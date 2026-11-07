@@ -1,0 +1,38 @@
+{
+  "n_samples": 14420,
+  "n_features": 17,
+  "n_games": 1442,
+  "feature_names": [
+    "is_home",
+    "tip_winner",
+    "early_touches",
+    "early_shots",
+    "first_basket_rate",
+    "first_shot_rate",
+    "L10_first_basket_rate",
+    "L5_first_basket_rate",
+    "player_games_played",
+    "usage_rate",
+    "true_shooting_pct",
+    "minutes_per_game",
+    "points_per_game",
+    "team_tipoff_win_pct",
+    "home_fb_pct",
+    "away_fb_pct",
+    "team_games_played"
+  ],
+  "positive_rate": 0.1,
+  "all_feature_names": [
+    "game_id",
+    "player_id",
+    "player_name",
+    "team",
+    "opponent",
+    "is_home",
+    "tip_winner",
+    "position",
+    "early_touches",
+    "early_shots",
+    "first_play_type"
+  ]
+}
