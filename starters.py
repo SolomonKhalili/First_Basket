@@ -24,6 +24,27 @@ OUT_STATUSES = {"Out", "Injured Reserve", "Suspension"}
 UNCERTAIN_STATUSES = {"Day-To-Day", "Day-to-Day", "Questionable", "Doubtful"}
 
 
+def severity(status: str) -> int:
+    """0 = out, 1 = doubtful, 2 = questionable, 3 = day-to-day/probable, 9 = unknown/healthy.
+    Case-insensitive and tolerant of variants ('Out For Season', 'out', 'Game Time Decision')."""
+    k = (status or "").strip().lower()
+    if not k:
+        return 9
+    if k.startswith("out") or k in ("injured reserve", "suspension", "suspended", "inactive", "ir"):
+        return 0
+    if k.startswith("doubtful"):
+        return 1
+    if k.startswith("questionable") or "game time" in k or "gtd" in k:
+        return 2
+    if k.startswith("day") or k.startswith("probable"):
+        return 3
+    return 9
+
+
+def is_out(status: str) -> bool:
+    return severity(status) == 0
+
+
 # ──────────────────────────────────────────────
 # DATES
 # ──────────────────────────────────────────────
@@ -143,8 +164,8 @@ def fetch_injuries() -> dict:
 
 def split_injuries(status_by_name: dict) -> tuple[set, set]:
     """-> (definitely_out_names, uncertain_names)"""
-    out = {n for n, s in status_by_name.items() if s in OUT_STATUSES}
-    unc = {n for n, s in status_by_name.items() if s in UNCERTAIN_STATUSES}
+    out = {n for n, s in status_by_name.items() if severity(s) == 0}
+    unc = {n for n, s in status_by_name.items() if severity(s) in (1, 2, 3)}
     return out, unc
 
 
@@ -170,8 +191,8 @@ def recent_starters(
     Returns {'players': [{player_id, name, position, jersey, team, uncertain}],
              'games_used': int, 'complete': bool}
     """
-    out_names = out_names or set()
-    uncertain_names = uncertain_names or set()
+    out_names = {norm_name(n) for n in (out_names or set())}
+    uncertain_names = {norm_name(n) for n in (uncertain_names or set())}
     before = yyyymmdd(before_date)
 
     games = con.execute(
@@ -203,7 +224,7 @@ def recent_starters(
         (
             (pid, s)
             for pid, s in stats.items()
-            if s["name"] not in out_names
+            if norm_name(s["name"]) not in out_names
         ),
         key=lambda kv: (-kv[1]["starts"], -kv[1]["minutes"], kv[1]["last"] == ""),
     )
@@ -215,7 +236,7 @@ def recent_starters(
             "position": "",
             "jersey": "",
             "team": team,
-            "uncertain": s["name"] in uncertain_names,
+            "uncertain": norm_name(s["name"]) in uncertain_names,
         }
         for pid, s in top
     ]
@@ -323,7 +344,9 @@ def norm_name(name: str) -> str:
 
     s = unicodedata.normalize("NFKD", name or "").encode("ascii", "ignore").decode().lower()
     s = re.sub(r"[^a-z\s]", " ", s)
-    return " ".join(w for w in s.split() if w not in _SUFFIXES)
+    s = " ".join(w for w in s.split() if w not in _SUFFIXES)
+    # join runs of single-letter initials: 'p j washington' -> 'pj washington' (matches 'PJ Washington')
+    return re.sub(r"\b[a-z](?: [a-z]\b)+", lambda m: m.group().replace(" ", ""), s)
 
 
 def espn_ids_by_name(con) -> dict:
@@ -424,7 +447,7 @@ def _daily_feed(d: str):
     except Exception as e:  # noqa: BLE001
         code = getattr(getattr(e, "response", None), "status_code", None)
         if code == 404:
-            print(f"  (NBA.com has not published the daily lineups file for {d} yet — it appears later in the day)")
+            pass   # not published yet: normal; each game reports its own lineup status
         else:
             print(f"  (NBA.com daily lineups fetch failed for {d}: {e})")
     _FEED_CACHE[d] = feed
@@ -484,19 +507,109 @@ def parse_injury_rows(rows) -> list[dict]:
     return out
 
 
-def fetch_injury_report() -> list[dict]:
-    """ESPN injury report. [] on failure."""
+SUMMARY_URL = ("https://site.web.api.espn.com/apis/site/v2/sports/basketball/nba/summary"
+               "?region=us&lang=en&contentorigin=espn&event={event}")
+
+
+def parse_summary_injuries(data: dict) -> list[dict]:
+    """Pure function. ESPN game-summary JSON -> same row shape as parse_injury_rows.
+    Tolerant: summary['injuries'] = [{team: {...}, injuries: [{status, athlete, details, ...}]}]."""
+    out = []
+    for blk in (data or {}).get("injuries") or []:
+        team = blk.get("team") or {}
+        abbr = team.get("abbreviation", "")
+        for p in blk.get("injuries") or []:
+            ath = p.get("athlete") or {}
+            name = ath.get("displayName") or ath.get("fullName") or ""
+            if not name:
+                continue
+            det = p.get("details") if isinstance(p.get("details"), dict) else {}
+            out.append({
+                "name": name,
+                "team": abbr or (ath.get("team") or {}).get("abbreviation", ""),
+                "status": p.get("status", "") or (p.get("type") or {}).get("description", ""),
+                "detail": _detail(p),
+                "note": p.get("shortComment", ""),
+                "return": det.get("returnDate", ""),
+            })
+    return out
+
+
+def fetch_game_injuries(event_id: str) -> list[dict]:
+    """Injuries ESPN attaches to one game (summary endpoint). [] on failure."""
+    try:
+        import requests
+        time.sleep(SLEEP)
+        r = requests.get(SUMMARY_URL.format(event=event_id), timeout=15,
+                         headers={"User-Agent": "Mozilla/5.0"})
+        r.raise_for_status()
+        return parse_summary_injuries(r.json())
+    except Exception as e:  # noqa: BLE001
+        print(f"  (game {event_id} injury fetch failed: {e})")
+        return []
+
+
+def merge_injury_reports(*reports) -> list[dict]:
+    """Union of reports by player. If sources disagree, the MORE SEVERE status wins (a missed
+    injury is worse than a false alarm) and the row is marked conflict with all statuses seen."""
+    by = {}
+    for rep in reports:
+        for r in rep or []:
+            k = norm_name(r["name"])
+            if not k:
+                continue
+            cur = by.get(k)
+            if cur is None:
+                by[k] = dict(r, seen=[r["status"]])
+                continue
+            seen = cur["seen"] + ([r["status"]] if r["status"] not in cur["seen"] else [])
+            if severity(r["status"]) < severity(cur["status"]):
+                cur = dict(r, team=r.get("team") or cur.get("team", ""))
+            else:
+                cur = dict(cur, team=cur.get("team") or r.get("team", ""),
+                           detail=cur.get("detail") or r.get("detail", ""),
+                           **{"return": cur.get("return") or r.get("return", "")})
+            cur["seen"] = seen
+            cur["conflict"] = len({severity(x) for x in seen}) > 1
+            by[k] = cur
+    return list(by.values())
+
+
+def fetch_injury_report(game_ids=None, verbose: bool = True) -> list[dict]:
+    """ESPN league-wide injury feed, plus (when `game_ids` given) each game's own summary
+    injuries, merged. Never fails silently: prints a warning if nothing could be loaded."""
+    league = []
     try:
         from sportsdataverse.nba import espn_nba_injuries
 
         time.sleep(SLEEP)
         inj = espn_nba_injuries()
-        if inj.height == 0:
-            return []
-        return parse_injury_rows(inj.iter_rows(named=True))
+        if inj.height:
+            league = parse_injury_rows(inj.iter_rows(named=True))
     except Exception as e:  # noqa: BLE001
-        print(f"  (injury report fetch failed: {e})")
-        return []
+        print(f"  (league injury feed failed: {e})")
+    per_game = []
+    for gid in game_ids or []:
+        per_game.extend(fetch_game_injuries(gid))
+    rep = merge_injury_reports(league, per_game)
+    if verbose:
+        print("  " + injury_coverage_note(rep, len(league), len(per_game), bool(game_ids)))
+    return rep
+
+
+def injury_coverage_note(rep: list[dict], n_league: int = 0, n_game: int = 0, used_games: bool = False) -> str:
+    if not rep:
+        return ("🚨 NO INJURY DATA LOADED — injuries are NOT accounted for. Do not trust projected "
+                "lineups; check ESPN/NBA.com injury reports by hand.")
+    outs = sum(severity(r["status"]) == 0 for r in rep)
+    conf = [r["name"] for r in rep if r.get("conflict")]
+    note = (f"Injury report: {len(rep)} players ({outs} out) from league feed={n_league}"
+            + (f", game summaries={n_game}" if used_games else " (game summaries not used)"))
+    if used_games and n_game == 0:
+        note += " ⚠️ game-summary source returned nothing"
+    if conf:
+        note += f" · sources disagreed (kept the more severe): {', '.join(conf[:6])}"
+    return note
 
 
 def team_by_player(con) -> dict:
@@ -521,7 +634,7 @@ def injury_flags(names, report: list[dict]) -> list[tuple]:
 
 def team_injuries(team: str, report: list[dict], team_of: dict) -> list[dict]:
     rows = [r for r in report if (r.get("team") or team_of.get(norm_name(r["name"]))) == team]
-    return sorted(rows, key=lambda r: (_SEVERITY.get(r["status"], 9), r["name"]))
+    return sorted(rows, key=lambda r: (severity(r["status"]), r["name"]))
 
 
 def daily_report(con, date_str: str) -> str:
@@ -563,35 +676,367 @@ def daily_report(con, date_str: str) -> str:
 
 
 # ── injury sets for projection ───────────────────────────────
+def usual_starter_names(con, team: str, before_date, n_games: int = 5,
+                        regular_games: int = 25, regular_min_starts: int = 5) -> set:
+    """Normalized names of the team's starters: anyone who started in the last `n_games`,
+    plus REGULAR starters (>= `regular_min_starts` starts in the last `regular_games`).
+    The longer window keeps a starter who has been injured for a while (so is absent from
+    the last-5 window) recognizable as a starter, e.g. a center out two weeks."""
+    before = yyyymmdd(before_date)
+    games = con.execute(
+        """SELECT DISTINCT g.game_id FROM games g JOIN lineups l ON l.game_id = g.game_id AND l.team = ?
+           WHERE g.game_date < ? ORDER BY g.game_date DESC, g.game_id DESC LIMIT ?""",
+        (team, before, max(n_games, regular_games))).fetchall()
+    ids = [g[0] for g in games]
+    if not ids:
+        return set()
+    names = set()
+    for window, min_starts in ((ids[:n_games], 1), (ids[:regular_games], regular_min_starts)):
+        q = ",".join("?" * len(window))
+        rows = con.execute(
+            f"""SELECT player_name, COUNT(*) FROM lineups
+                WHERE team=? AND is_starter=1 AND game_id IN ({q}) GROUP BY player_name""",
+            (team, *window)).fetchall()
+        names |= {norm_name(n) for n, c in rows if c >= min_starts}
+    return names
+
+
+def team_injury_lines(con, team: str, before_date, report: list[dict],
+                      projected_names=(), dropped_names=(), n_games: int = 5) -> list[str]:
+    """The team's ENTIRE injury report as printable lines, starters first.
+
+    A player counts as a starter if he started in the team's last n games, is a regular
+    starter (see usual_starter_names), is in the projected five, or was removed from it. Matches by ESPN team code OR by the team the
+    player last appeared for, so a mismatch in team codes can't hide anyone."""
+    team_of = team_by_player(con)
+    usual = usual_starter_names(con, team, before_date, n_games)
+    proj = {norm_name(n) for n in projected_names}
+    drop = {norm_name(n) for n in dropped_names}
+    rows = [r for r in report
+            if r.get("status") and (r.get("team") == team or team_of.get(norm_name(r["name"])) == team)]
+    if not rows:
+        return []
+
+    def is_starter(r):
+        k = norm_name(r["name"])
+        return k in usual or k in proj or k in drop
+
+    rows.sort(key=lambda r: (not is_starter(r), severity(r["status"]), r["name"]))
+    lines = []
+    for r in rows:
+        k = norm_name(r["name"])
+        tags = []
+        if k in drop:
+            tags.append("removed from projected five")
+        elif k in proj:
+            tags.append("in projected five")
+        elif is_starter(r):
+            tags.append("NOT in projected five")
+        if is_starter(r):
+            tags.insert(0, "STARTER")
+        mark = "★" if is_starter(r) else " "
+        detail = f" — {r['detail']}" if r.get("detail") else ""
+        tag = f"  [{' · '.join(tags)}]" if tags else ""
+        lines.append(f"      {mark} {r['name']}: {r['status']}{detail}{tag}")
+    return lines
+
+
 PROJECTION_OUT = OUT_STATUSES | {"Doubtful"}   # treated as not starting when projecting
 
 
 def out_names_from_report(report: list[dict]) -> set:
-    return {r["name"] for r in report if r["status"] in PROJECTION_OUT}
+    return {r["name"] for r in report if severity(r["status"]) <= 1}
 
 
 def uncertain_names_from_report(report: list[dict]) -> set:
-    return {r["name"] for r in report if r["status"] in UNCERTAIN_STATUSES - {"Doubtful"}}
+    return {r["name"] for r in report if severity(r["status"]) in (2, 3)}
+
+
+# ──────────────────────────────────────────────
+# INJURY SUBSTITUTION
+# Stateless on purpose: the lineup is rebuilt from the CURRENT injury report on every
+# run. Nothing is remembered between runs, so a player who is cleared (no longer on the
+# report) goes straight back into the lineup, and one who is newly ruled out is replaced.
+# ──────────────────────────────────────────────
+# Statuses that get replaced: 0 = Out, 1 = Doubtful. 2 = Questionable / 3 = Day-to-Day are
+# KEPT in the lineup (most of them play) and shown with an "if out -> X" note instead.
+# Set to 3 to replace Questionable / Day-to-Day players too.
+REPLACE_MAX_SEVERITY = 1
+MIN_MISSED_GAMES = 2    # need >= this many games the player missed before trusting "who started instead"
+MIN_FILL_STARTS = 2     # ...and the replacement must have started at least this many of them (1 game is noise)
+
+
+def season_start(before) -> str:
+    """First day (YYYYMMDD) of the NBA season that `before` falls in (seasons start in autumn)."""
+    b = yyyymmdd(before)
+    y, m = int(b[:4]), int(b[4:6])
+    return f"{y if m >= 9 else y - 1}0901"
+
+
+def _team_games(con, team: str, before: str, since: Optional[str] = None, limit: Optional[int] = None) -> list:
+    """[(game_id, game_date)] newest first: the team's stored games before `before`."""
+    q = ("SELECT DISTINCT g.game_id, g.game_date FROM games g "
+         "JOIN lineups l ON l.game_id = g.game_id AND l.team = ? WHERE g.game_date < ?")
+    params = [team, yyyymmdd(before)]
+    if since:
+        q += " AND g.game_date >= ?"
+        params.append(since)
+    q += " ORDER BY g.game_date DESC, g.game_id DESC"
+    if limit:
+        q += " LIMIT ?"
+        params.append(limit)
+    return con.execute(q, params).fetchall()
+
+
+def _rows_for_games(con, team: str, game_ids: list) -> dict:
+    """game_id -> [(player_id, name, is_starter, minutes)]"""
+    out = {g: [] for g in game_ids}
+    for i in range(0, len(game_ids), 500):
+        chunk = game_ids[i:i + 500]
+        q = ",".join("?" * len(chunk))
+        for gid, pid, name, st_, mins in con.execute(
+                f"SELECT game_id, player_id, player_name, is_starter, minutes FROM lineups "
+                f"WHERE team = ? AND game_id IN ({q})", (team, *chunk)):
+            out[gid].append((pid, name, st_, mins))
+    return out
+
+
+def healthy_base_five(con, team: str, game_date, n_recent: int = 5, long_games: int = 30,
+                      team_of: Optional[dict] = None, verified_names: Optional[set] = None,
+                      listed_names: Optional[set] = None) -> dict:
+    """The team's usual starting five assuming EVERYONE is available (injuries are applied afterwards).
+
+    Ranks players by how often they START WHEN THEY PLAY (recent games count double, shrunk toward a low
+    prior so one-game samples can't win), over this season's last `long_games` (early in the season it
+    borrows last season's). Because it is a rate, a regular starter who missed a few games is still
+    recognised once he is healthy again, while the bench player who filled in does not displace him.
+    Exceptions:
+      * played in the recent games but never started -> benched by the coach, not a starter.
+      * missed the ENTIRE recent window -> back in only if he is a regular starter AND either in
+        `verified_names` (still on the report as Questionable/Day-to-Day, possibly back) or cleared:
+        `listed_names` (everyone on a successfully loaded report) is non-empty and he is not on it.
+        Otherwise (still Out, or no report to check against) he is not assumed back.
+      * most recent team is not `team` (traded) -> ignored.
+    -> {'players': [...5], 'complete': bool, 'games_used': int, 'missed_recent': {norm_name: games missed}}"""
+    before = yyyymmdd(game_date)
+    team_of = team_of if team_of is not None else team_by_player(con)
+    verified_names = verified_names or set()
+    listed_names = listed_names or set()
+    games = _team_games(con, team, before, since=season_start(before), limit=long_games)
+    if len(games) < n_recent:
+        games = _team_games(con, team, before, limit=long_games)
+    if not games:
+        return {"players": [], "complete": False, "games_used": 0, "missed_recent": {}}
+    rows = _rows_for_games(con, team, [g for g, _ in games])
+    recent = {g for g, _ in games[:n_recent]}
+    s = defaultdict(lambda: {"name": "", "st_recent": 0, "st_long": 0, "pl_recent": 0, "pl_long": 0, "mins": 0.0})
+    for gid, _ in games:
+        for pid, name, st_, mins in rows[gid]:
+            e = s[pid]
+            e["name"] = name
+            e["mins"] += mins or 0.0
+            played = (mins or 0) > 0
+            e["st_long"] += 1 if st_ else 0
+            e["pl_long"] += 1 if played else 0
+            if gid in recent:
+                e["st_recent"] += 1 if st_ else 0
+                e["pl_recent"] += 1 if played else 0
+
+    PRIOR_RATE, PRIOR_WEIGHT = 0.2, 3.0
+
+    def score(e):
+        if e["pl_recent"] > 0 and e["st_recent"] == 0:
+            return 0.0                                  # healthy and playing, but not starting: benched
+        if e["pl_recent"] == 0:
+            # Missed the whole recent window. A regular (>= 3 starts and >= 60% of the games he played)
+            # is still a starter if he is Questionable/Day-to-Day on the report (the fill-in is shown as
+            # his "if he sits" replacement) or has been cleared (report loaded, he's no longer on it).
+            # Anyone else who has vanished (still Out, waived, traded, benched) is not assumed back.
+            k = norm_name(e["name"])
+            cleared = bool(listed_names) and k not in listed_names
+            if ((k in verified_names or cleared) and e["st_long"] >= 3
+                    and e["st_long"] >= 0.6 * e["pl_long"]):
+                return 1.0
+            return 0.0
+        num = 2 * e["st_recent"] + e["st_long"]
+        den = 2 * e["pl_recent"] + e["pl_long"]
+        return (num + PRIOR_RATE * PRIOR_WEIGHT) / (den + PRIOR_WEIGHT) if den else 0.0
+
+    cand = [(pid, e) for pid, e in s.items() if team_of.get(norm_name(e["name"]), team) == team]
+    cand.sort(key=lambda kv: (-score(kv[1]), -kv[1]["st_long"], -kv[1]["mins"], kv[1]["name"]))
+    top = [(pid, e) for pid, e in cand[:5] if score(e) > 0]
+    players = [{"player_id": pid, "name": e["name"], "position": "", "jersey": "", "team": team,
+                "uncertain": False, "id_matched": True} for pid, e in top]
+    n_rec = len(recent)
+    missed = {norm_name(e["name"]): n_rec - e["pl_recent"] for _, e in top if e["pl_recent"] < n_rec}
+    return {"players": players, "complete": len(players) == 5, "games_used": len(games), "missed_recent": missed}
+
+
+def pick_replacement(con, team: str, absent_name: str, exclude: set, game_date,
+                     team_of: Optional[dict] = None) -> Optional[dict]:
+    """Who starts when `absent_name` is out? `exclude` = normalized names that can't be chosen
+    (the other starters, other players ruled out).
+
+    1. HISTORY: games (this season; both seasons if that is too thin) the player missed while on the
+       team -> the non-excluded player who started most of them (needs >= MIN_MISSED_GAMES missed
+       games and the replacement to have started >= MIN_FILL_STARTS of them).
+    2. FALLBACK: the non-excluded player with the most starts in the last 5 games, then the most
+       minutes over the last 10 (the same ranking the lineup projection has always used).
+    Only players who played in those last 10 games (the current rotation) can be chosen.
+    -> player dict plus 'how' ('history'|'recent') and 'evidence', or None if nobody is available."""
+    before = yyyymmdd(game_date)
+    ax = norm_name(absent_name)
+    team_of = team_of if team_of is not None else team_by_player(con)
+
+    rot_games = (_team_games(con, team, before, since=season_start(before), limit=10)
+                 or _team_games(con, team, before, limit=10))
+    rot_rows = _rows_for_games(con, team, [g for g, _ in rot_games])
+    in_rotation = {norm_name(n) for g, _ in rot_games for _, n, _, m in rot_rows[g] if (m or 0) > 0}
+
+    def ok(name):
+        k = norm_name(name)
+        return k != ax and k not in exclude and k in in_rotation and team_of.get(k, team) == team
+
+    def make(pid, name, how, evidence):
+        return {"player_id": pid, "name": name, "position": "", "jersey": "", "team": team,
+                "uncertain": False, "id_matched": True, "how": how, "evidence": evidence}
+
+    if team_of.get(ax, team) == team:
+        for since in (season_start(before), None):
+            games = _team_games(con, team, before, since=since)
+            if not games:
+                continue
+            rows = _rows_for_games(con, team, [g for g, _ in games])
+            played = [any(norm_name(n) == ax and (m or 0) > 0 for _, n, _, m in rows[g]) for g, _ in games]
+            if not any(played):
+                continue
+            oldest = max(i for i, p in enumerate(played) if p)
+            current = list(range(played.index(True)))                  # his ongoing absence (newest games)
+            missed = [i for i in range(oldest + 1) if not played[i]]   # every game missed, incl. the current run
+            # The current absence decides first (an old absence may have had a different fill-in);
+            # if it's too short to tell, fall back to every game he missed.
+            for window, label in ((current, f"the last {len(current)} games {absent_name} missed"),
+                                  (missed, f"the {len(missed)} games {absent_name} missed")):
+                if len(window) < MIN_MISSED_GAMES:
+                    continue
+                counts = {}
+                for i in window:
+                    for pid, n, st_, m in rows[games[i][0]]:
+                        if st_ and ok(n):
+                            c = counts.setdefault(pid, [n, 0, i])
+                            c[1] += 1
+                            c[2] = min(c[2], i)
+                if counts:
+                    pid, (n, c, _) = max(counts.items(), key=lambda kv: (kv[1][1], -kv[1][2]))
+                    if c >= MIN_FILL_STARTS:
+                        return make(pid, n, "history", f"started {c} of {label}")
+
+    recent5 = {g for g, _ in rot_games[:5]}
+    info = {}
+    for g, _ in rot_games:
+        for pid, n, st_, m in rot_rows[g]:
+            if ok(n):
+                e = info.setdefault(pid, [n, 0, 0.0])          # name, starts in last 5, minutes in last 10
+                e[1] += 1 if (st_ and g in recent5) else 0
+                e[2] += m or 0.0
+    cand = [(pid, n, ss, mm) for pid, (n, ss, mm) in info.items() if mm > 0]
+    if not cand:
+        return None
+    pid, n, _, _ = max(cand, key=lambda x: (x[2], x[3], x[1]))
+    return make(pid, n, "recent", "next in line: most recent starts, then minutes")
+
+
+def _status_maps(report: list[dict]) -> dict:
+    return {norm_name(r["name"]): r for r in report if r.get("status")}
+
+
+def substitute_injured(con, team: str, starters: list, report: list[dict], game_date,
+                       replace_max_severity: Optional[int] = None,
+                       team_of: Optional[dict] = None) -> dict:
+    """Swap starters who are ruled out (severity <= replace_max_severity) for their expected replacement,
+    in the same slot. Works on any five-man list (feed lineup or healthy_base_five).
+    A starter nobody can replace stays in the list and is reported in 'unresolved'.
+    -> {'players': [...], 'replaced': [{'out','in','how','evidence','status','detail','return'}], 'unresolved': [names]}"""
+    rms = REPLACE_MAX_SEVERITY if replace_max_severity is None else replace_max_severity
+    team_of = team_of if team_of is not None else team_by_player(con)
+    by = _status_maps(report)
+
+    def sev(p):
+        return severity(by.get(norm_name(p["name"]), {}).get("status", ""))
+
+    unavailable = {k for k, r in by.items() if severity(r["status"]) <= rms}
+    exclude = {norm_name(p["name"]) for p in starters} | unavailable
+    lineup, replaced, unresolved = list(starters), [], []
+    for p in starters:
+        if sev(p) > rms:
+            continue
+        rep = pick_replacement(con, team, p["name"], exclude, game_date, team_of)
+        r = by.get(norm_name(p["name"]), {})
+        if rep is None:
+            unresolved.append(p["name"])
+            continue
+        exclude.add(norm_name(rep["name"]))
+        rep["uncertain"] = severity(by.get(norm_name(rep["name"]), {}).get("status", "")) in (2, 3)
+        rep["replaces"] = p["name"]
+        lineup[lineup.index(p)] = rep
+        replaced.append({"out": p["name"], "in": rep["name"], "how": rep["how"], "evidence": rep["evidence"],
+                         "status": r.get("status", ""), "detail": r.get("detail", ""), "return": r.get("return", "")})
+    return {"players": lineup, "replaced": replaced, "unresolved": unresolved}
+
+
+def contingencies(con, team: str, starters: list, report: list[dict], game_date,
+                  replace_max_severity: Optional[int] = None, team_of: Optional[dict] = None) -> dict:
+    """For starters KEPT in the lineup but listed Questionable / Day-to-Day: who would start if he sits?
+    -> {normalized starter name: {'in': name, 'how': .., 'evidence': ..}}"""
+    rms = REPLACE_MAX_SEVERITY if replace_max_severity is None else replace_max_severity
+    team_of = team_of if team_of is not None else team_by_player(con)
+    by = _status_maps(report)
+    unavailable = {k for k, r in by.items() if severity(r["status"]) <= rms}
+    base_exclude = {norm_name(p["name"]) for p in starters} | unavailable
+    out = {}
+    for p in starters:
+        k = norm_name(p["name"])
+        if not (rms < severity(by.get(k, {}).get("status", "")) <= 3):
+            continue
+        rep = pick_replacement(con, team, p["name"], base_exclude, game_date, team_of)
+        if rep:
+            base_exclude.add(norm_name(rep["name"]))      # two players sitting need two different fill-ins
+            out[k] = {"in": rep["name"], "how": rep["how"], "evidence": rep["evidence"]}
+    return out
 
 
 def project_usual_starters(con, team: str, game_date, report: list[dict], n_games: int = 5) -> dict:
-    """Usual starters (last n games) minus players ruled out; next-in-line fills in.
-    -> {'players': [...], 'complete': bool, 'dropped': [names of usual starters removed]}"""
-    out, unc = out_names_from_report(report), uncertain_names_from_report(report)
-    base = recent_starters(con, team, game_date, n_games=n_games)
-    adj = recent_starters(con, team, game_date, n_games=n_games, out_names=out, uncertain_names=unc)
-    kept = {p["player_id"] for p in adj["players"]}
-    dropped = [p["name"] for p in base["players"] if p["player_id"] not in kept]
-    return {"players": adj["players"], "complete": adj["complete"], "dropped": dropped}
+    """Usual starting five with everyone healthy, then ruled-out players swapped for their expected
+    replacement using the CURRENT report (a player cleared since the last run is back in).
+    -> {'players', 'complete', 'dropped': [names removed], 'replaced': [...], 'unresolved': [...],
+        'returning': {name: recent team games missed}  # in the five, no longer on the report}"""
+    team_of = team_by_player(con)
+    by = _status_maps(report)
+    verified = {k for k, r in by.items() if severity(r["status"]) in (2, 3)}
+    base = healthy_base_five(con, team, game_date, n_recent=n_games, team_of=team_of, verified_names=verified,
+                             listed_names=set(by))
+    if not base["players"]:
+        return {"players": [], "complete": False, "dropped": [], "replaced": [], "unresolved": [], "returning": {}}
+    for p in base["players"]:
+        p["uncertain"] = severity(by.get(norm_name(p["name"]), {}).get("status", "")) in (2, 3)
+    sub = substitute_injured(con, team, base["players"], report, game_date, team_of=team_of)
+    returning = {p["name"]: base["missed_recent"][norm_name(p["name"])]
+                 for p in sub["players"]
+                 if norm_name(p["name"]) in base["missed_recent"] and norm_name(p["name"]) not in by
+                 and base["missed_recent"][norm_name(p["name"])] >= 2}
+    return {"players": sub["players"],
+            "complete": len(sub["players"]) == 5 and base["complete"] and not sub["unresolved"],
+            "dropped": [r["out"] for r in sub["replaced"]], "replaced": sub["replaced"],
+            "unresolved": sub["unresolved"], "returning": returning}
 
 
 def returning_by(report: list[dict], names, day_iso: str) -> list[str]:
     """Names (from `names`) that are ruled out but whose estimated return date is `day_iso` or earlier.
     ESPN's status may be stale for these: they could actually play."""
-    by = {norm_name(r["name"]): r for r in report if r["status"] in PROJECTION_OUT}
+    by = {norm_name(r["name"]): r for r in report if severity(r["status"]) <= 1}
     out = []
     for n in names:
         r = by.get(norm_name(n))
-        if r and r.get("return") and r["return"] <= day_iso:
+        if r and r.get("return") and r["return"][:10] <= day_iso:
             out.append(n)
     return out

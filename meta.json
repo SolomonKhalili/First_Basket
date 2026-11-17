@@ -1,7 +1,7 @@
 {
-  "n_samples": 14420,
-  "n_features": 17,
-  "n_games": 1442,
+  "n_samples": 15150,
+  "n_features": 18,
+  "n_games": 1515,
   "feature_names": [
     "is_home",
     "tip_winner",
@@ -19,7 +19,8 @@
     "team_tipoff_win_pct",
     "home_fb_pct",
     "away_fb_pct",
-    "team_games_played"
+    "team_games_played",
+    "tip_win_prob"
   ],
   "positive_rate": 0.1,
   "all_feature_names": [

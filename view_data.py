@@ -44,25 +44,9 @@ def main():
     # Export option
     export = input("\nExport to CSV? (y/n): ").strip().lower()
     if export == 'y':
-        import csv
-        cur.execute("""
-            SELECT g.game_date, g.game_id, g.home_team, g.away_team, g.tip_winner_team,
-                   fb.scorer_name, fb.scorer_team, fb.shot_type, fb.clock, fb.x, fb.y
-            FROM games g
-            JOIN first_baskets fb ON g.game_id = fb.game_id
-            ORDER BY g.game_date
-        """)
-        rows = cur.fetchall()
-        with open('first_basket_data.csv', 'w', newline='') as f:
-            w = csv.writer(f)
-            # Header with friendly date
-            w.writerow(["game_start", "game_id", "home_team", "away_team", "tip_winner",
-                       "first_basket_scorer", "scorer_team", "shot_type", "clock", "x", "y"])
-            for r in rows:
-                d = r[0]  # game_date as YYYYMMDD
-                game_start = f"{d[4:6]}/{d[6:8]}/{d[2:4]}"
-                w.writerow([game_start] + list(r[1:]))
-        print("Exported to first_basket_data.csv")
+        import nba                      # same export as `nba.py predict`, so there's one CSV format
+        n = nba.export_csv(nba.db())
+        print(f"Exported {n} games to {nba.CSV_PATH}")
 
 if __name__ == "__main__":
     main()

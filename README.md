@@ -13,9 +13,10 @@ Project status, decisions, known issues and the to-do list live in [`BLUEPRINT.m
 For each game today it:
 
 1. Finds the **starting five** for both teams, in this order of trust:
-   `CONFIRMED` (NBA.com daily lineups feed, then NBA.com box score, then ESPN) →
+   `CONFIRMED` (NBA.com daily lineups feed, then NBA.com box score) →
    `EXPECTED` (NBA.com lists a lineup but it isn't confirmed yet) →
-   `PROJECTED` (each team's usual starters from the last 5 games, minus players ruled Out/Doubtful; Questionable and Day-to-Day players stay in and are flagged).
+   `PROJECTED` (each team's usual starters, with anyone ruled Out/Doubtful swapped for their expected replacement; Questionable and Day-to-Day players stay in, flagged, with an "if he sits" replacement).
+   Replacements are picked from who actually started when that player missed games, and the lineup is rebuilt from the current injury report on every run: a player who is cleared goes straight back in. Replacements are marked `↳`. Official `CONFIRMED` lineups are never changed.
 2. Pulls the **ESPN injury report** and warns about any listed starter who's hurt.
 3. Scores the 10 starters with a pre-game model and prints the top 5 with a probability and **fair American odds**.
 
@@ -54,7 +55,7 @@ Run tests any time: `pytest test_starters.py`.
 | `python3 nba.py backfill [year]` | Backfill a season's completed regular-season games (`2025` = 2025-26) |
 | `python3 nba.py lineups` | Store starters/minutes for every game that lacks them (resumable; run once) |
 | `python3 nba.py report [YYYYMMDD]` | Matchups, who's injured, who's starting (projected if NBA.com hasn't posted yet) |
-| `python3 nba.py predict` | One-shot predictions for today's games not yet started |
+| `python3 nba.py predict` | First catches up every finished game missing from the database, rewrites `first_basket_data.csv` from the database, then predicts today's games not yet started |
 | `python3 nba.py predict --watch [--interval 300]` | Recheck every N seconds; print each game when its lineup first appears, changes, or is confirmed; stops when all games are confirmed or tipped |
 | `python3 nba.py predict --confirmed-only` | Skip any game without an official confirmed lineup |
 | `python3 nba.py eval` | Accuracy of stored predictions on finished games |
@@ -62,15 +63,18 @@ Run tests any time: `pytest test_starters.py`.
 | `python3 train_pregame.py` | Retrain the pre-game model |
 | `python3 view_data.py` | Browse games / export CSV |
 
-`predict` also catches up any finished games since the last run (and stores their lineups) before predicting.
+`predict` also catches up any finished games since the last run (and stores their lineups) before predicting. It re-scans from the last stored game date and retries recent games stored without a first basket, then **rewrites `first_basket_data.csv` from the database**, so the CSV always matches the DB (one row per game with a first basket). `backfill` refreshes the CSV the same way.
 
 ### Reading the output
 
-```
-BKN @ ATL   [pregame_clogit_nba_expected_unconfirmed]
-  ⚠️  LINEUP EXPECTED, NOT CONFIRMED — may change before tip
-  1. <player> (ATL) — 13.6%  fair +634
-```
+Each game is a box with: the top 5 picks (chance + a bar + fair odds), each team's chance to win the
+opening tip and who is expected to jump, both starting fives (injured players coloured), and any notes
+(replacements, players back from injury). The box border and label show the lineup type:
+✅ CONFIRMED (green) · 🟡 EXPECTED (yellow) · 🟠 PROJECTED (orange, our guess). A "How to read this" box at
+the bottom explains the columns. Data-update chatter is hidden; problems appear in a yellow **Warnings** box.
+
+NBA.com posts expected lineups in the early afternoon ET and confirms them ~30 min before tip. ESPN is not
+used for lineups: it doesn't publish starters until a game starts.
 
 *Fair odds* are the model's probability converted to American odds. A sportsbook price is only **+EV** if it is *longer* than the fair odds: at 13.6% (fair ≈ +634), +800 is value and +450 is not. Remember the model's probabilities carry real uncertainty.
 
@@ -148,6 +152,7 @@ NBA/
 ├── train_model.py          # legacy LightGBM trainer (retired)
 ├── model.txt, model_meta.json   # legacy model (retired; leaky)
 ├── view_data.py            # DB viewer / CSV export
+├── first_basket_data.csv   # auto-regenerated from the DB by predict/backfill (don't edit by hand)
 ├── nba_first_basket.db     # SQLite database
 ├── player_game_logs.pkl    # per-player game-log cache (not auto-refreshed yet)
 ├── X_train.npy, y_train.npy, groups.npy, feature_names.json, meta.json
