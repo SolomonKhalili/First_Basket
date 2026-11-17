@@ -158,7 +158,7 @@ Output per game (a box, see `display.py`): top 5 starters, probability, **fair A
   - A cleared regular starter is brought back only when the injury report loaded; if the feed fails, he stays out (on purpose — no report means we can't tell "cleared" from "still hurt").
 - ⚠️ **Data hygiene:** `games.status` is never filled; ESPN dates are UTC (late games stored under the next day). (Fixed 2026-11-17: orphan rows removed; catchup re-checks the last stored date; recent games missing a label or lineup are retried. The 9 old unlabeled games and 7 old 403 lineups are permanent and no longer retried.)
 - ⚠️ **Misleading features:** `first_shot_rate` is just 2 × `first_basket_rate`; `usage_rate` is shots per 36 min, not usage; `team_tipoff_win_pct` counts games with no recorded tip as losses.
-- ⚠️ **Git:** only 2 commits. `tip_model.py`, `tipoff_model.json`, `game_ids.json` are **not tracked**; the DB, `.pkl`, `.npy` and `.pyc` files are tracked. 8 old worktrees in `.claude/worktrees/` (`fanduel-px-fix` has 14 uncommitted changes).
+- ⚠️ **Git:** all of the 2026-11-17 work is committed (`8bd440a`), including `tip_model.py`, `game_ids.json`, `display.py` and the tests. Still tracked but shouldn't be: `.pyc` and `.DS_Store`. The DB, `.pkl` and `.npy` are tracked too (a decision to make). `tipoff_model.json` is untracked and unused. 8 old worktrees in `.claude/worktrees/` (`fanduel-px-fix` has 14 uncommitted changes).
 
 ---
 
@@ -185,7 +185,8 @@ Output per game (a box, see `display.py`): top 5 starters, probability, **fair A
 - [x] ~~Clean up the 72 orphan `first_baskets` rows~~ — **done 2026-11-17** (they were preseason + All-Star games).
 - [x] ~~One command keeps everything up to date~~ — **done 2026-11-17**: `predict`/`report`/`eval` run `sync_data()` first.
 - [ ] Fill or drop the empty `games.status` column; store game dates in ET, not UTC.
-- [ ] **Git:** commit `tip_model.py`, `tipoff_model.json`, `game_ids.json`; stop tracking `.pyc`/`.DS_Store`; decide whether the DB/`.pkl`/`.npy` belong in git; remove the 8 old worktrees (check `fanduel-px-fix` first).
+- [x] ~~**Git:** commit `tip_model.py`, `game_ids.json`~~ — done 2026-11-17 (`8bd440a`).
+- [ ] **Git:** stop tracking `.pyc`/`.DS_Store`; decide whether the DB/`.pkl`/`.npy` belong in git; remove the 8 old worktrees (check `fanduel-px-fix` first).
 - [x] ~~Fix `README.md`~~ — rewritten 2026-11-09 (accurate methodology, honest results, new commands). `requirements.txt` now includes `scipy`.
 
 **P1 — model quality (the only realistic path to an edge)**
@@ -228,9 +229,9 @@ NBA/
 ├── pregame_model.json      # trained pre-game weights                       (ACTIVE model)
 ├── train_pregame.py        # retrains pregame_model.json (needs scipy)
 ├── build_features.py       # feature builder with checkpointing (incremental); also builds/refreshes player_game_logs.pkl; leaky early_* only in X_train.npy
-├── tip_model.py            # tip-off model: P(team wins tip) from earlier games only (⚠️ not tracked in git)
+├── tip_model.py            # tip-off model: P(team wins tip) from earlier games only
 ├── test_tip_model.py       # pytest suite for tip_model.py [5 tests]
-├── game_ids.json           # game order of the training matrices (⚠️ not tracked in git)
+├── game_ids.json           # game order of the training matrices
 ├── train_model.py          # legacy LightGBM trainer (retired)
 ├── ~~model.txt / model_meta.json~~   # **removed** — legacy LightGBM model (leaky, invalid pre-game)
 ├── view_data.py            # DB viewer + CSV export
@@ -288,6 +289,7 @@ NBA/
 - **CSV cleanup**: removed the `x`/`y` columns from `first_basket_data.csv` (empty in all 1,515 games — the ESPN parser never captured shot location; nothing read them). `view_data.py`'s "Export to CSV" now calls `nba.export_csv`, so it no longer overwrites the CSV with a shorter format that dropped the tip-off columns. Rewrote the CSV: 1,515 games, 13 columns.
 - **Lineup source fixed**: checked live — ESPN publishes no starters before tip-off (its pre-game data has no player list), so the ESPN step in `predict` could never work; removed it. NBA.com works: Expected lineups by ~1 PM ET, Confirmed ~30 min before tip; verified the status string is exactly "Confirmed". Measured our fallback projection against real starters (86% of starters right; beats "last game's five" at 80%). Game dates for today's games now use the ET date (ESPN's UTC date put evening games on tomorrow).
 - **New screen output** (`display.py`, `rich`): one coloured box per game with the top 5 picks (bars + fair odds), tip-off chances and jumpers, both starting fives (injuries coloured), notes; data-update chatter hidden behind a spinner; warnings in one box; a "How to read this" legend that tells you to re-run or use `--watch` when a lineup is only projected. Removed the fake 45% heuristic used when the model file was missing (now shows a warning instead). 4 new tests; 56 pass. Ran on today's 5 real games.
+- **Committed** all of today's work to `main` as `8bd440a`.
 - **Next**: fix the auto-retrain training window (learn from 2026-27 games), then try the two-stage model.
 
 ### 2026-11-09 (Phase 1 complete — tip_win_prob integrated, forward test 15.1% on 139 games)
