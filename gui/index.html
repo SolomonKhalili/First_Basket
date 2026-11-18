@@ -474,6 +474,27 @@ body.viewer #runAll, body.viewer #runSelected, body.viewer #clearSel, body.viewe
 .acct b { color: #fff; }
 .acct .role { font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: .06em; color: #ff8a2b; }
 .acct a { color: rgba(255,255,255,.7); text-decoration: underline; }
+
+/* ── Data view: player search ── */
+.dplayer { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; margin: 0 0 10px; padding: 10px 12px;
+  background: var(--surface); border: 1px solid var(--line); border-radius: 14px; }
+.dplayer .dp-label { font-weight: 700; font-size: 14px; }
+.dplayer input { flex: 1 1 200px; min-width: 0; font: inherit; font-size: 14px; color: var(--text); background: var(--surface-2);
+  border: 1px solid var(--line); border-radius: 10px; padding: 8px 11px; }
+.dplayer select { font: inherit; font-size: 14px; color: var(--text); background: var(--surface-2); border: 1px solid var(--line);
+  border-radius: 10px; padding: 8px 10px; }
+.dplayer input:focus, .dplayer select:focus { outline: 2px solid color-mix(in srgb, var(--accent) 45%, transparent); border-color: var(--accent); }
+.dplayer .dp-as { color: var(--muted); font-size: 13px; }
+.dpsum { display: flex; flex-wrap: wrap; align-items: stretch; gap: 8px; margin: 0 0 12px; }
+.dpsum .who { font-family: var(--display); font-size: 22px; font-weight: 800; text-transform: uppercase; align-self: center;
+  margin-right: 6px; }
+.dpsum button { text-align: left; background: var(--surface); border: 1px solid var(--line); border-radius: 12px;
+  padding: 8px 12px; min-width: 120px; transition: border-color .15s, transform .12s; }
+.dpsum button:hover { border-color: var(--accent); transform: translateY(-1px); }
+.dpsum button.on { border-color: var(--accent); background: var(--accent-soft); }
+.dpsum b { display: block; font-size: 18px; font-weight: 800; }
+.dpsum small { color: var(--muted); font-size: 12px; }
+.dpsum .ok { color: var(--good); font-weight: 700; }
 </style>
 </head>
 <body>
@@ -512,6 +533,16 @@ body.viewer #runAll, body.viewer #runSelected, body.viewer #clearSel, body.viewe
       <span class="dcount" id="dcount"></span>
       <button class="btn secondary" id="ddown" title="Save what you see as a spreadsheet file (.csv)">⬇ Download</button>
     </div>
+
+    <div class="dplayer" id="dplayer" hidden>
+      <span class="dp-label">🔎 Player</span>
+      <input id="dpname" type="search" list="dpnames" placeholder="Type a player's name…" aria-label="Player name" autocomplete="off">
+      <datalist id="dpnames"></datalist>
+      <span class="dp-as">as</span>
+      <select id="dprole" aria-label="What to look for"></select>
+      <button class="link" id="dpclear" hidden>Clear</button>
+    </div>
+    <div class="dpsum" id="dpsum" hidden></div>
     <div id="dbody"><div class="dempty">Loading…</div></div>
   </section>
 
@@ -1224,6 +1255,7 @@ function filteredRows() {
   const teamRe = team ? new RegExp(`\\b${team}\\b`) : null;
   let rows = d.rows.filter((r) => {
     if (season && seasonOf(r[0]) !== season) return false;           // the first column is the date
+    if (!playerFilter(d, r)) return false;
     if (q && !r.some((v) => String(v ?? "").toLowerCase().includes(q))) return false;
     if (teamRe && !r.some((v) => teamRe.test(String(v ?? "")))) return false;
     if (result && ri >= 0) {
@@ -1254,6 +1286,8 @@ function renderData() {
   $("dseason").hidden = seasons.length < 2;
   const keep = $("dteam").value;
   $("dteam").innerHTML = `<option value="">All teams</option>` + [...seen].sort().map((t) => `<option ${t === keep ? "selected" : ""}>${t}</option>`).join("");
+  setupPlayerSearch(d);
+  renderPlayerSummary(d);
   const rows = filteredRows();
   $("dcount").textContent = `Showing ${rows.length.toLocaleString()} of ${d.rows.length.toLocaleString()}`;
   const head = d.columns.map((c, i) => `<th data-col="${i}" title="Sort by this column">${esc(c.label)}${
@@ -1282,7 +1316,7 @@ function downloadData() {
 
 $("dataBtn").addEventListener("click", () => openData(dstate.tab));
 $("dataBack").addEventListener("click", closeData);
-$("dtabs").addEventListener("click", (e) => { const b = e.target.closest("[data-tab]"); if (b) { $("dq").value = ""; $("dteam").value = ""; $("dseason").value = ""; openData(b.dataset.tab); } });
+$("dtabs").addEventListener("click", (e) => { const b = e.target.closest("[data-tab]"); if (b) { $("dq").value = ""; $("dteam").value = ""; $("dseason").value = ""; $("dpname").value = ""; $("dprole").value = ""; openData(b.dataset.tab); } });
 $("dbody").addEventListener("click", (e) => {
   const th = e.target.closest("th[data-col]");
   if (!th) return;
@@ -1293,6 +1327,93 @@ $("dbody").addEventListener("click", (e) => {
 });
 let dqTimer = null;
 $("dq").addEventListener("input", () => { clearTimeout(dqTimer); dqTimer = setTimeout(renderData, 120); });
+
+/* ── Player search: a name + what to look for (role), with a summary card ── */
+const DROLES = {
+  picks: [["", "Anywhere"], ["pick_1", "Our #1 pick"], ["pick_2", "Our #2 pick"], ["actual_first_scorer", "Scored first"],
+          ["predicted_tip_winner", "Predicted tip winner"], ["actual_tip_winner", "Actual tip winner"]],
+  games: [["", "Anywhere"], ["first_basket_scorer", "Scored first"], ["tip_winner_player_name", "Won the tip"],
+          ["tip_loser_player_name", "Lost the tip"]],
+};
+// "Jarrett Allen (CLE)" -> "jarrett allen"; accents and case ignored
+const pnorm = (v) => String(v ?? "").replace(/\s*\([A-Z]{2,4}\)\s*$/, "").normalize("NFD")
+  .replace(/[̀-ͯ]/g, "").toLowerCase().replace(/\s+/g, " ").trim();
+const pclean = (v) => String(v ?? "").replace(/\s*\([A-Z]{2,4}\)\s*$/, "").trim();
+const colIdx = (d, key) => d.columns.findIndex((c) => c.key === key);
+
+function playerRoles() { return DROLES[dstate.tab] || null; }
+function playerQuery() { return pnorm($("dpname").value); }
+
+/* rows that match the player in the chosen role (or in any role column for "Anywhere") */
+function playerFilter(d, r) {
+  const q = playerQuery(), roles = playerRoles();
+  if (!q || !roles) return true;
+  const role = $("dprole").value;
+  const cols = role ? [colIdx(d, role)] : roles.slice(1).map(([k]) => colIdx(d, k));
+  return cols.some((i) => i >= 0 && pnorm(r[i]).includes(q));
+}
+
+function setupPlayerSearch(d) {
+  const roles = playerRoles();
+  $("dplayer").hidden = !roles;
+  if (!roles) { $("dpsum").hidden = true; return; }
+  const keepRole = $("dprole").value;
+  $("dprole").innerHTML = roles.map(([k, l]) => `<option value="${k}" ${k === keepRole ? "selected" : ""}>${l}</option>`).join("");
+  const names = new Set();                                   // suggestions: every player in the role columns
+  for (const [k] of roles.slice(1)) { const i = colIdx(d, k); if (i >= 0) for (const r of d.rows) if (r[i]) names.add(pclean(r[i])); }
+  $("dpnames").innerHTML = [...names].sort().map((n) => `<option value="${esc(n)}"></option>`).join("");
+  $("dpclear").hidden = !$("dpname").value;
+}
+
+/* the summary card: how often this player shows up in each role (this season / filters applied) */
+function renderPlayerSummary(d) {
+  const q = playerQuery(), roles = playerRoles();
+  if (!q || !roles) { $("dpsum").hidden = true; return; }
+  const season = $("dseason").value;
+  const rows = d.rows.filter((r) => !season || seasonOf(r[0]) === season);
+  const m = (r, key) => { const i = colIdx(d, key); return i >= 0 && pnorm(r[i]).includes(q); };
+  const v = (r, key) => r[colIdx(d, key)];
+  let shown = null;                                           // the player's name as written in the data
+  const find = (key) => { for (const r of rows) if (m(r, key)) return pclean(v(r, key)); return null; };
+  for (const [k] of roles.slice(1)) shown = shown || find(k);
+  const cards = [];
+  const card = (role, big, label, sub = "") =>
+    cards.push(`<button data-role="${role}" class="${$("dprole").value === role ? "on" : ""}"><b class="num">${big}</b><small>${label}</small>${sub ? `<br><small>${sub}</small>` : ""}</button>`);
+  if (dstate.tab === "picks") {
+    const p1 = rows.filter((r) => m(r, "pick_1")), p1done = p1.filter((r) => ["YES", "NO"].includes(v(r, "pick_1_right")));
+    const p1right = p1done.filter((r) => v(r, "pick_1_right") === "YES").length;
+    const p2 = rows.filter((r) => m(r, "pick_2")), p2scored = p2.filter((r) => m(r, "actual_first_scorer")).length;
+    const sf = rows.filter((r) => m(r, "actual_first_scorer")).length;
+    const pt = rows.filter((r) => m(r, "predicted_tip_winner")), ptdone = pt.filter((r) => ["YES", "NO"].includes(v(r, "tip_right")));
+    const ptright = ptdone.filter((r) => v(r, "tip_right") === "YES").length;
+    const at = rows.filter((r) => m(r, "actual_tip_winner")).length;
+    card("pick_1", p1.length, "times our #1 pick", p1done.length ? `<span class="ok">${p1right} right</span> of ${p1done.length} played` : "");
+    card("pick_2", p2.length, "times our #2 pick", p2.length ? `${p2scored} of those he scored first` : "");
+    card("actual_first_scorer", sf, "times scored first");
+    card("predicted_tip_winner", pt.length, "times predicted to win the tip", ptdone.length ? `<span class="ok">${ptright} right</span> of ${ptdone.length}` : "");
+    card("actual_tip_winner", at, "times actually won the tip");
+  } else {
+    const sf = rows.filter((r) => m(r, "first_basket_scorer")).length;
+    const won = rows.filter((r) => m(r, "tip_winner_player_name")).length, lost = rows.filter((r) => m(r, "tip_loser_player_name")).length;
+    card("first_basket_scorer", sf, "times scored first");
+    card("tip_winner_player_name", won, "tips won", won + lost ? `${Math.round((won / (won + lost)) * 100)}% of ${won + lost} jump balls` : "");
+    card("tip_loser_player_name", lost, "tips lost");
+  }
+  $("dpsum").innerHTML = `<span class="who">${esc(shown || $("dpname").value)}</span>` + cards.join("");
+  $("dpsum").hidden = false;
+}
+
+let dpTimer = null;
+$("dpname").addEventListener("input", () => { clearTimeout(dpTimer); dpTimer = setTimeout(renderData, 150); });
+$("dprole").addEventListener("change", renderData);
+$("dpclear").addEventListener("click", () => { $("dpname").value = ""; $("dprole").value = ""; renderData(); });
+$("dpsum").addEventListener("click", (e) => {                 // click a number: show just those games
+  const b = e.target.closest("[data-role]");
+  if (!b) return;
+  $("dprole").value = $("dprole").value === b.dataset.role ? "" : b.dataset.role;
+  renderData();
+});
+
 $("dteam").addEventListener("change", renderData);
 $("dseason").addEventListener("change", renderData);
 $("dresult").addEventListener("change", renderData);
