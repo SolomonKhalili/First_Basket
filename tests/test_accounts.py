@@ -39,12 +39,15 @@ def test_verify_and_roles(users):
 
 
 def test_add_user_rules(users):
+    # no length rules (owner's choice): any username without spaces, any non-empty password
+    assert accounts.add_user("x", "a") == "x"
+    assert accounts.add_user("a-really-long-username-with-no-limit-at-all", "b") == "a-really-long-username-with-no-limit-at-all"
     with pytest.raises(ValueError):
-        accounts.add_user("x", "long-enough-1")                           # name too short
+        accounts.add_user("two words", "pw")                              # spaces not allowed
     with pytest.raises(ValueError):
-        accounts.add_user("sam", "short")                                 # password too short
+        accounts.add_user("sam", "")                                      # empty password
     with pytest.raises(ValueError):
-        accounts.add_user("sam", "long-enough-1", role="admin")           # unknown role
+        accounts.add_user("sam", "pw", role="admin")                      # unknown role
 
 
 def test_lockout_after_five_wrong_tries(users):

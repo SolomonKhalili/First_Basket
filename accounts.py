@@ -28,8 +28,8 @@ ROLES = ("owner", "viewer")
 ITERATIONS = 240_000
 SESSION_SECONDS = 7 * 24 * 3600          # stay logged in for a week
 MAX_FAILS, LOCK_SECONDS = 5, 15 * 60     # 5 wrong passwords -> locked for 15 minutes
-MIN_PASSWORD = 8
-NAME_RE = re.compile(r"^[a-z0-9_.-]{2,32}$")
+MIN_PASSWORD = 1                         # no length rules (owner's choice); longer is safer
+NAME_RE = re.compile(r"^\S+$")           # any username without spaces, any length
 
 _lock = threading.Lock()
 SESSIONS: dict = {}                      # token -> {"user", "role", "expires"}
@@ -68,11 +68,11 @@ def enabled(path: Path | None = None) -> bool:
 def add_user(name: str, password: str, role: str = "viewer", path: Path | None = None) -> str:
     name = (name or "").strip().lower()
     if not NAME_RE.match(name):
-        raise ValueError("username: 2–32 characters, letters, numbers, . _ - only")
+        raise ValueError("username: no spaces")
     if role not in ROLES:
         raise ValueError(f"role must be one of {', '.join(ROLES)}")
     if len(password or "") < MIN_PASSWORD:
-        raise ValueError(f"password: at least {MIN_PASSWORD} characters")
+        raise ValueError("password: can't be empty")
     users = load_users(path)
     salt = secrets.token_hex(16)
     users[name] = {"role": role, "salt": salt, "hash": _hash(password, salt), "created": time.strftime("%Y-%m-%d")}

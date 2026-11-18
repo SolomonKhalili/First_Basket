@@ -8,7 +8,7 @@ Website accounts for the free, password-protected site (see publish.py).
 
 Each account stores only a "wrapped" copy of the site's data key, locked with that person's password
 (PBKDF2-SHA256, 600,000 rounds + AES-256-GCM). The password itself is never stored. Because the locked copies
-are part of the public website, use long passwords (at least 8 characters; longer is safer).
+are part of the public website, longer passwords are safer (no length rules are enforced).
 After add/remove the change is uploaded to your private GitHub repo and the website is rebuilt automatically.
 """
 import base64
@@ -23,8 +23,8 @@ import time
 import publish
 
 ITERATIONS = 600_000
-MIN_PASSWORD = 8                      # owner's choice (2026-11-18); longer is safer
-NAME_RE = re.compile(r"^[a-z0-9_.-]{2,32}$")
+MIN_PASSWORD = 1                      # no length rules (owner's choice, 2026-11-18); longer is safer
+NAME_RE = re.compile(r"^\S+$")         # any username without spaces, any length
 REPO = "SolomonKhalili/First_Basket"
 
 
@@ -102,12 +102,12 @@ def main(argv) -> int:
         upload_and_rebuild(f"Website: remove account {name}")
         return 0
     if not NAME_RE.match(name):
-        print("Username: 2–32 characters — letters, numbers, . _ - only.")
+        print("Usernames can't contain spaces.")
         return 1
     key = publish.data_key()
-    pw = getpass.getpass(f"Password for {name} (at least {MIN_PASSWORD} characters; it won't show as you type): ")
+    pw = getpass.getpass(f"Password for {name} (it won't show as you type): ")
     if len(pw) < MIN_PASSWORD:
-        print(f"Too short — use at least {MIN_PASSWORD} characters. Nothing saved.")
+        print("The password can't be empty. Nothing saved.")
         return 1
     if pw != getpass.getpass("Type it again: "):
         print("The two passwords don't match. Nothing saved.")

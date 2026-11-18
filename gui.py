@@ -479,7 +479,7 @@ def manage_accounts(argv) -> int:
     role = "owner" if "--owner" in argv else "viewer"
     if not accounts.enabled() and role != "owner":
         print("Tip: make your own account first with --owner, or you'll be locked out of 'Get picks'.")
-    pw = getpass.getpass(f"Password for {name} (at least {accounts.MIN_PASSWORD} characters): ")
+    pw = getpass.getpass(f"Password for {name}: ")
     if pw != getpass.getpass("Type it again: "):
         print("The two passwords don't match. Nothing saved.")
         return 1
