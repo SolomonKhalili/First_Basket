@@ -93,20 +93,15 @@ def game_card(c: dict):
         top2.append(("     " if i > 1 else "") + f"{i}. {name} ({team}) {p:.1%}", style="bold" if i == 1 else "")
     headline.add_row(Text("🎯 Top 2", style="bold"), top2)
 
-    (t1, p1), (t2, _) = sorted(c["tip"].items(), key=lambda kv: -kv[1])
-    j = c.get("jumpers") or {}
-    tip = Text()
-    tip.append(f"{j[t1]} ({t1}) to win the tip" if j.get(t1) else f"{t1} to win the tip", style="bold")
-    tip.append(f" — {p1:.0%}")
-    if not j.get(t1):
-        tip.append("  (jumper not known yet)", style="dim")
-    tip.append(f"  vs {j[t2]} ({t2})" if j.get(t2) else f"  vs {t2} jumper not known yet", style="dim")
-    headline.add_row(Text("🏀 Tip-off", style="bold"), tip)
+    headline.add_row(Text("🏀 Tip-off", style="bold"), tip_line(c))
     if c.get("first_team"):
-        (f1, q1), (f2, q2) = sorted(c["first_team"].items(), key=lambda kv: -kv[1])
+        ft = c["first_team"]                       # away first, like the tip-off line; favourite in bold
+        fav = c["away"] if ft[c["away"]] > ft[c["home"]] else c["home"]
         first = Text()
-        first.append(f"{f1} {q1:.0%}", style="bold")
-        first.append(f"  vs {f2} {q2:.0%}", style="dim")
+        for i, team in enumerate((c["away"], c["home"])):
+            if i:
+                first.append("  vs  ", style="dim")
+            first.append(f"{team} {ft[team]:.0%}", style="bold" if team == fav else "dim")
         headline.add_row(Text("📈 Scores first", style="bold"), first)
 
     starters = Table.grid(padding=(0, 1))
@@ -127,6 +122,25 @@ def game_card(c: dict):
         subtitle = Text.assemble(("🔄 UPDATED  ", "bold magenta"), subtitle)
     console.print(Panel(Group(*body), title=title, title_align="left", subtitle=subtitle,
                         subtitle_align="left", border_style=colour, padding=(0, 1), width=88))
+
+
+def tip_line(c: dict) -> Text:
+    """Who jumps for each team, head to head, away first (same order as the matchup):
+    'Myles Turner (MIL) 15%  vs  Bam Adebayo (MIA) 85%' — the favourite in bold with a green chance."""
+    j = c.get("jumpers") or {}
+    away, home = c["away"], c["home"]
+    fav = away if c["tip"][away] > c["tip"][home] else home
+    line = Text()
+    for i, team in enumerate((away, home)):
+        if i:
+            line.append("  vs  ", style="dim")
+        is_fav = team == fav
+        if j.get(team):
+            line.append(f"{j[team]} ({team})", style="bold" if is_fav else "")
+        else:
+            line.append(f"{team} jumper not known yet", style="dim italic")
+        line.append(f" {c['tip'][team]:.0%}", style="bold green" if is_fav else "dim")
+    return line
 
 
 def _payout(american: int) -> float:
@@ -243,8 +257,9 @@ def legend(any_projected: bool):
                          "(the model thinks the bet has value); grey = it pays less. Skip it with --no-odds.")
     t.add_row("Top 2", "The two players most likely to score the game's first basket.")
     t.add_row("Scores first", "Each team's chance to score the game's first points (from the tip-off and home court).")
-    t.add_row("Tip-off", "Who we expect to win the opening jump ball (the player who usually jumps for each "
-                         "team, from their past tips). The team that wins it scores first about 66% of the time.")
+    t.add_row("Tip-off", "Who jumps for each team (away first) and each one's chance to win the opening jump ball; "
+                         "the favourite is in bold. The jumper is the player who usually jumps for that team, "
+                         "from past tips. The team that wins the tip scores first about 66% of the time.")
     t.add_row("Lineups", "✅ official   🟡 expected, can change   🟠 our guess")
     if any_projected:
         tip = Text("NBA.com usually posts lineups in the early afternoon (ET) and confirms them about "

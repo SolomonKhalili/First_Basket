@@ -34,8 +34,7 @@ def test_card_headline_shows_top_two_and_the_tip_winner_by_name():
     out = render(ui.game_card, card())
     head = out[:out.index("Fair odds")]                                 # the headline sits above the table
     assert "Top 2" in head and "1. Jalen Brunson (NY) 16.2%" in head and "2. RJ Barrett (TOR) 11.9%" in head
-    assert "Karl-Anthony Towns (NY) to win the tip — 55%" in head
-    assert "vs TOR jumper not known yet" in head                       # TOR's jumper unknown in this card
+    assert "Karl-Anthony Towns (NY) 55%  vs  TOR jumper not known yet 45%" in head   # away first; TOR unknown
 
 
 def test_tip_headline_names_both_jumpers_when_known():
@@ -43,7 +42,16 @@ def test_tip_headline_names_both_jumpers_when_known():
     c["jumpers"] = {"NY": "Karl-Anthony Towns", "TOR": "Jakob Poeltl"}
     c["tip"] = {"TOR": 0.62, "NY": 0.38}
     out = render(ui.game_card, c)
-    assert "Jakob Poeltl (TOR) to win the tip — 62%" in out and "vs Karl-Anthony Towns (NY)" in out
+    assert "Karl-Anthony Towns (NY) 38%  vs  Jakob Poeltl (TOR) 62%" in out
+
+
+def test_tip_line_bolds_the_favourite():
+    c = card()
+    c["jumpers"] = {"NY": "Karl-Anthony Towns", "TOR": "Jakob Poeltl"}
+    c["tip"] = {"TOR": 0.62, "NY": 0.38}
+    line = ui.tip_line(c)
+    bold = [line.plain[s.start:s.end] for s in line.spans if "bold" in str(s.style)]
+    assert "Jakob Poeltl (TOR)" in bold and " 62%" in bold and "Karl-Anthony Towns (NY)" not in bold
 
 
 def test_every_lineup_label_renders():
@@ -94,7 +102,9 @@ def test_card_shows_which_team_is_expected_to_score_first():
     c["first_team"] = {"NY": 0.53, "TOR": 0.47}
     out = render(ui.game_card, c)
     head = out[:out.index("Fair odds")]
-    assert "Scores first" in head and "NY 53%" in head and "TOR 47%" in head
+    assert "Scores first" in head and "NY 53%  vs  TOR 47%" in head
+    c["first_team"] = {"NY": 0.40, "TOR": 0.60}                        # home favoured: still away first
+    assert "NY 40%  vs  TOR 60%" in render(ui.game_card, c)
     assert "Scores first" not in render(ui.game_card, card())          # older cards without it still render
 
 
