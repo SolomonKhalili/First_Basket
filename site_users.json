@@ -1,4 +1,11 @@
 {
+  "bhass": {
+    "created": "2026-11-18",
+    "iter": 600000,
+    "iv": "7b88PHfrKkodlP65",
+    "salt": "Qg/RUD6D/yvcTERK207ZfA==",
+    "wk": "XDwpWKQn5FOSs+SapcSrbEXYFePE3y6lBgw/nPmsEgK4cQSB5+Ae0EhZs6D3ZE4L"
+  },
   "solomon": {
     "created": "2026-11-18",
     "iter": 600000,
