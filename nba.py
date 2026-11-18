@@ -121,6 +121,11 @@ def get_todays_games() -> list[dict]:
             'home_team': str(r['home_abbreviation']),
             'away_team': str(r['away_abbreviation']),
             'status': status,
+            # for the GUI's countdowns and live scoreboard
+            'start_utc': str(r['date']),
+            'home_score': int(r.get('home_score') or 0),
+            'away_score': int(r.get('away_score') or 0),
+            'detail': str(r.get('status_type_short_detail') or ''),     # 'Q2 5:31', 'Halftime', 'Final'
         })
     return games
 

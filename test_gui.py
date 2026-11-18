@@ -23,8 +23,7 @@ def test_collector_keeps_what_predict_would_print():
     r = c.result
     assert steps == ["Checking injuries and lineups"]
     assert r["date"] == "Wednesday, November 18, 2026" and r["summary"] == ["Data up to date"]
-    assert r["schedule"][0] == {"game_id": "1", "start": "7:00 PM ET", "home_team": "MIA", "away_team": "MIL",
-                                "status": 1}
+    assert set(r["schedule"][0]) == set(gui.GAME_KEYS) and r["schedule"][0]["home_team"] == "MIA"
     assert r["cards"][0]["matchup"] == "MIL @ MIA"
     assert r["skipped"] == [{"matchup": "DET @ NO", "reason": "lineup not confirmed yet"}]
     assert r["notes"] == ["FanDuel odds unavailable"]
@@ -76,3 +75,40 @@ def test_server_serves_page_and_status():
             assert e.code == 404
     finally:
         server.shutdown()
+
+
+def test_result_of_first_basket_vs_our_pick():
+    pick = {"id": "1", "name": "Bam Adebayo", "top3": ["Bam Adebayo", "Giannis Antetokounmpo", "Tyler Herro"]}
+    assert gui.result_of({"id": "1", "name": "Bam Adebayo"}, pick) == "hit"
+    assert gui.result_of({"id": "9", "name": "Giannis Antetokounmpo"}, pick) == "top3"
+    assert gui.result_of({"id": "8", "name": "Kyle Kuzma"}, pick) == "miss"
+    assert gui.result_of(None, pick) is None and gui.result_of({"id": "1", "name": "X"}, None) is None
+
+
+def test_live_board_marks_results(monkeypatch):
+    import sqlite3
+
+    import nba
+    import picks
+    con = sqlite3.connect(":memory:")
+    picks.log_pick(con, {"game_id": "g1", "game_date": "20261118", "matchup": "MIL @ MIA", "lineup_type": "CONFIRMED",
+                         "lineup_sig": "x", "model_id": "m",
+                         "players": [{"id": "1", "name": "Bam Adebayo", "team": "MIA", "prob": 0.2},
+                                     {"id": "2", "name": "Tyler Herro", "team": "MIL", "prob": 0.1}]})
+    games = [{"game_id": "g1", "start": "7:00 PM ET", "start_utc": "2026-11-19T00:00Z", "home_team": "MIA",
+              "away_team": "MIL", "status": 2, "home_score": 2, "away_score": 0, "detail": "Q1 11:30"},
+             {"game_id": "g2", "start": "9:00 PM ET", "start_utc": "2026-11-19T02:00Z", "home_team": "DEN",
+              "away_team": "BOS", "status": 1, "home_score": 0, "away_score": 0, "detail": ""}]
+    calls = []
+    monkeypatch.setattr(nba, "get_todays_games", lambda: games)
+    monkeypatch.setattr(nba, "db", lambda: con)
+    monkeypatch.setattr(nba, "get_pbp", lambda gid: calls.append(gid) or [
+        {"scoringPlay": True, "period": 1, "personId": "1", "playerName": "Bam Adebayo", "teamTricode": "MIA"}])
+    b = gui.LiveBoard()
+    snap = b.snapshot()
+    live, upcoming = snap["games"]
+    assert live["first_basket"]["name"] == "Bam Adebayo" and live["result"] == "hit"
+    assert live["our_pick"]["name"] == "Bam Adebayo"
+    assert upcoming["first_basket"] is None and upcoming["result"] is None   # pre-game: no play-by-play call
+    b.refresh()
+    assert calls == ["g1"]                     # first basket found once, then remembered
