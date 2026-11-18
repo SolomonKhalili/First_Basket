@@ -1,1 +1,9 @@
-{}
+{
+  "solomon": {
+    "created": "2026-11-18",
+    "iter": 600000,
+    "iv": "JtSgmfhmYr0YsD65",
+    "salt": "phUEM0M02PVO1xFr1yBxKw==",
+    "wk": "/d8ZpQaJ313LM5abEsvQsyxN2ZdgP8IkNyBNph/Ka8ANHCGnYYrIRImj3dlCTUZf"
+  }
+}
