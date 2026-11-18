@@ -733,10 +733,13 @@ def filter_games(games: list, teams: set) -> list:
     return [g for g in games if not teams or g['home_team'] in teams or g['away_team'] in teams]
 
 
-def predict_today(first_pass: bool = True, teams: set = frozenset()) -> int:
+def predict_today(first_pass: bool = True, teams: set = frozenset(), ui=None) -> int:
     """Predict the first basket for today's games that haven't started (only `teams`' games if given).
-    Returns the number of games still waiting on a confirmed lineup (used by --watch)."""
-    import display as ui
+    Returns the number of games still waiting on a confirmed lineup (used by --watch).
+    `ui` receives the output (header, schedule, game_card, skipped, notes, legend, console.status):
+    the terminal display by default; gui.py passes a collector instead."""
+    if ui is None:
+        import display as ui
     confirmed_only = '--confirmed-only' in sys.argv
     warn: list = []
 
@@ -782,7 +785,7 @@ def predict_today(first_pass: bool = True, teams: set = frozenset()) -> int:
         groups = st.player_groups(con, date.today().strftime("%Y%m%d"), roster_pos)
     pending, any_projected = 0, False
     early_index = bf.build_early_shot_index(con)        # each player's share of his team's first 5 shots
-    fd_games = _fanduel_prices(pre_games, warn)          # FanDuel "First Basket" prices (None if unreachable)
+    fd_games = _fanduel_prices(pre_games, warn, ui)          # FanDuel "First Basket" prices (None if unreachable)
 
     for g in pre_games:
         game_id, game_date = g['game_id'], g['game_date']
@@ -927,13 +930,14 @@ def predict_today(first_pass: bool = True, teams: set = frozenset()) -> int:
     return pending
 
 
-def _fanduel_prices(games: list, warn: list):
+def _fanduel_prices(games: list, warn: list, ui=None):
     """FanDuel First Basket prices for these games, or None (with a note) if FanDuel can't be reached.
     Skipped with --no-odds."""
     if '--no-odds' in sys.argv or not games:
         return None
     import fanduel_odds as fd
-    import display as ui
+    if ui is None:
+        import display as ui
     try:
         with ui.console.status("Getting FanDuel first-basket odds…"):
             return fd.fetch_first_basket_odds({g[k] for g in games for k in ('home_team', 'away_team')})

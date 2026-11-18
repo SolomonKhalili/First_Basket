@@ -40,6 +40,7 @@ python3 train_pregame.py            # train the pre-game model (writes pregame_m
 python3 nba.py report               # today's matchups, injuries, starters
 python3 nba.py                      # today's picks (same as: python3 nba.py predict)
 python3 nba.py knicks               # just one team's game (team name or code, any case)
+python3 gui.py                      # the same picks in your web browser (cards, colours, FanDuel odds)
 ```
 
 If you already have the database and `pregame_model.json`, you only need the last two commands.
@@ -62,6 +63,8 @@ Run the tests any time: `python3 -m pytest test_starters.py test_tip_model.py te
 | `python3 nba.py predict` | Brings everything up to date first (new games, lineups, CSV, player stats, training data, model), then predicts today's games not yet started |
 | `python3 nba.py predict --watch [--interval 300]` | Recheck every N seconds; print each game when its lineup first appears, changes, or is confirmed; stops when all games are confirmed or tipped |
 | `python3 nba.py predict --confirmed-only` | Skip any game without an official confirmed lineup |
+| `python3 gui.py` | Today's picks in your web browser at http://127.0.0.1:8765 — tap games to choose, press **Get picks**; also shows the track record. Same model, data update and pick log as `predict`. Ctrl-C in the terminal to stop |
+| `python3 nba.py predict --no-odds` | Predict without fetching FanDuel's First Basket prices |
 | `python3 nba.py eval` | Real track record: every logged pick on finished games, by lineup type and model version |
 | `python3 build_features.py [--incremental]` | Build training matrices (`--incremental` adds only new games) |
 | `python3 train_pregame.py [--incremental]` | Retrain the model and run the week-by-week test |
