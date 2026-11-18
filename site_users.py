@@ -8,7 +8,7 @@ Website accounts for the free, password-protected site (see publish.py).
 
 Each account stores only a "wrapped" copy of the site's data key, locked with that person's password
 (PBKDF2-SHA256, 600,000 rounds + AES-256-GCM). The password itself is never stored. Because the locked copies
-are part of the public website, use long passwords (at least 10 characters; a short phrase is best).
+are part of the public website, use long passwords (at least 8 characters; longer is safer).
 After add/remove the change is uploaded to your private GitHub repo and the website is rebuilt automatically.
 """
 import base64
@@ -23,7 +23,7 @@ import time
 import publish
 
 ITERATIONS = 600_000
-MIN_PASSWORD = 10
+MIN_PASSWORD = 8                      # owner's choice (2026-11-18); longer is safer
 NAME_RE = re.compile(r"^[a-z0-9_.-]{2,32}$")
 REPO = "SolomonKhalili/First_Basket"
 
