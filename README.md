@@ -65,7 +65,7 @@ Run the tests any time: `python3 -m pytest test_starters.py test_tip_model.py te
 | `python3 nba.py predict --confirmed-only` | Skip any game without an official confirmed lineup |
 | `python3 gui.py` | Today's picks in your web browser at http://127.0.0.1:8765 — tap games to choose, press **Get picks**; also shows the track record. Same model, data update and pick log as `predict`. Ctrl-C in the terminal to stop |
 | `python3 nba.py predict --no-odds` | Predict without fetching FanDuel's First Basket prices |
-| `python3 nba.py eval` | Real track record: every logged pick on finished games, by lineup type and model version |
+| `python3 nba.py eval` | Real track record: every logged pick on finished games, by lineup type and model version; plus **paper betting** — $1 on every +EV FanDuel price, settled after the games (nothing is really bet) |
 | `python3 build_features.py [--incremental]` | Build training matrices (`--incremental` adds only new games) |
 | `python3 train_pregame.py [--incremental]` | Retrain the model and run the week-by-week test |
 | `python3 tip_model.py` | Accuracy check of the tip-off model |

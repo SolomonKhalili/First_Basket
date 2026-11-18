@@ -176,8 +176,8 @@ button { font: inherit; cursor: pointer; border: 0; color: inherit; }
 
 table { width: 100%; border-collapse: collapse; margin-top: 12px; font-size: 14px; }
 th { text-align: left; font-size: 11px; text-transform: uppercase; letter-spacing: .05em; color: var(--muted);
-  font-weight: 650; padding: 6px 4px; border-bottom: 1px solid var(--line); }
-td { padding: 8px 4px; border-bottom: 1px solid var(--line); vertical-align: middle; }
+  font-weight: 650; padding: 6px 4px; border-bottom: 1px solid var(--line); white-space: nowrap; }
+td { padding: 8px 3px; border-bottom: 1px solid var(--line); vertical-align: middle; }
 tbody tr { transition: background .15s; }
 tbody tr:hover { background: var(--surface-2); }
 tr:last-child td { border-bottom: 0; }
@@ -186,16 +186,25 @@ th.r, td.r { text-align: right; }
 .rank { color: var(--muted); width: 18px; }
 .player { display: flex; align-items: center; gap: 8px; }
 .player small { color: var(--muted); }
-.bar { height: 6px; border-radius: 99px; background: var(--line); width: 70px; display: inline-block; vertical-align: middle;
+.bar { height: 6px; border-radius: 99px; background: var(--line); width: 44px; display: inline-block; vertical-align: middle;
   margin-right: 8px; overflow: hidden; }
 .bar i { display: block; height: 100%; background: var(--accent); border-radius: 99px;
   animation: grow 1s cubic-bezier(.2,.7,.2,1) both; animation-delay: calc(var(--i, 0) * 70ms + var(--r, 0) * 60ms + .2s); }
 .odds { font-weight: 650; }
-.fd { display: inline-block; min-width: 54px; text-align: center; border-radius: 8px; padding: 2px 8px; font-weight: 650;
+.fd { display: inline-block; min-width: 48px; text-align: center; border-radius: 8px; padding: 2px 8px; font-weight: 650;
   background: var(--surface-2); color: var(--muted); }
 .fd.value { background: var(--good-soft); color: var(--good); }
 .fd.none { background: transparent; }
 .small-note { color: var(--muted); font-size: 12.5px; margin-top: 8px; }
+.ev { font-weight: 650; color: var(--muted); font-size: 13px; }
+.ev.pos { color: var(--good); }
+.value-line { margin-top: 10px; padding: 9px 12px; border-radius: 11px; font-size: 13.5px; background: var(--surface-2);
+  color: var(--muted); }
+.value-line.pos { background: var(--good-soft); color: var(--text); }
+.value-line b.g { color: var(--good); }
+.paper { border-top: 1px solid var(--line); margin-top: 14px; padding-top: 12px; }
+.paper .big { font-size: 22px; font-weight: 800; }
+.paper .big.pos { color: var(--good); } .paper .big.neg { color: var(--bad); }
 @media (max-width: 520px) {
   .bar, .player small { display: none; }
   table { font-size: 13.5px; }
@@ -243,6 +252,59 @@ details[open] summary::before { content: "▾ "; }
   box-shadow: var(--shadow-up); padding: 12px 14px; font-size: 14px; animation: toastIn .35s ease both; }
 .toast.hit { border-left-color: var(--good); }
 .toast small { display: block; color: var(--muted); margin-top: 2px; }
+
+/* ── Learn EV tutorial ────────────────────── */
+.learn { border: 0; padding: 0; border-radius: 20px; width: min(640px, calc(100vw - 24px)); max-height: calc(100vh - 40px);
+  background: var(--surface); color: var(--text); box-shadow: 0 30px 80px rgba(0,0,0,.35); }
+.learn::backdrop { background: rgba(10,10,14,.55); backdrop-filter: blur(3px); }
+.learn[open] { animation: fadeUp .3s cubic-bezier(.2,.7,.2,1) both; display: flex; flex-direction: column; }
+.learn-head { display: flex; align-items: center; gap: 10px; padding: 16px 20px; border-bottom: 1px solid var(--line); }
+.learn-head h2 { margin: 0; font-size: 17px; }
+.learn-head .step-of { color: var(--muted); font-size: 13px; margin-left: auto; }
+.x { background: var(--surface-2); width: 32px; height: 32px; border-radius: 50%; font-size: 15px; color: var(--muted); }
+.learn-body { padding: 20px 22px 8px; overflow-y: auto; }
+.learn-body h3 { margin: 0 0 4px; font-size: 22px; letter-spacing: -.01em; }
+.learn-body .kicker { color: var(--accent); font-size: 12px; font-weight: 700; text-transform: uppercase; letter-spacing: .08em; }
+.learn-body p { margin: 10px 0; line-height: 1.55; }
+.learn-body .muted { color: var(--muted); }
+.learn-step { animation: fadeUp .35s ease both; }
+.callout { background: var(--surface-2); border-radius: 13px; padding: 14px 16px; margin: 14px 0; }
+.callout.good { background: var(--good-soft); }
+.callout.warn { background: var(--warn-soft); }
+.callout b.g { color: var(--good); } .callout b.r { color: var(--bad); } .callout b.o { color: var(--accent); }
+.bigline { font-size: 18px; font-weight: 700; line-height: 1.4; }
+.formula { font-size: 15px; line-height: 1.9; font-variant-numeric: tabular-nums; }
+.formula .eq { font-size: 20px; font-weight: 800; color: var(--good); }
+.ticket { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin: 14px 0; }
+.ticket div { background: var(--surface-2); border-radius: 12px; padding: 12px 14px; }
+.ticket small { display: block; color: var(--muted); font-size: 12px; text-transform: uppercase; letter-spacing: .05em; }
+.ticket b { font-size: 20px; }
+.ticket .win b { color: var(--good); } .ticket .lose b { color: var(--bad); }
+.dots100 { display: grid; grid-template-columns: repeat(20, 1fr); gap: 4px; margin: 12px 0 6px; max-width: 420px; }
+.dots100 i { aspect-ratio: 1; border-radius: 3px; background: var(--line); animation: pop .35s ease both; }
+.dots100 i.w { background: var(--good); }
+.legend-dots { display: flex; gap: 14px; font-size: 12.5px; color: var(--muted); }
+.legend-dots span::before { content: ""; display: inline-block; width: 10px; height: 10px; border-radius: 3px; margin-right: 6px;
+  vertical-align: -1px; background: var(--line); }
+.legend-dots span.w::before { background: var(--good); }
+.calc { display: grid; gap: 14px; margin: 12px 0; }
+.calc label { font-size: 13px; color: var(--muted); display: flex; justify-content: space-between; align-items: baseline; }
+.calc label b { color: var(--text); font-size: 16px; }
+.calc input[type=range] { width: 100%; accent-color: var(--accent); }
+.chips-row { display: flex; gap: 6px; flex-wrap: wrap; margin-top: 6px; }
+.chips-row button { background: var(--surface-2); border-radius: 8px; padding: 4px 10px; font-size: 13px; font-weight: 600; }
+.chips-row button.on { background: var(--accent); color: #fff; }
+.result { border-radius: 13px; padding: 14px 16px; }
+.result.good { background: var(--good-soft); } .result.bad { background: var(--bad-soft); } .result.even { background: var(--surface-2); }
+.result .ev-big { font-size: 28px; font-weight: 800; }
+.result.good .ev-big { color: var(--good); } .result.bad .ev-big { color: var(--bad); }
+.checklist { padding-left: 0; list-style: none; display: grid; gap: 10px; }
+.checklist li { display: grid; grid-template-columns: 26px 1fr; gap: 6px; line-height: 1.5; }
+.learn-foot { display: flex; align-items: center; gap: 10px; padding: 14px 20px; border-top: 1px solid var(--line); }
+.progress-dots { display: flex; gap: 6px; margin-right: auto; }
+.progress-dots i { width: 8px; height: 8px; border-radius: 50%; background: var(--line); transition: background .2s, transform .2s; }
+.progress-dots i.on { background: var(--accent); transform: scale(1.25); }
+.whats { background: none; color: var(--accent); font-size: 12px; font-weight: 600; padding: 0 0 0 6px; text-decoration: underline; }
 </style>
 </head>
 <body>
@@ -256,6 +318,7 @@ details[open] summary::before { content: "▾ "; }
       </div>
     </div>
     <div class="actions">
+      <button class="btn secondary" id="learnBtn" title="A 1-minute beginner's guide to EV (good deal or bad deal?)">🎓 What's EV?</button>
       <button class="btn secondary" id="runSelected" hidden>Selected games</button>
       <button class="btn" id="runAll">🏀 All games</button>
     </div>
@@ -288,6 +351,8 @@ details[open] summary::before { content: "▾ "; }
             <dt>Chance</dt><dd>The model's chance this player scores the game's first basket. A random pick would be 10%.</dd>
             <dt>Fair odds</dt><dd>The break-even price. A bet only makes sense if the sportsbook pays more (e.g. +700 when fair is +500).</dd>
             <dt>FanDuel</dt><dd>FanDuel's current First Basket price. <b style="color:var(--good)">Green</b> = it pays more than the fair odds, so the model sees value. Grey = it pays less.</dd>
+            <dt>Value (EV) <button class="whats" data-learn="0">1-minute guide</button></dt><dd>Is FanDuel's prize big enough for how often the model thinks he scores first? <b style="color:var(--good)">Green +10¢</b> = good deal: about 10¢ profit for every $1 over many bets. Grey = bad deal. A good deal still loses most nights.</dd>
+            <dt>Best deal</dt><dd>The best-value player in the game (out of all 10 starters, not just the top 5).</dd>
             <dt>Tip-off</dt><dd>Who jumps for each team (the player who usually takes the tip, or NBA.com's listed centre) and each one's chance to win the opening jump ball; the favourite is in bold. The team that wins the tip scores first about 66% of the time. "Not known yet" = no tip history for that team's starters.</dd>
             <dt>Scores first</dt><dd>Each team's chance to score the game's first points.</dd>
             <dt>Lineup</dt><dd><b style="color:var(--good)">Confirmed</b> = official NBA.com starters. <b style="color:var(--warn)">Expected</b> = NBA.com's expected starters, can change. <b style="color:var(--accent)">Projected</b> = our own guess; NBA.com usually posts lineups in the early afternoon (ET).</dd>
@@ -299,6 +364,20 @@ details[open] summary::before { content: "▾ "; }
   </div>
 </div>
 <div class="toasts" id="toasts"></div>
+<dialog class="learn" id="learn" aria-labelledby="learnTitle">
+  <div class="learn-head">
+    <span style="font-size:22px">🎓</span><h2 id="learnTitle">Good deal or bad deal?</h2>
+    <span class="step-of" id="learnStepOf"></span>
+    <button class="x" id="learnClose" aria-label="Close">✕</button>
+  </div>
+  <div class="learn-body" id="learnBody"></div>
+  <div class="learn-foot">
+    <div class="progress-dots" id="learnDots"></div>
+    <button class="btn secondary" id="learnBack">Back</button>
+    <button class="btn" id="learnNext">Next</button>
+  </div>
+</dialog>
+
 
 <script>
 const TEAM_COLOR = {
@@ -317,6 +396,9 @@ const dot = (team) => `<span class="dot" style="background:${color(team)}"></spa
 const pct = (p, d = 1) => `${(p * 100).toFixed(d)}%`;
 const american = (a) => (a > 0 ? `+${a}` : `${a}`);
 const payout = (a) => (a > 0 ? a / 100 : 100 / -a);    // profit per $1
+const VALUE_MIN = 0.005;                                // same rule as ev.py: at least +$0.01 per $1
+const money = (x) => (Math.abs(x) < 0.005 ? "$0.00" : `${x > 0 ? "+" : "−"}$${Math.abs(x).toFixed(2)}`);
+const cents = (x) => (Math.abs(x) < 0.005 ? "0¢" : `${x > 0 ? "+" : "−"}${Math.round(Math.abs(x) * 100)}¢`);   // EV per $1 in cents
 const calm = matchMedia("(prefers-reduced-motion: reduce)").matches;
 
 let board = [];                 // today's games with live scores and first-basket results
@@ -443,6 +525,17 @@ function card(c, i) {
     return `<td class="r"><span class="fd ${value ? "value" : ""}" title="${value ? "Pays more than fair odds" : "Pays less than fair odds"}">${american(price)}</span></td>`;
   };
 
+  const evs = c.ev || {};
+  const evCell = (name) => {
+    if (!fdOn) return "";
+    const v = evs[name];
+    return v === undefined ? `<td class="r"><span class="fd none">–</span></td>`
+      : `<td class="r num"><span class="ev ${v >= VALUE_MIN ? "pos" : ""}" title="${v >= VALUE_MIN ? "Good deal" : "Bad deal"}: about ${cents(v)} per $1 in the long run (EV)">${cents(v)}</span></td>`;
+  };
+  const bv = c.best_value;
+  const valueLine = !fdOn || !Object.keys(fd).length ? ""
+    : bv ? `<div class="value-line pos">💰 <b>Best deal:</b> ${esc(bv.name)} at <b class="g">${american(bv.american)}</b>, about <b class="g">${cents(bv.ev)}</b> for every $1 in the long run <button class="whats" data-learn="0">What's this?</button></div>`
+         : `<div class="value-line">💰 No good deals in this game: FanDuel's prizes are all too small. <button class="whats" data-learn="0">What's this?</button></div>`;
   // Tip-off head-to-head: away jumper on the left, home on the right (same sides as "Scores first")
   const j = c.jumpers || {};
   const pAway = c.tip[c.away], pHome = c.tip[c.home];
@@ -473,7 +566,7 @@ function card(c, i) {
       <td class="rank num">${r + 1}</td>
       <td><div class="player">${dot(team)}<span>${esc(name)}</span> <small>${esc(team)}</small></div></td>
       <td class="r num"><span class="bar"><i style="width:${(p / max) * 100}%;--r:${r}"></i></span>${pct(p)}</td>
-      <td class="r num odds">${american(fair)}</td>${fdCell(name, fair)}</tr>`).join("");
+      <td class="r num odds">${american(fair)}</td>${fdCell(name, fair)}${evCell(name)}</tr>`).join("");
   const starterLine = (team, players) => `<div class="line"><span class="tm">${dot(team)}${esc(team)}</span>
     ${players.map((p) => { const s = (c.injuries || {})[p.name];
       return `<span>${esc(p.name)}${s ? `<span class="inj ${esc(s)}">${esc(s)}</span>` : ""}</span>`; })
@@ -498,10 +591,11 @@ function card(c, i) {
         ${tipBlock}${first}
       </div>
       <table style="--i:${i}">
-        <thead><tr><th></th><th>Player</th><th class="r">Chance</th><th class="r">Fair</th>${fdOn ? '<th class="r">FanDuel</th>' : ""}</tr></thead>
+        <thead><tr><th></th><th>Player</th><th class="r">Chance</th><th class="r">Fair</th>${fdOn ? '<th class="r">FanDuel</th><th class="r" title="Good deal? Average profit per $1 in the long run">Value<button class="whats" data-learn="2" title="What is this?">?</button></th>' : ""}</tr></thead>
         <tbody>${rows}</tbody>
       </table>
       ${c.fanduel_note ? `<div class="small-note">${esc(c.fanduel_note)}</div>` : ""}
+      ${valueLine}
       <details><summary>Starters</summary><div class="starters">${starterLine(c.away, c.away_starters)}${starterLine(c.home, c.home_starters)}</div></details>
       ${(c.notes || []).length ? `<ul class="notes">${c.notes.map((n) => `<li>${esc(n)}</li>`).join("")}</ul>` : ""}
     </div>
@@ -561,6 +655,17 @@ function renderResult(res) {
   renderTicker(); updateCardsLive();
 }
 
+function paperBlock(p) {
+  if (!p) return "";
+  if (!p.bets) return `<div class="paper"><div class="section-title">💰 Paper betting (pretend money)</div>
+    <div class="hint" style="margin:0">We pretend to bet $1 on every good deal and keep score after the games, to see if the “good deals” really pay off. No results yet: check back after tonight's games.</div></div>`;
+  return `<div class="paper"><div class="section-title">💰 Paper betting (pretend $1 on every good deal)</div>
+    <div class="big num ${p.profit > 0 ? "pos" : "neg"}">${money(p.profit)}</div>
+    <div class="hint num" style="margin:2px 0 8px">${p.bets} pretend bets · ${p.wins} won · the model expected ${money(p.expected_profit)}</div>
+    <ul class="recent">${p.rows.map((b) => `<li><span class="${b.won ? "ok" : "no"}">${b.won ? "✓" : "✗"}</span>
+      <span>${esc(b.player)} ${american(b.american)} <small>${esc(b.matchup)} · ${b.won ? `won ${money(b.profit)}` : "lost $1"}</small></span></li>`).join("")}</ul></div>`;
+}
+
 async function renderRecord() {
   try {
     const r = await getJSON("/api/record");
@@ -574,7 +679,8 @@ async function renderRecord() {
       <div class="section-title" style="margin-top:4px">Recent games</div>
       <ul class="recent">${r.recent.map((g) => `<li>
         <span class="${g.hit ? "ok" : "no"}">${g.hit ? "✓" : "✗"}</span>
-        <span>${esc(g.pick)} <small>${esc(g.matchup)} · scored: ${esc(g.actual)}</small></span></li>`).join("")}</ul>`;
+        <span>${esc(g.pick)} <small>${esc(g.matchup)} · scored: ${esc(g.actual)}</small></span></li>`).join("")}</ul>
+      ${paperBlock(r.paper)}`;
     const ring = $("ring"), target = rate * 100;      // fill the ring
     if (calm) ring.style.setProperty("--p", target);
     else { const t0 = performance.now(); const step = (t) => { const k = Math.min(1, (t - t0) / 1000);
@@ -620,6 +726,123 @@ async function run(teams) {
     if (!polling) polling = setInterval(poll, 1000);
   }
 }
+
+
+/* ── Learn EV: a beginner walkthrough (plain words, one idea per step) ─────── */
+const EX = { chance: 0.20, odds: 450 };          // the round-number example used throughout the lesson
+const calc = { chance: 0.20, odds: 450 };        // the "try it yourself" step
+let learnStep = 0;
+
+function dots100(chance) {
+  const wins = Math.round(chance * 100);
+  return `<div class="dots100" aria-label="${wins} wins out of 100">${Array.from({ length: 100 }, (_, i) =>
+    `<i class="${i < wins ? "w" : ""}" style="animation-delay:${calm ? 0 : i * 6}ms"></i>`).join("")}</div>
+    <div class="legend-dots"><span class="w">${wins} he scores first</span><span>${100 - wins} someone else does</span></div>`;
+}
+
+function tonightExample() {
+  const vals = (lastResult?.cards || []).map((c) => c.best_value).filter(Boolean).sort((a, b) => b.ev - a.ev);
+  return vals[0];
+}
+
+const LEARN = [
+  () => {
+    const p = payout(EX.odds);
+    return `<div class="kicker">Step 1 · The prize</div><h3>“+450” is just the prize</h3>
+      <p class="bigline">Bet $1 on a player. If he scores the first basket, you win <span style="color:var(--good)">$${p.toFixed(2)}</span>.
+        If he doesn't, you lose your $1.</p>
+      <div class="ticket"><div class="win"><small>He scores first</small><b>+$${p.toFixed(2)}</b></div>
+        <div class="lose"><small>He doesn't</small><b>−$1.00</b></div></div>
+      <p class="muted">Bigger number = bigger prize. +900 wins $9, +1200 wins $12.</p>`;
+  },
+  () => `<div class="kicker">Step 2 · How often?</div><h3>Picture 100 games</h3>
+      <p class="bigline">Our model says this player scores first in about <span style="color:var(--good)">${Math.round(EX.chance * 100)} out of 100</span> games.</p>
+      ${dots100(EX.chance)}
+      <p class="muted">So most nights he <i>won't</i> score first. That's normal: there are 10 players on the floor.</p>`,
+  () => {
+    const p = payout(EX.odds), w = Math.round(EX.chance * 100), l = 100 - w, total = w * p - l;
+    return `<div class="kicker">Step 3 · Add it up</div><h3>Bet $1 in all 100 games</h3>
+      <div class="ticket"><div class="win"><small>${w} wins × $${p.toFixed(2)}</small><b>+$${(w * p).toFixed(0)}</b></div>
+        <div class="lose"><small>${l} losses × $1</small><b>−$${l}</b></div></div>
+      <div class="callout good"><div class="bigline">You end up <b class="g">${money(total)}</b> after 100 bets.</div>
+        That's about <b class="g">${cents(total / 100)}</b> for every $1 you bet.</div>
+      <p class="bigline">That number is the <b>EV</b>, short for <i>expected value</i>.</p>
+      <p><b style="color:var(--good)">Above zero = good deal</b>: the prize is big enough for how often he scores.<br>
+        <b style="color:var(--bad)">Below zero = bad deal</b>: the prize is too small.</p>`;
+  },
+  () => `<div class="kicker">Step 4 · Try it</div><h3>Is it a good deal?</h3>
+      <p class="muted">Slide the two numbers and watch the answer change.</p>
+      <div class="calc">
+        <div><label>How often he scores first (out of 100 games) <b class="num" id="cChanceV"></b></label>
+          <input type="range" id="cChance" min="2" max="40" step="1" value="${Math.round(calc.chance * 100)}"></div>
+        <div><label>The prize (odds) <b class="num" id="cOddsV"></b></label>
+          <input type="range" id="cOdds" min="150" max="2000" step="50" value="${calc.odds}">
+          <div class="chips-row">${[300, 450, 700, 900, 1200].map((o) => `<button data-o="${o}">+${o}</button>`).join("")}</div></div>
+        <div id="cResult"></div>
+      </div>`,
+  () => {
+    const t = tonightExample();
+    const ex = t ? `<div class="callout good">🏀 <b>Tonight's best deal:</b> ${esc(t.name)} at <b class="g">${american(t.american)}</b>
+        (about <b class="g">${cents(t.ev)}</b> for every $1). Even so, he <i>won't</i> score first about ${Math.round((1 - t.prob) * 10)} times out of 10.</div>` : "";
+    return `<div class="kicker">Step 5 · Remember</div><h3>Three things to remember</h3>
+      <ul class="checklist">
+        <li><span>🎲</span><span><b>A good deal still loses most nights.</b> It only pays off over lots and lots of bets.</span></li>
+        <li><span>🧠</span><span><b>It's only as good as our model's guess.</b> If the guess is wrong, the “good deal” isn't one. The <b>Paper betting</b> panel keeps score so we can find out.</span></li>
+        <li><span>🛑</span><span><b>This app never bets.</b> It only looks at prices. Only ever risk money you can afford to lose.</span></li>
+      </ul>
+      ${ex}
+      <p class="muted"><b>In the app:</b> look for <b style="color:var(--good)">green</b> in the <b>Value</b> column and the <b>💰 Best deal</b> line on each game.</p>`;
+  },
+];
+
+function renderCalc() {
+  const c = calc.chance, o = calc.odds, p = payout(o), ev = c * p - (1 - c);
+  const w = Math.round(c * 100);
+  $("cChanceV").textContent = `${w} of 100`;
+  $("cOddsV").textContent = `${american(o)} · wins $${p.toFixed(2)}`;
+  document.querySelectorAll(".chips-row button").forEach((b) => b.classList.toggle("on", +b.dataset.o === o));
+  const kind = ev >= VALUE_MIN ? "good" : ev <= -VALUE_MIN ? "bad" : "even";
+  const verdict = { good: "✅ Good deal", bad: "❌ Bad deal", even: "⚖️ About even" }[kind];
+  $("cResult").innerHTML = `<div class="result ${kind}">
+      <div class="ev-big">${verdict}</div>
+      <div class="num" style="margin-top:4px">Bet $1 in 100 games: ${w} wins × $${p.toFixed(2)} − ${100 - w} losses × $1
+        = <b style="white-space:nowrap">${money(ev * 100)}</b></div>
+      <div class="muted num" style="font-size:13px">That's about <b>${cents(ev)}</b> for every $1 (the EV).</div>
+      ${dots100(c)}</div>`;
+}
+
+function showLearn(step = learnStep) {
+  learnStep = Math.max(0, Math.min(LEARN.length - 1, step));
+  $("learnBody").innerHTML = `<div class="learn-step">${LEARN[learnStep]()}</div>`;
+  $("learnBody").scrollTop = 0;
+  $("learnStepOf").textContent = `${learnStep + 1} of ${LEARN.length}`;
+  $("learnDots").innerHTML = LEARN.map((_, i) => `<i class="${i === learnStep ? "on" : ""}"></i>`).join("");
+  $("learnBack").disabled = learnStep === 0;
+  $("learnNext").textContent = learnStep === LEARN.length - 1 ? "Done" : "Next";
+  if ($("cChance")) {
+    renderCalc();
+    $("cChance").addEventListener("input", (e) => { calc.chance = e.target.value / 100; renderCalc(); });
+    $("cOdds").addEventListener("input", (e) => { calc.odds = +e.target.value; renderCalc(); });
+    document.querySelectorAll(".chips-row button").forEach((b) => b.addEventListener("click", () => {
+      calc.odds = +b.dataset.o; $("cOdds").value = calc.odds; renderCalc(); }));
+  }
+}
+
+function openLearn(step = 0) { showLearn(step); if (!$("learn").open) $("learn").showModal(); }
+$("learnBtn").addEventListener("click", () => openLearn(0));
+$("learnClose").addEventListener("click", () => $("learn").close());
+$("learnBack").addEventListener("click", () => showLearn(learnStep - 1));
+$("learnNext").addEventListener("click", () => (learnStep === LEARN.length - 1 ? $("learn").close() : showLearn(learnStep + 1)));
+$("learn").addEventListener("click", (e) => { if (e.target === $("learn")) $("learn").close(); });   // click outside
+document.addEventListener("keydown", (e) => {
+  if (!$("learn").open) return;
+  if (e.key === "ArrowRight") showLearn(learnStep + 1);
+  if (e.key === "ArrowLeft") showLearn(learnStep - 1);
+});
+document.addEventListener("click", (e) => {                  // "What's this?" links on the cards
+  const w = e.target.closest("[data-learn]");
+  if (w) openLearn(+w.dataset.learn);
+});
 
 $("runAll").addEventListener("click", () => run([]));
 $("runSelected").addEventListener("click", () =>

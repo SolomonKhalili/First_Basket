@@ -21,6 +21,7 @@ import pregame_model as pm
 import build_features as bf
 import tip_model as tm
 import picks
+import ev
 warnings.filterwarnings("ignore")
 
 DB = "nba_first_basket.db"
@@ -916,9 +917,14 @@ def predict_today(first_pass: bool = True, teams: set = frozenset(), ui=None) ->
                     st.injury_flags([p['name'] for p in home_starters + away_starters], inj_report)}
         top5 = [(info[i]['name'], info[i]['team'], float(probs[i]), pm.fair_american(float(probs[i])))
                 for i in order[:5]]
+        everyone = [{**info[i], "prob": float(probs[i])} for i in order]       # all 10 starters, for EV
+        fd_card = _fanduel_card(fd_games, home_team, away_team, top5, everyone)
+        priced = fd_card.pop("_priced", [])
+        if priced:                             # save the prices, so EV can be checked later (ev.paper_results)
+            ev.log_odds(con, game_id, game_date, matchup, priced)
         ui.game_card({
             "matchup": matchup, "start": g.get('start', ''), "label": label, "updated": changed,
-            "picks": top5, **_fanduel_card(fd_games, home_team, away_team, top5),
+            "picks": top5, **fd_card,
             "tip": {home_team: show_home, away_team: show_away}, "jumpers": jumpers,
             "first_team": ({home_team: float(probs[:len(home_starters)].sum()),
                             away_team: float(probs[len(home_starters):].sum())} if pg.get("type") == "two_stage" else None),
@@ -951,21 +957,29 @@ def _fanduel_prices(games: list, warn: list, ui=None):
         return None
 
 
-def _fanduel_card(fd_games, home: str, away: str, top5: list) -> dict:
-    """The game card's FanDuel fields: {"fanduel": {name: american}, "fanduel_note": str}; {} when odds are off."""
+def _fanduel_card(fd_games, home: str, away: str, top5: list, everyone: list = ()) -> dict:
+    """The game card's FanDuel fields; {} when odds are off.
+    fanduel {name: american}, fanduel_note str, ev {name: EV per $1}, best_value (the starter with the highest
+    EV of all 10, if it is positive) and _priced (rows for ev.log_odds; popped before display)."""
     if fd_games is None:
         return {}
     import fanduel_odds as fd
     game = fd.game_for(fd_games, home, away)
     if not game or not game["players"]:
         return {"fanduel": {}, "fanduel_note": "FanDuel hasn't posted first-basket odds for this game yet."}
-    prices = {name: row["american"] for name, row in fd.match_prices(game["players"], top5).items()}
+    players = list(everyone) or [{"name": n, "team": t, "prob": p} for n, t, p, _ in top5]
+    matched = fd.match_prices(game["players"], [(p["name"], p["team"]) for p in players])
+    prices = {name: row["american"] for name, row in matched.items()}
+    priced = ev.priced_players(players, prices)
     note = ""
     if not fd.is_complete(game["players"]):
         note = f"FanDuel lists only {len(game['players'])} players so far (lineups not all posted)."
-    elif len(prices) < len(top5):
+    elif any(name not in prices for name, *_ in top5):
         note = "– = FanDuel doesn't offer that player (it prices only the starters it expects)."
-    return {"fanduel": prices, "fanduel_note": note}
+    best = priced[0] if priced and ev.is_value(priced[0]["ev"]) else None
+    return {"fanduel": prices, "fanduel_note": note, "ev": {r["name"]: r["ev"] for r in priced},
+            "best_value": ({k: best[k] for k in ("name", "team", "prob", "american", "ev")} if best else None),
+            "_priced": [r for r in priced if "id" in r]}
 
 
 def report_without_lineups(con, d: str) -> str:
@@ -1011,6 +1025,7 @@ def evaluate():
     with ui.console.status("Updating data…"), _quiet(warn):
         summary = sync_data()
     ui.track_record(picks.summary(db()), summary)
+    ui.paper_betting(ev.paper_results(db()))
     ui.notes(warn)
 
 # ──────────────────────────────────────────────

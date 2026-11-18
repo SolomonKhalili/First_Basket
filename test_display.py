@@ -1,3 +1,4 @@
+import pytest
 from rich.console import Console
 import display as ui
 import nba
@@ -143,3 +144,48 @@ def test_fanduel_card_fields():
     assert "doesn't offer" in out["fanduel_note"]
     assert nba._fanduel_card(fd_games, "LAL", "BOS", top)["fanduel"] == {}     # game not on FanDuel yet
     assert nba._fanduel_card(None, "TOR", "NY", top) == {}                     # odds off: no column
+
+
+# ── EV ───────────────────────────────────────────────────────
+def test_game_card_shows_ev_column_and_best_value():
+    c = card()
+    c["fanduel"] = {"Jalen Brunson": 600, "RJ Barrett": 500}
+    c["ev"] = {"Jalen Brunson": 0.134, "RJ Barrett": -0.286}
+    c["best_value"] = {"name": "Jalen Brunson", "team": "NY", "prob": 0.162, "american": 600, "ev": 0.134}
+    out = render(ui.game_card, c)
+    assert "EV/$1" in out and "+$0.13" in out and "−$0.29" in out
+    assert "Best value  Jalen Brunson (NY) +600" in out and "EV +$0.13 per $1" in out
+
+
+def test_best_value_line_when_nothing_is_positive():
+    assert "No value at FanDuel's prices" in ui.best_value_line(None).plain
+
+
+def test_paper_betting_section():
+    r = {"bets": 2, "wins": 1, "games": 1, "staked": 2.0, "profit": 3.6, "roi": 1.8, "expected_profit": 0.22,
+         "rows": [{"game_date": "20261118", "matchup": "MIL @ MIA", "player": "Bam Adebayo", "american": 460,
+                   "ev": 0.12, "scorer": "Bam Adebayo", "won": True, "profit": 4.6}]}
+    out = render(ui.paper_betting, r)
+    assert "+$3.60" in out and "2 on 1 games" in out and "Bam Adebayo" in out
+    empty = render(ui.paper_betting, {**r, "bets": 0, "rows": []})
+    assert "No settled bets yet" in empty
+
+
+def test_money_and_ev_cell_round_to_cents():
+    assert ui.money(0.134) == "+$0.13" and ui.money(-0.286) == "−$0.29"
+    assert ui.money(0.001) == "$0.00" == ui.money(-0.002)          # no "+$0.00" / "−$0.00"
+    assert ui.ev_cell(0.003).style == "dim" and ui.ev_cell(0.02).style == "bold green"
+
+
+def test_fanduel_card_best_value_needs_at_least_a_cent():
+    def game(price):
+        rows = [{"player": n, "team": t, "american": a, "decimal": 1 + a / 100, "implied": 100 / (100 + a)}
+                for n, t, a in [("Jalen Brunson", "NY", price)] + [(f"N{i}", "NY", 900) for i in range(4)]
+                + [(f"T{i}", "TOR", 900) for i in range(5)]]
+        return [{"home_code": "TOR", "away_code": "NY", "players": rows}]
+    everyone = [{"id": "1", "name": "Jalen Brunson", "team": "NY", "prob": 0.2}]
+    top = [("Jalen Brunson", "NY", 0.2, 400)]
+    at_fair = nba._fanduel_card(game(400), "TOR", "NY", top, everyone)        # EV exactly 0 -> no "best value"
+    assert at_fair["best_value"] is None and at_fair["ev"]["Jalen Brunson"] == pytest.approx(0)
+    better = nba._fanduel_card(game(450), "TOR", "NY", top, everyone)         # EV +0.10
+    assert better["best_value"]["name"] == "Jalen Brunson" and better["_priced"][0]["id"] == "1"

@@ -26,7 +26,10 @@ and — later — compare those odds with sportsbook prices.
 - No open fixes. Owner's workflow: run `python3 nba.py` about 30 minutes before tip-off — it shows today's games as a numbered list and asks which one (type the number, a team name, or Enter for all); or name the team directly, e.g. `python3 nba.py knicks`.
 - Each game card names the **top 2 picks** and the **predicted tip-off winner by player**. This is a
   **shortlist tool, not a proven betting edge.**
-- Odds / EV / bet tracking is **not built** and should wait until the model shows a real track record.
+- **EV step built 2026-11-18 (owner's request):** FanDuel First Basket prices, EV per $1 for all 10 starters,
+  a "best value" line, every priced pick saved (`odds_log`), and $1 paper bets on +EV prices settled in
+  `nba.py eval` and the GUI. Nothing is bet. Stakes (Kelly), closing-line value and a real bet log are still
+  **not built**; judge the paper results over a few hundred bets first.
 
 **Hard rules (decisions already made).**
 1. Use only the two most recent seasons (2025-26 and 2026-27); rosters and roles change too fast for older data.
@@ -299,7 +302,8 @@ fallback 0.6354 / 0.6323 → NBA.com's listed C in training too 0.6299 / 0.6309.
 | Pick log + track record | `picks.py`, `nba.py eval` | ✅ Every pick kept; `eval` by lineup type and model version. First results after the 2026-11-17 games |
 | CSV export | `nba.py export_csv` (also `view_data.py`) | ✅ 13 columns, one writer |
 | Predictions spreadsheet | `picks.export_predictions` → `my_predictions.xlsx` (Scorecard + Games tabs) | ✅ Our pick vs what happened, per game; written after every `predict` and every sync |
-| Odds / EV / bankroll / bet log | — | 🔲 Not started (deliberately) |
+| FanDuel odds + EV | `fanduel_odds.py`, `ev.py`; `predict`, `gui.py`, `eval` | ✅ 2026-11-18: prices, EV per $1, best value, `odds_log`, paper betting on +EV (≥ +$0.01 per $1) |
+| Bankroll / stakes / real bet log / CLV | — | 🔲 Not started (deliberately) |
 | First-shot data + share | `nba.first_shots`, `build_features.first_shot_share` | ✅ Recorded for every game; tested as a model input and not adopted (§7.1) |
 | Early-shot data + share | `nba.early_shots`, `build_features.early_shot_share` | ✅ Each team's first 5 attempts recorded for every game; **used by the model** (stage 2) |
 
@@ -423,10 +427,13 @@ Owner's order: **fix everything first, then build forward.**
 - Second injury source (official NBA injury report PDF).
 - Re-check calibration once the season has more games (it was accurate on 1,129 games on 2026-11-17).
 
-### 7.3 Odds layer (only after the model shows a real track record)
+### 7.3 Odds layer
 
-- Remove the bookmaker margin, compute EV and closing-line value, fractional-Kelly stakes (0.5–1% of bankroll),
-  and a bet log with ROI, CLV and hit rate.
+- ✅ 2026-11-18: EV per $1 from the model's chance and FanDuel's price (`ev.py`); prices saved per predict run
+  (`odds_log`, unchanged snapshots skipped); paper betting = $1 on every +EV price in each finished game's
+  last snapshot, settled against `first_baskets` (`ev.paper_results`).
+- Still to do (only after the paper results hold up over a few hundred bets): closing-line value,
+  fractional-Kelly stakes (0.5–1% of bankroll), and a real bet log with ROI, CLV and hit rate.
 
 ### 7.4 Model roadmap
 

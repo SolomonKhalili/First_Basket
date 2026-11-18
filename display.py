@@ -73,15 +73,17 @@ def game_card(c: dict):
     picks.add_column("", no_wrap=True)
     picks.add_column("Fair odds", justify="right")
     fanduel = c.get("fanduel")                     # {name: American odds}; None = odds not fetched
+    evs = c.get("ev") or {}                        # {name: EV per $1}
     if fanduel is not None:
         picks.add_column("FanDuel", justify="right")
+        picks.add_column("EV/$1", justify="right")
     top = c["picks"][0][2] if c["picks"] else 0
     for i, (name, team, p, fair) in enumerate(c["picks"], 1):
         bold = "bold" if i == 1 else ""
         cells = [str(i), Text(name, style=bold), team, Text(f"{p:.1%}", style=bold),
                  _bar(p, top), Text(f"{fair:+d}", style=bold)]
         if fanduel is not None:
-            cells.append(_fanduel_cell(fanduel.get(name), fair))
+            cells += [_fanduel_cell(fanduel.get(name), fair), ev_cell(evs.get(name))]
         picks.add_row(*cells)
 
     # Headline: the two most likely first scorers and the predicted tip winner (by player)
@@ -112,6 +114,8 @@ def game_card(c: dict):
     body = [headline, Text(""), picks]
     if c.get("fanduel_note"):
         body.append(Text(c["fanduel_note"], style="dim"))
+    if fanduel:
+        body.append(best_value_line(c.get("best_value")))
     body += [Text(""), Text("Starters", style="dim"), starters]
     if c.get("notes"):
         body += [Text("")] + [Text(f"• {n}", style="dim") for n in c["notes"]]
@@ -141,6 +145,30 @@ def tip_line(c: dict) -> Text:
             line.append(f"{team} jumper not known yet", style="dim italic")
         line.append(f" {c['tip'][team]:.0%}", style="bold green" if is_fav else "dim")
     return line
+
+
+def money(x: float) -> str:
+    """+0.14 -> '+$0.14', -0.2 -> '−$0.20', anything that rounds to zero -> '$0.00'."""
+    if abs(x) < 0.005:
+        return "$0.00"
+    return f"{'+' if x > 0 else '−'}${abs(x):.2f}"
+
+
+def ev_cell(v) -> Text:
+    """EV per $1: green when positive (the price beats the model's chance), dim when negative."""
+    if v is None:
+        return Text("–", style="dim")
+    import ev
+    return Text(money(v), style="bold green" if ev.is_value(v) else "dim")
+
+
+def best_value_line(b) -> Text:
+    """The starter (of all 10) whose FanDuel price has the highest EV, or a note that none is positive."""
+    if not b:
+        return Text("💰 No value at FanDuel's prices: every listed starter has negative EV.", style="dim")
+    return Text.assemble(("💰 Best value  ", "bold"), (f"{b['name']} ({b['team']}) ", "bold"),
+                         (f"{b['american']:+d}", "bold green"), (f"  · model {b['prob']:.1%}", "dim"),
+                         ("  · EV ", "dim"), (f"{money(b['ev'])} per $1", "bold green"))
 
 
 def _payout(american: int) -> float:
@@ -207,6 +235,39 @@ def track_record(s: dict, data_summary: str = "", recent: int = 15):
                        "even a good model is wrong on most nights.", style="dim"))
 
 
+def paper_betting(r: dict, recent: int = 10):
+    """`nba.py eval`: a flat $1 paper bet on every +EV FanDuel price, settled on finished games (ev.paper_results)."""
+    console.print()
+    console.print(Text("💰 Paper betting: $1 on every +EV FanDuel price", style="bold"))
+    if not r["bets"]:
+        console.print(Text("No settled bets yet. FanDuel prices are saved each time you run `python3 nba.py predict`; "
+                           "a game counts here once it has finished. Nothing is ever really bet.", style="dim"))
+        return
+    colour = "green" if r["profit"] > 0 else "red"
+    t = Table.grid(padding=(0, 2))
+    t.add_column(style="dim")
+    t.add_column()
+    t.add_row("Bets", f"{r['bets']} on {r['games']} games · {r['wins']} won ({r['wins'] / r['bets']:.1%})")
+    t.add_row("Result", Text.assemble((f"{money(r['profit'])} ", f"bold {colour}"),
+                                      (f"on ${r['staked']:.0f} staked · return {r['roi']:+.1%}", colour)))
+    t.add_row("EV said", f"{money(r['expected_profit'])} (what the model expected on these bets)")
+    console.print(t)
+    g = Table(box=box.SIMPLE_HEAD, show_edge=False, width=88, title=f"Latest {min(recent, r['bets'])} bets",
+              title_justify="left")
+    for col, kw in (("", {"width": 2}), ("Date", {"style": "dim"}), ("Game", {}), ("Bet", {}),
+                    ("Price", {"justify": "right"}), ("EV", {"justify": "right"}), ("Scored first", {}),
+                    ("Profit", {"justify": "right"})):
+        g.add_column(col, **kw)
+    for b in r["rows"][:recent]:
+        d = b["game_date"] or ""
+        g.add_row("✅" if b["won"] else "❌", f"{d[4:6]}/{d[6:8]}", b["matchup"] or "", b["player"],
+                  f"{b['american']:+d}", money(b["ev"]), b["scorer"] or "",
+                  Text(money(b["profit"]), style="green" if b["won"] else "dim"))
+    console.print(g)
+    console.print(Text("Long shots lose most nights, so this swings a lot. It takes a few hundred bets to tell a "
+                       "real edge from luck.", style="dim"))
+
+
 def report(body: str, data_summary: str = ""):
     """`nba.py report`: one box per game; injury warnings highlighted."""
     lines = body.strip("\n").split("\n")
@@ -255,6 +316,10 @@ def legend(any_projected: bool):
                            "(e.g. +700 when fair is +500).")
     t.add_row("FanDuel", "FanDuel's current First Basket price. Green = it pays more than the fair odds "
                          "(the model thinks the bet has value); grey = it pays less. Skip it with --no-odds.")
+    t.add_row("EV/$1", "Expected value: the average profit per $1 if this bet were made many times, using the "
+                       "model's chance (e.g. +$0.10 = you'd expect to win 10¢ per $1 in the long run). Green = "
+                       "positive. It is only as good as the model; `nba.py eval` checks it on finished games.")
+    t.add_row("Best value", "The starter (of all 10, not only the top 5) with the highest EV at FanDuel's price.")
     t.add_row("Top 2", "The two players most likely to score the game's first basket.")
     t.add_row("Scores first", "Each team's chance to score the game's first points (from the tip-off and home court).")
     t.add_row("Tip-off", "Who jumps for each team (away first) and each one's chance to win the opening jump ball; "

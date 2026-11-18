@@ -103,10 +103,13 @@ class Job:
 
 
 def track_record() -> dict:
+    import ev
     import nba
     import picks
     s = picks.summary(nba.db())
-    return {"final": s["final"], "by_type": s["by_type"], "recent": s["games"][:12]}
+    paper = ev.paper_results(nba.db())
+    paper["rows"] = paper["rows"][:5]
+    return {"final": s["final"], "by_type": s["by_type"], "recent": s["games"][:12], "paper": paper}
 
 
 GAME_KEYS = ("game_id", "start", "start_utc", "home_team", "away_team", "status", "home_score", "away_score",
