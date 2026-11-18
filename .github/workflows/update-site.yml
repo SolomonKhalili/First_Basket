@@ -33,7 +33,7 @@ jobs:
       TZ: America/New_York                 # so "today" is the NBA day, not UTC
       SITE_DATA_KEY: ${{ secrets.SITE_DATA_KEY }}
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
 
       - name: Which kind of run
         id: kind
@@ -43,7 +43,7 @@ jobs:
           else kind=hourly; fi
           echo "kind=$kind" >> "$GITHUB_OUTPUT"; echo "Run kind: $kind"
 
-      - uses: actions/setup-python@v5
+      - uses: actions/setup-python@v7
         with:
           python-version: "3.12"
           cache: pip
@@ -78,6 +78,7 @@ jobs:
         env:
           DEPLOY_KEY: ${{ secrets.SITE_DEPLOY_KEY }}
         run: |
+          [ -f site_out/index.html ] || { echo "nothing to publish (no website accounts yet)"; exit 0; }
           mkdir -p ~/.ssh && printf '%s\n' "$DEPLOY_KEY" > ~/.ssh/site_key && chmod 600 ~/.ssh/site_key
           export GIT_SSH_COMMAND="ssh -i ~/.ssh/site_key -o StrictHostKeyChecking=accept-new"
           cd site_out

@@ -143,13 +143,14 @@ def main(argv) -> int:
         return 0 if ok else 3
     out = Path(argv[argv.index("--out") + 1]) if "--out" in argv else HERE / "site_out"
     users = load_site_users()
-    if not users:
-        raise SystemExit("No website accounts yet: add one with python3 site_users.py add NAME")
-    key = data_key()
     result = None
     if "--no-update" not in argv:
         print("Updating data and picks…", flush=True)
         result = run_update()
+    if not users:                       # data still updated (and saved by the job); nothing to publish yet
+        print("No website accounts yet — website not published. Add one: python3 site_users.py add NAME")
+        return 0
+    key = data_key()
     print("Packaging results…", flush=True)
     bundle = build_bundle(result)
     build_site(encrypt_bundle(bundle, key), users, out)
