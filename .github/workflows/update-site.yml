@@ -1,0 +1,103 @@
+# Keeps the free website up to date, with nobody running anything.
+#   • hourly from about 10 AM to 10 PM New York time — skipped on days with no upcoming games
+#   • nightly at about 4 AM New York time — files last night's results, refreshes the spreadsheet/CSV, retrains
+#   • on demand: Actions → update-site → Run workflow (also started by site_users.py after adding an account)
+# Each run: restore the saved data (branch "state") → update + build the locked website (publish.py) →
+# publish it to SolomonKhalili/first-basket (GitHub Pages) → save the data for next time.
+# Code, model and data stay in this private repo; only the encrypted results are published.
+name: update-site
+
+on:
+  schedule:
+    - cron: "17 14-23 * * *"   # 10 AM – 7 PM ET (one hour later in winter time)
+    - cron: "17 0-3 * * *"     # 8 PM – 11 PM ET
+    - cron: "7 9 * * *"        # nightly, ~4–5 AM ET
+  workflow_dispatch:
+    inputs:
+      kind:
+        description: "hourly (skip if no upcoming games) · nightly · publish (always run)"
+        default: publish
+
+concurrency:
+  group: update-site
+  cancel-in-progress: false
+
+permissions:
+  contents: write
+
+jobs:
+  update:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    env:
+      TZ: America/New_York                 # so "today" is the NBA day, not UTC
+      SITE_DATA_KEY: ${{ secrets.SITE_DATA_KEY }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Which kind of run
+        id: kind
+        run: |
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then kind="${{ inputs.kind }}"
+          elif [ "${{ github.event.schedule }}" = "7 9 * * *" ]; then kind=nightly
+          else kind=hourly; fi
+          echo "kind=$kind" >> "$GITHUB_OUTPUT"; echo "Run kind: $kind"
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+
+      - name: Worth running now?
+        id: check
+        run: |
+          pip install -q requests
+          if [ "${{ steps.kind.outputs.kind }}" = "hourly" ]; then
+            python publish.py --should-run hourly || echo "skip=1" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Restore saved data
+        if: steps.check.outputs.skip != '1'
+        run: |
+          if git ls-remote --exit-code origin refs/heads/state > /dev/null; then
+            git fetch -q --depth 1 origin state && git checkout FETCH_HEAD -- . && echo "restored saved data"
+          else
+            echo "first run: starting from the data in main"
+          fi
+
+      - name: Install
+        if: steps.check.outputs.skip != '1'
+        run: pip install -q -r requirements.txt cryptography
+
+      - name: Update and build the website
+        if: steps.check.outputs.skip != '1'
+        run: python publish.py --out site_out
+
+      - name: Publish the website
+        if: steps.check.outputs.skip != '1'
+        env:
+          DEPLOY_KEY: ${{ secrets.SITE_DEPLOY_KEY }}
+        run: |
+          mkdir -p ~/.ssh && printf '%s\n' "$DEPLOY_KEY" > ~/.ssh/site_key && chmod 600 ~/.ssh/site_key
+          export GIT_SSH_COMMAND="ssh -i ~/.ssh/site_key -o StrictHostKeyChecking=accept-new"
+          cd site_out
+          git init -q -b main
+          git -c user.name="First Basket bot" -c user.email="bot@users.noreply.github.com" add -A
+          git -c user.name="First Basket bot" -c user.email="bot@users.noreply.github.com" commit -q -m "Picks $(date '+%Y-%m-%d %H:%M %Z')"
+          git push -q --force git@github.com:SolomonKhalili/first-basket.git main   # replace: no growing history
+          echo "published"
+
+      - name: Save data for next time
+        if: steps.check.outputs.skip != '1'
+        run: |
+          mkdir state
+          for f in nba_first_basket.db first_basket_data.csv my_predictions.xlsx pregame_model.json X_train.npy \
+                   y_train.npy groups.npy game_ids.json meta.json feature_names.json player_game_logs.pkl; do
+            [ -f "$f" ] && cp "$f" state/
+          done
+          cd state
+          git init -q -b state
+          git -c user.name="First Basket bot" -c user.email="bot@users.noreply.github.com" add -A
+          git -c user.name="First Basket bot" -c user.email="bot@users.noreply.github.com" commit -q -m "Saved data $(date '+%Y-%m-%d %H:%M %Z')"
+          git push -q --force "https://x-access-token:${{ github.token }}@github.com/${{ github.repository }}.git" state
+          echo "saved"

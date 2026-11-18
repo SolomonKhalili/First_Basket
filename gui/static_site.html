@@ -1,0 +1,227 @@
+<!-- ═══ Website-only part (added by publish.py; not used by the app on your Mac) ═══
+     • A login screen: the friend's password unlocks the encrypted results (data.json) in their browser.
+     • Answers the page's /api/... requests from those results, so the same app page works without a server.
+     • Live scores + first baskets straight from ESPN between the hourly updates. -->
+<style>
+  #fb-lock { position: fixed; inset: 0; z-index: 2000; display: grid; place-items: center; padding: 16px; color: #eef0f4;
+    font: 15px/1.5 Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", system-ui, sans-serif;
+    background: radial-gradient(700px 380px at 15% 0%, rgba(255,122,26,.30), transparent 60%),
+                radial-gradient(600px 340px at 100% 0%, rgba(59,130,246,.22), transparent 60%), #0a0c11; }
+  #fb-lock[hidden] { display: none; }
+  #fb-lock form { width: min(400px, 100%); background: linear-gradient(160deg, #171c29, #0d1017 70%); border: 1px solid rgba(255,255,255,.08);
+    border-radius: 22px; padding: 28px 26px 24px; box-shadow: 0 24px 60px rgba(0,0,0,.45); }
+  #fb-lock .lball { width: 58px; height: 58px; border-radius: 50%; display: grid; place-items: center; font-size: 32px; margin-bottom: 14px;
+    background: radial-gradient(circle at 35% 30%, #ffb26b, #ea580c 70%); box-shadow: 0 6px 22px rgba(234,88,12,.45); }
+  #fb-lock h1 { margin: 0; font-family: "Barlow Condensed", "Arial Narrow", sans-serif; font-weight: 800; font-size: 34px;
+    text-transform: uppercase; line-height: 1; color: #fff; }
+  #fb-lock h1 span { color: #ff8a2b; }
+  #fb-lock .sub { color: rgba(255,255,255,.6); margin: 6px 0 18px; }
+  #fb-lock label { display: block; font-size: 13px; font-weight: 600; color: rgba(255,255,255,.75); margin: 12px 0 6px; }
+  #fb-lock input[type=text], #fb-lock input[type=password] { width: 100%; font: inherit; color: #fff; background: rgba(255,255,255,.06);
+    border: 1px solid rgba(255,255,255,.14); border-radius: 12px; padding: 12px 14px; }
+  #fb-lock input:focus { outline: 2px solid rgba(255,138,43,.6); border-color: #ff8a2b; }
+  #fb-lock .remember { display: flex; align-items: center; gap: 8px; margin-top: 12px; font-size: 13px; color: rgba(255,255,255,.7); }
+  #fb-lock button { width: 100%; margin-top: 18px; font: inherit; font-weight: 700; color: #fff; border: 0; border-radius: 12px; padding: 13px;
+    cursor: pointer; background: linear-gradient(135deg, #ff8a2b, #ea580c); box-shadow: 0 6px 20px rgba(234,88,12,.4); }
+  #fb-lock button:disabled { opacity: .6; cursor: default; }
+  #fb-lock .lerr { margin-top: 14px; padding: 10px 12px; border-radius: 10px; background: rgba(248,113,113,.14); color: #fca5a5; font-size: 14px; }
+  #fb-lock .lerr:empty { display: none; }
+  #fb-lock .foot { margin-top: 16px; color: rgba(255,255,255,.45); font-size: 12.5px; text-align: center; }
+  #fb-fresh { position: fixed; left: 12px; bottom: 12px; z-index: 5; font-size: 12px; color: var(--muted, #949cab);
+    background: var(--surface, #12151c); border: 1px solid var(--line, #242a35); border-radius: 999px; padding: 5px 11px; }
+  #fb-fresh[hidden] { display: none; }
+</style>
+
+<div id="fb-lock">
+  <form id="fb-form" autocomplete="on">
+    <div class="lball">🏀</div>
+    <h1>First Basket <span>Picks</span></h1>
+    <p class="sub">Private — log in to see tonight's picks.</p>
+    <label for="fb-u">Username</label>
+    <input id="fb-u" type="text" name="username" autocomplete="username" autocapitalize="none" spellcheck="false" required>
+    <label for="fb-p">Password</label>
+    <input id="fb-p" type="password" name="password" autocomplete="current-password" required>
+    <label class="remember"><input id="fb-r" type="checkbox" checked> Remember me on this device (30 days)</label>
+    <button id="fb-go" type="submit">Log in</button>
+    <div class="lerr" id="fb-err" role="alert"></div>
+    <div class="foot">Ask the owner for an account.</div>
+  </form>
+</div>
+<div id="fb-fresh" hidden></div>
+
+<script>
+(() => {
+  const DATA_URL = "data.json", STORE = "fb-site-v1", REMEMBER_DAYS = 30;
+  const ESPN = "https://site.api.espn.com/apis/site/v2/sports/basketball/nba/scoreboard";
+  const ESPN_SUMMARY = "https://site.web.api.espn.com/apis/site/v2/sports/basketball/nba/summary?event=";
+  const b64d = (s) => Uint8Array.from(atob(s), (c) => c.charCodeAt(0));
+  const b64e = (u8) => btoa(String.fromCharCode(...u8));
+  const realFetch = window.fetch.bind(window);
+  const reply = (obj, status = 200) => new Response(JSON.stringify(obj), { status, headers: { "Content-Type": "application/json" } });
+  let user = null, rawKey = null, bundle = null, enc = null, encAt = 0;
+  let resolveReady; const ready = new Promise((r) => (resolveReady = r));
+
+  // ── locked results: download, unlock, decrypt ──
+  async function getEnc(force) {
+    if (!force && enc && Date.now() - encAt < 120000) return enc;      // re-check for a newer update every 2 min
+    enc = await (await realFetch(`${DATA_URL}?t=${Date.now()}`, { cache: "no-store" })).json();
+    encAt = Date.now();
+    return enc;
+  }
+  async function decrypt(keyBytes, e) {
+    const k = await crypto.subtle.importKey("raw", keyBytes, "AES-GCM", false, ["decrypt"]);
+    const plain = await crypto.subtle.decrypt({ name: "AES-GCM", iv: b64d(e.iv) }, k, b64d(e.ct));
+    const text = await new Response(new Blob([plain]).stream().pipeThrough(new DecompressionStream("gzip"))).text();
+    return JSON.parse(text);
+  }
+  async function unwrap(entry, password) {
+    const base = await crypto.subtle.importKey("raw", new TextEncoder().encode(password), "PBKDF2", false, ["deriveKey"]);
+    const kek = await crypto.subtle.deriveKey({ name: "PBKDF2", hash: "SHA-256", salt: b64d(entry.salt), iterations: entry.iter },
+                                              base, { name: "AES-GCM", length: 256 }, false, ["decrypt"]);
+    return new Uint8Array(await crypto.subtle.decrypt({ name: "AES-GCM", iv: b64d(entry.iv) }, kek, b64d(entry.wk)));
+  }
+  let lastCt = null;                                             // the encrypted text last decrypted
+  async function refresh(force) {
+    const e = await getEnc(force);
+    if (!e.users || !e.users[user]) { logout(); throw new Error("account removed"); }
+    if (!bundle || e.ct !== lastCt) { bundle = await decrypt(rawKey, e); lastCt = e.ct; }   // only when it changed
+    showFresh();
+  }
+
+  function showFresh() {
+    const el = document.getElementById("fb-fresh");
+    if (!bundle) return;
+    const t = new Date(bundle.published);
+    el.textContent = `Picks updated ${t.toLocaleString([], { weekday: "short", hour: "numeric", minute: "2-digit" })} · refresh hourly on game days`;
+    el.hidden = false;
+  }
+
+  // ── login ──
+  function remember(on) {
+    const rec = JSON.stringify({ user, key: b64e(rawKey), exp: Date.now() + REMEMBER_DAYS * 864e5 });
+    try { (on ? localStorage : sessionStorage).setItem(STORE, rec); } catch (e) { /* private mode: just this visit */ }
+  }
+  function logout() {
+    try { localStorage.removeItem(STORE); sessionStorage.removeItem(STORE); } catch (e) { /* ignore */ }
+    location.reload();
+  }
+  async function unlocked() {
+    document.getElementById("fb-lock").hidden = true;
+    resolveReady();
+  }
+  document.getElementById("fb-form").addEventListener("submit", async (ev) => {
+    ev.preventDefault();
+    const btn = document.getElementById("fb-go"), err = document.getElementById("fb-err");
+    const name = document.getElementById("fb-u").value.trim().toLowerCase(), pw = document.getElementById("fb-p").value;
+    btn.disabled = true; btn.textContent = "Unlocking…"; err.textContent = "";
+    try {
+      const e = await getEnc(true);
+      const entry = e.users && e.users[name];
+      if (!entry) throw new Error("bad");
+      rawKey = await unwrap(entry, pw);
+      user = name;
+      bundle = await decrypt(rawKey, e);
+      lastCt = e.ct;
+      remember(document.getElementById("fb-r").checked);
+      showFresh();
+      unlocked();
+    } catch (e) {
+      err.textContent = "Wrong username or password.";
+      btn.disabled = false; btn.textContent = "Log in";
+    }
+  });
+  (async function autoUnlock() {                                    // remembered on this device?
+    let rec = null;
+    try { rec = JSON.parse(localStorage.getItem(STORE) || sessionStorage.getItem(STORE) || "null"); } catch (e) { rec = null; }
+    if (!rec || rec.exp < Date.now()) return;
+    try {
+      user = rec.user; rawKey = b64d(rec.key);
+      await refresh(true);
+      unlocked();
+    } catch (e) { user = rawKey = bundle = null; }
+  })();
+  document.addEventListener("click", (e) => {                     // the page's "Log out" link
+    const a = e.target.closest && e.target.closest('a[href="/logout"]');
+    if (a) { e.preventDefault(); logout(); }
+  }, true);
+
+  // ── live scores + first baskets from ESPN (between the hourly updates) ──
+  let espnAt = 0, espnEvents = null;
+  const firstFound = {}, firstTried = {};
+  const SUFFIX = /^(jr|sr|ii|iii|iv|v)$/;
+  const norm = (n) => String(n || "").normalize("NFD").replace(/[̀-ͯ]/g, "").toLowerCase()
+    .replace(/[^a-z\s]/g, " ").split(/\s+/).filter((w) => w && !SUFFIX.test(w)).join(" ")
+    .replace(/\b([a-z])\s(?=[a-z]\b)/g, "$1");
+  async function espnBoard() {
+    if (espnEvents && Date.now() - espnAt < 30000) return espnEvents;
+    try { espnEvents = (await (await realFetch(ESPN, { cache: "no-store" })).json()).events || []; espnAt = Date.now(); }
+    catch (e) { espnEvents = espnEvents || []; }
+    return espnEvents;
+  }
+  async function firstBasket(gid) {
+    if (firstFound[gid]) return firstFound[gid];
+    if (firstTried[gid] && Date.now() - firstTried[gid] < 60000) return null;
+    firstTried[gid] = Date.now();
+    try {
+      const s = await (await realFetch(ESPN_SUMMARY + gid, { cache: "no-store" })).json();
+      const names = {}, teams = {};
+      for (const t of (s.boxscore && s.boxscore.players) || []) {
+        for (const st of t.statistics || []) for (const a of st.athletes || []) names[a.athlete.id] = a.athlete.displayName;
+        if (t.team) teams[t.team.id] = t.team.abbreviation;
+      }
+      for (const c of ((s.header || {}).competitions || [{}])[0].competitors || []) if (c.team) teams[c.team.id] = c.team.abbreviation;
+      const p = (s.plays || []).find((x) => x.scoringPlay && x.period && x.period.number >= 1 && x.period.number <= 4);
+      if (!p || !p.participants || !p.participants[0]) return null;
+      const id = String(p.participants[0].athlete.id);
+      firstFound[gid] = { id, name: names[id] || "", team: (p.team && teams[p.team.id]) || "" };
+      return firstFound[gid];
+    } catch (e) { return null; }
+  }
+  async function liveBoard() {
+    const board = JSON.parse(JSON.stringify(bundle.board));
+    const events = await espnBoard();
+    for (const g of board.games) {
+      const ev = events.find((e) => String(e.id) === String(g.game_id));
+      if (ev) {
+        const st = ev.status.type.state;
+        g.status = st === "pre" ? 1 : st === "post" ? 3 : 2;
+        g.detail = ev.status.type.shortDetail || g.detail;
+        for (const c of ev.competitions[0].competitors) {
+          if (c.homeAway === "home") g.home_score = +c.score || 0; else g.away_score = +c.score || 0;
+        }
+      }
+      if (g.status !== 1 && !g.first_basket) {
+        const fb = await firstBasket(g.game_id);
+        if (fb) {
+          g.first_basket = fb;
+          const op = g.our_pick;
+          g.result = !op ? null : fb.id === String(op.id) ? "hit"
+            : (op.top3 || []).some((n) => norm(n) === norm(fb.name)) ? "top3" : "miss";
+        }
+      }
+    }
+    return board;
+  }
+
+  // ── answer the page's /api/... requests from the unlocked results ──
+  window.fetch = async (input, init) => {
+    const u = new URL(typeof input === "string" ? input : input.url, location.href);
+    const at = u.pathname.indexOf("/api/");
+    if (u.origin !== location.origin || at < 0) return realFetch(input, init);
+    await ready;
+    const path = u.pathname.slice(at);
+    if (path === "/api/me") return reply({ user, role: "viewer", logins: true });
+    if (path === "/api/predict") return reply({ error: "view-only" }, 403);
+    try { await refresh(false); } catch (e) { return reply({ error: "log in first" }, 401); }
+    if (path === "/api/status") return reply(bundle.status);
+    if (path === "/api/record") return reply(bundle.record);
+    if (path === "/api/data_version") return reply({ version: bundle.version });
+    if (path === "/api/data") {
+      const d = bundle.data[u.searchParams.get("tab") || "picks"];
+      return d ? reply({ ...d, version: bundle.version }) : reply({ error: "unknown tab" }, 400);
+    }
+    if (path === "/api/games") return reply(await liveBoard());
+    return reply({ error: "not found" }, 404);
+  };
+})();
+</script>
