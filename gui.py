@@ -114,16 +114,19 @@ GAME_KEYS = ("game_id", "start", "start_utc", "home_team", "away_team", "status"
 
 
 def latest_picks(con, game_ids) -> dict:
-    """game_id -> our latest logged pick {id, name, team, prob, top3 [names]} (the pick that counts)."""
+    """game_id -> our latest logged pick {id, name, team, prob, top3 [names], home_jumper, away_jumper, tip_home}
+    (the pick that counts)."""
     import picks
     picks.ensure_table(con)
     out = {}
     for gid in game_ids:
-        row = con.execute("""SELECT pick_player_id, pick_player_name, pick_team, pick_prob, players_json
+        row = con.execute("""SELECT pick_player_id, pick_player_name, pick_team, pick_prob, players_json,
+                                    home_jumper, away_jumper, tip_home
                              FROM pick_log WHERE game_id = ? ORDER BY id DESC LIMIT 1""", (gid,)).fetchone()
         if row:
             top3 = [p["name"] for p in json.loads(row[4])[:3]]
-            out[gid] = {"id": str(row[0]), "name": row[1], "team": row[2], "prob": row[3], "top3": top3}
+            out[gid] = {"id": str(row[0]), "name": row[1], "team": row[2], "prob": row[3], "top3": top3,
+                        "home_jumper": row[5], "away_jumper": row[6], "tip_home": row[7]}
     return out
 
 

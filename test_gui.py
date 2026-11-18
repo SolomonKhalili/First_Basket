@@ -92,7 +92,8 @@ def test_live_board_marks_results(monkeypatch):
     import picks
     con = sqlite3.connect(":memory:")
     picks.log_pick(con, {"game_id": "g1", "game_date": "20261118", "matchup": "MIL @ MIA", "lineup_type": "CONFIRMED",
-                         "lineup_sig": "x", "model_id": "m",
+                         "lineup_sig": "x", "model_id": "m", "tip_home": 0.85, "home_jumper": "Bam Adebayo",
+                         "away_jumper": "Myles Turner",
                          "players": [{"id": "1", "name": "Bam Adebayo", "team": "MIA", "prob": 0.2},
                                      {"id": "2", "name": "Tyler Herro", "team": "MIL", "prob": 0.1}]})
     games = [{"game_id": "g1", "start": "7:00 PM ET", "start_utc": "2026-11-19T00:00Z", "home_team": "MIA",
@@ -109,6 +110,8 @@ def test_live_board_marks_results(monkeypatch):
     live, upcoming = snap["games"]
     assert live["first_basket"]["name"] == "Bam Adebayo" and live["result"] == "hit"
     assert live["our_pick"]["name"] == "Bam Adebayo"
+    assert (live["our_pick"]["away_jumper"], live["our_pick"]["home_jumper"]) == ("Myles Turner", "Bam Adebayo")
+    assert live["our_pick"]["tip_home"] == 0.85
     assert upcoming["first_basket"] is None and upcoming["result"] is None   # pre-game: no play-by-play call
     b.refresh()
     assert calls == ["g1"]                     # first basket found once, then remembered
