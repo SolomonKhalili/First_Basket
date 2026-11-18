@@ -2,9 +2,9 @@ game_start,game_id,home_team,away_team,tip_winner,tip_winner_player,tip_winner_p
 10/21/25,401809243,OKC,HOU,HOU,2991235,Steven Adams,4433255,Chet Holmgren,Chet Holmgren,OKC,Cutting Layup Shot,11:26
 10/21/25,401809244,LAL,GS,LAL,4278129,Deandre Ayton,6589,Draymond Green,Luka Doncic,LAL,Fade Away Jump Shot,11:39
 10/22/25,401809234,NY,CLE,CLE,4066328,Jarrett Allen,4871141,Ariel Hukporti,Evan Mobley,CLE,Turnaround Fade Away Jump Shot,11:45
-10/22/25,401809933,CHA,BKN,BKN,4278067,Nic Claxton,4576060,Ryan Kalkbrenner,Kon Knueppel,CHA,Running Layup Shot,10:56
+10/22/25,401809933,CHA,BKN,BKN,4278067,Nic Claxton,4576060,Ryan Kalkbrenner,Miles Bridges,CHA,Free Throw - 1 of 2,11:18
 10/22/25,401809934,ORL,MIA,ORL,4277847,Wendell Carter Jr.,4066261,Bam Adebayo,Wendell Carter Jr.,ORL,Alley Oop Dunk Shot,11:43
-10/22/25,401809935,ATL,TOR,ATL,3102531,Kristaps Porzingis,3134908,Jakob Poeltl,Brandon Ingram,TOR,Driving Finger Roll Layup,11:07
+10/22/25,401809935,ATL,TOR,ATL,3102531,Kristaps Porzingis,3134908,Jakob Poeltl,Jalen Johnson,ATL,Free Throw - 1 of 2,11:26
 10/22/25,401809936,BOS,PHI,BOS,4397424,Neemias Queta,4870562,Dominick Barlow,Neemias Queta,BOS,Cutting Layup Shot,11:43
 10/22/25,401809937,CHI,DET,CHI,6478,Nikola Vucevic,4433621,Jalen Duren,Nikola Vucevic,CHI,Cutting Layup Shot,11:39
 10/22/25,401809938,MEM,NO,MEM,4277961,Jaren Jackson Jr.,5061589,Yves Missi,Jordan Poole,NO,Driving Floating Jump Shot,11:43
@@ -12,8 +12,8 @@ game_start,game_id,home_team,away_team,tip_winner,tip_winner_player,tip_winner_p
 10/22/25,401809940,UTAH,LAC,UTAH,4433136,Walker Kessler,4017837,Ivica Zubac,Lauri Markkanen,UTAH,Step Back Jump Shot,11:33
 10/22/25,401809235,DAL,SA,SA,5104157,Victor Wembanyama,4683688,Dereck Lively II,Anthony Davis,DAL,Putback Dunk Shot,11:39
 10/22/25,401809941,PHX,SAC,PHX,4601023,Oso Ighodaro,3914285,Drew Eubanks,Oso Ighodaro,PHX,Cutting Dunk Shot,11:43
-10/22/25,401809942,POR,MIN,POR,5105565,Donovan Clingan,3032976,Rudy Gobert,Shaedon Sharpe,POR,Driving Floating Jump Shot,10:44
-10/23/25,401809236,IND,OKC,OKC,4433255,Chet Holmgren,4432170,Isaiah Jackson,Chet Holmgren,OKC,Driving Layup Shot,10:19
+10/22/25,401809942,POR,MIN,POR,5105565,Donovan Clingan,3032976,Rudy Gobert,Deni Avdija,POR,Free Throw - 1 of 2,11:14
+10/23/25,401809236,IND,OKC,OKC,4433255,Chet Holmgren,4432170,Isaiah Jackson,Shai Gilgeous-Alexander,OKC,Free Throw - 1 of 2,11:01
 10/23/25,401809237,GS,DEN,GS,6589,Draymond Green,3112335,Nikola Jokic,Stephen Curry,GS,Jump Shot,11:46
 10/24/25,401809946,TOR,MIL,TOR,3134908,Jakob Poeltl,3133628,Myles Turner,Brandon Ingram,TOR,Fade Away Jump Shot,10:58
 10/24/25,401809943,ORL,ATL,ORL,4277847,Wendell Carter Jr.,4431680,Onyeka Okongwu,Franz Wagner,ORL,Jump Shot,11:14
@@ -22,7 +22,7 @@ game_start,game_id,home_team,away_team,tip_winner,tip_winner_player,tip_winner_p
 10/24/25,401809947,HOU,DET,DET,4433621,Jalen Duren,2991235,Steven Adams,Kevin Durant,HOU,Pullup Bank Jump Shot,11:24
 10/24/25,401809948,MEM,MIA,MEM,4277961,Jaren Jackson Jr.,5105623,Kel'el Ware,Ja Morant,MEM,Driving Floating Jump Shot,11:45
 10/24/25,401809949,NO,SA,NO,4397688,Trey Murphy III,5104157,Victor Wembanyama,Zion Williamson,NO,Driving Dunk Shot,11:44
-10/24/25,401809950,DAL,WSH,DAL,4683688,Dereck Lively II,5160992,Alex Sarr,P.J. Washington,DAL,Pullup Jump Shot,11:17
+10/24/25,401809950,DAL,WSH,DAL,4683688,Dereck Lively II,5160992,Alex Sarr,Klay Thompson,DAL,Free Throw - Technical,11:29
 10/24/25,401809951,LAL,MIN,MIN,3032976,Rudy Gobert,4278129,Deandre Ayton,Donte DiVincenzo,MIN,Driving Floating Jump Shot,11:34
 10/24/25,401809952,POR,GS,POR,5105565,Donovan Clingan,4593016,Quinten Post,Deni Avdija,POR,Cutting Layup Shot,11:41
 10/24/25,401809953,SAC,UTAH,UTAH,4433136,Walker Kessler,3155942,Domantas Sabonis,Svi Mykhailiuk,UTAH,Running Jump Shot,11:39
@@ -52,14 +52,14 @@ game_start,game_id,home_team,away_team,tip_winner,tip_winner_player,tip_winner_p
 10/27/25,401809246,MIN,DEN,MIN,3032976,Rudy Gobert,3112335,Nikola Jokic,Aaron Gordon,DEN,Driving Floating Jump Shot,11:31
 10/27/25,401809976,GS,MEM,GS,6589,Draymond Green,4277961,Jaren Jackson Jr.,Brandin Podziemski,GS,Jump Shot,11:51
 10/27/25,401809977,LAL,POR,POR,5105565,Donovan Clingan,4278129,Deandre Ayton,Austin Reaves,LAL,Driving Layup Shot,10:59
-10/28/25,401809978,WSH,PHI,PHI,3133603,Kelly Oubre Jr.,5160992,Alex Sarr,Khris Middleton,WSH,Driving Layup Shot,11:29
+10/28/25,401809978,WSH,PHI,PHI,3133603,Kelly Oubre Jr.,5160992,Alex Sarr,Joel Embiid,PHI,Free Throw - 1 of 2,11:45
 10/28/25,401809979,MIA,CHA,MIA,5105623,Kel'el Ware,4576060,Ryan Kalkbrenner,Kel'el Ware,MIA,Alley Oop Dunk Shot,11:44
 10/28/25,401809980,MIL,NY,NY,3136195,Karl-Anthony Towns,3133628,Myles Turner,Mikal Bridges,NY,Jump Shot,11:37
 10/28/25,401809981,OKC,SAC,OKC,4222252,Isaiah Hartenstein,3155942,Domantas Sabonis,Aaron Wiggins,OKC,Layup Shot,11:23
 10/28/25,401809982,GS,LAC,GS,4593016,Quinten Post,4017837,Ivica Zubac,Draymond Green,GS,Jump Shot,11:43
-10/29/25,401809986,TOR,HOU,HOU,4871144,Alperen Sengun,5093267,Collin Murray-Boyles,Brandon Ingram,TOR,Turnaround Fade Away Jump Shot,10:37
+10/29/25,401809986,TOR,HOU,HOU,4871144,Alperen Sengun,5093267,Collin Murray-Boyles,Jabari Smith Jr.,HOU,Free Throw - 2 of 3,11:36
 10/29/25,401809983,BOS,CLE,CLE,4066328,Jarrett Allen,4397424,Neemias Queta,Evan Mobley,CLE,Driving Floating Bank Jump Shot,11:44
-10/29/25,401809984,DET,ORL,ORL,4277847,Wendell Carter Jr.,4433621,Jalen Duren,Desmond Bane,ORL,Running Layup Shot,11:00
+10/29/25,401809984,DET,ORL,ORL,4277847,Wendell Carter Jr.,4433621,Jalen Duren,Paolo Banchero,ORL,Free Throw - 1 of 2,11:26
 10/29/25,401809985,BKN,ATL,BKN,4278067,Nic Claxton,3102531,Kristaps Porzingis,Nic Claxton,BKN,Alley Oop Dunk Shot,11:41
 10/29/25,401809987,CHI,SAC,CHI,6478,Nikola Vucevic,3155942,Domantas Sabonis,Domantas Sabonis,SAC,Running Layup Shot,11:18
 10/29/25,401809988,DAL,IND,DAL,6583,Anthony Davis,4432170,Isaiah Jackson,Pascal Siakam,IND,Tip Shot,10:49
@@ -73,9 +73,9 @@ game_start,game_id,home_team,away_team,tip_winner,tip_winner_player,tip_winner_p
 10/30/25,401809996,SA,MIA,SA,5104157,Victor Wembanyama,5105623,Kel'el Ware,Devin Vassell,SA,Jump Shot,11:45
 10/31/25,401809502,IND,ATL,ATL,3102531,Kristaps Porzingis,4432170,Isaiah Jackson,Jalen Johnson,ATL,Driving Finger Roll Layup,11:40
 10/31/25,401809503,PHI,BOS,BOS,4397424,Neemias Queta,3133603,Kelly Oubre Jr.,Payton Pritchard,BOS,Turnaround Fade Away Jump Shot,11:27
-10/31/25,401809504,CLE,TOR,CLE,4432158,Evan Mobley,5093267,Collin Murray-Boyles,Scottie Barnes,TOR,Driving Hook Shot,10:36
+10/31/25,401809504,CLE,TOR,CLE,4432158,Evan Mobley,5093267,Collin Murray-Boyles,De'Andre Hunter,CLE,Free Throw - 1 of 2,11:03
 10/31/25,401809505,CHI,NY,NY,4351852,Mitchell Robinson,6478,Nikola Vucevic,Karl-Anthony Towns,NY,Jump Shot,11:12
-10/31/25,401809506,MEM,LAL,LAL,4278129,Deandre Ayton,4277961,Jaren Jackson Jr.,Jock Landale,MEM,Turnaround Hook Shot,10:51
+10/31/25,401809506,MEM,LAL,LAL,4278129,Deandre Ayton,4277961,Jaren Jackson Jr.,Jaren Jackson Jr.,MEM,Free Throw - 2 of 2,11:21
 10/31/25,401809507,PHX,UTAH,UTAH,4433136,Walker Kessler,4701232,Mark Williams,Devin Booker,PHX,Pullup Jump Shot,11:04
 10/31/25,401809508,POR,DEN,POR,5105565,Donovan Clingan,3112335,Nikola Jokic,Jamal Murray,DEN,Running Dunk Shot,10:36
 10/31/25,401809509,LAC,NO,NO,5061589,Yves Missi,4017837,Ivica Zubac,Herbert Jones,NO,Jump Shot,11:46
@@ -104,27 +104,27 @@ game_start,game_id,home_team,away_team,tip_winner,tip_winner_player,tip_winner_p
 11/03/25,401810019,LAC,MIA,MIA,4066261,Bam Adebayo,4017837,Ivica Zubac,Bam Adebayo,MIA,Cutting Layup Shot,11:43
 11/04/25,401810020,TOR,MIL,TOR,3134908,Jakob Poeltl,3133628,Myles Turner,RJ Barrett,TOR,Jump Shot,11:38
 11/04/25,401810021,ATL,ORL,ORL,4277847,Wendell Carter Jr.,3102531,Kristaps Porzingis,Wendell Carter Jr.,ORL,Driving Layup Shot,11:33
-11/04/25,401810022,CHI,PHI,PHI,3059318,Joel Embiid,6478,Nikola Vucevic,Kelly Oubre Jr.,PHI,Running Dunk Shot,11:28
+11/04/25,401810022,CHI,PHI,PHI,3059318,Joel Embiid,6478,Nikola Vucevic,Joel Embiid,PHI,Free Throw - 1 of 2,11:44
 11/04/25,401810023,NO,CHA,CHA,4576060,Ryan Kalkbrenner,3155535,Kevon Looney,Jeremiah Fears,NO,Running Finger Roll Layup,11:12
-11/04/25,401810024,GS,PHX,PHX,4701232,Mark Williams,4593016,Quinten Post,Grayson Allen,PHX,Jump Shot,10:06
-11/04/25,401810025,LAC,OKC,OKC,4433255,Chet Holmgren,4017837,Ivica Zubac,James Harden,LAC,Jump Shot,10:34
+11/04/25,401810024,GS,PHX,PHX,4701232,Mark Williams,4593016,Quinten Post,Devin Booker,PHX,Free Throw - 1 of 2,11:07
+11/04/25,401810025,LAC,OKC,OKC,4433255,Chet Holmgren,4017837,Ivica Zubac,James Harden,LAC,Free Throw - 1 of 2,11:31
 11/05/25,401810026,CLE,PHI,CLE,4066328,Jarrett Allen,5105637,Adem Bona,Jaylon Tyson,CLE,Tip Shot,11:41
 11/05/25,401810027,DET,UTAH,DET,4433621,Jalen Duren,3102530,Jusuf Nurkic,Ausar Thompson,DET,Cutting Layup Shot,11:43
 11/05/25,401810028,IND,BKN,BKN,4278067,Nic Claxton,4432170,Isaiah Jackson,Michael Porter Jr.,BKN,Jump Shot,11:36
-11/05/25,401810029,BOS,WSH,WSH,5160992,Alex Sarr,4397424,Neemias Queta,Neemias Queta,BOS,Cutting Dunk Shot,11:27
-11/05/25,401810030,NY,MIN,NY,4351852,Mitchell Robinson,3032976,Rudy Gobert,Julius Randle,MIN,Jump Shot,11:27
+11/05/25,401810029,BOS,WSH,WSH,5160992,Alex Sarr,4397424,Neemias Queta,Alex Sarr,WSH,Free Throw - 2 of 2,11:40
+11/05/25,401810030,NY,MIN,NY,4351852,Mitchell Robinson,3032976,Rudy Gobert,Karl-Anthony Towns,NY,Free Throw - 1 of 2,11:44
 11/05/25,401810031,MEM,HOU,MEM,4277961,Jaren Jackson Jr.,4871144,Alperen Sengun,Jaylen Wells,MEM,Pullup Jump Shot,11:36
 11/05/25,401810032,DAL,NO,DAL,4278049,Daniel Gafford,3155535,Kevon Looney,Saddiq Bey,NO,Step Back Jump Shot,10:44
 11/05/25,401810033,DEN,MIA,MIA,4066261,Bam Adebayo,3112335,Nikola Jokic,Norman Powell,MIA,Pullup Jump Shot,11:40
 11/05/25,401810034,LAL,SA,SA,5104157,Victor Wembanyama,4278129,Deandre Ayton,Victor Wembanyama,SA,Tip Shot,11:09
-11/05/25,401810035,POR,OKC,OKC,4222252,Isaiah Hartenstein,5105565,Donovan Clingan,Ajay Mitchell,OKC,Driving Layup Shot,10:43
+11/05/25,401810035,POR,OKC,OKC,4222252,Isaiah Hartenstein,5105565,Donovan Clingan,Shai Gilgeous-Alexander,OKC,Free Throw - 1 of 2,11:22
 11/05/25,401810036,SAC,GS,GS,4593016,Quinten Post,3914285,Drew Eubanks,Moses Moody,GS,Driving Layup Shot,11:11
 11/06/25,401810037,PHX,LAC,PHX,4701232,Mark Williams,4017837,Ivica Zubac,Mark Williams,PHX,Tip Dunk Shot,11:33
 11/07/25,401809510,ORL,BOS,ORL,4277847,Wendell Carter Jr.,4397424,Neemias Queta,Wendell Carter Jr.,ORL,Running Dunk Shot,11:14
 11/07/25,401809511,WSH,CLE,CLE,4066328,Jarrett Allen,5160992,Alex Sarr,Darius Garland,CLE,Driving Floating Jump Shot,11:42
 11/07/25,401809512,ATL,TOR,TOR,3134908,Jakob Poeltl,3102531,Kristaps Porzingis,Brandon Ingram,TOR,Pullup Jump Shot,11:43
 11/07/25,401809773,BKN,DET,DET,4433621,Jalen Duren,4278067,Nic Claxton,Cade Cunningham,DET,Step Back Jump Shot,11:41
-11/07/25,401809774,SA,HOU,SA,5104157,Victor Wembanyama,4871144,Alperen Sengun,Alperen Sengun,HOU,Cutting Layup Shot,10:58
+11/07/25,401809774,SA,HOU,SA,5104157,Victor Wembanyama,4871144,Alperen Sengun,Stephon Castle,SA,Free Throw - 2 of 2,11:12
 11/07/25,401809775,MIA,CHA,MIA,5105623,Kel'el Ware,4576060,Ryan Kalkbrenner,Norman Powell,MIA,Pullup Jump Shot,11:38
 11/07/25,401809776,MEM,DAL,DAL,4278049,Daniel Gafford,4277961,Jaren Jackson Jr.,P.J. Washington,DAL,Alley Oop Layup Shot,11:05
 11/07/25,401809777,MIL,CHI,CHI,6478,Nikola Vucevic,3133628,Myles Turner,Matas Buzelis,CHI,Layup Running Reverse,11:15
@@ -141,7 +141,7 @@ game_start,game_id,home_team,away_team,tip_winner,tip_winner_player,tip_winner_p
 11/08/25,401810045,LAC,PHX,PHX,4701232,Mark Williams,4017837,Ivica Zubac,Grayson Allen,PHX,Jump Shot,11:40
 11/09/25,401810046,MIL,HOU,MIL,3133628,Myles Turner,4871144,Alperen Sengun,Gary Trent Jr.,MIL,Jump Shot,11:44
 11/09/25,401810047,NY,BKN,NY,4351852,Mitchell Robinson,4278067,Nic Claxton,Karl-Anthony Towns,NY,Turnaround Hook Shot,10:58
-11/09/25,401810048,ORL,BOS,ORL,4277847,Wendell Carter Jr.,4397424,Neemias Queta,Wendell Carter Jr.,ORL,Jump Shot,10:59
+11/09/25,401810048,ORL,BOS,ORL,4277847,Wendell Carter Jr.,4397424,Neemias Queta,Jalen Suggs,ORL,Free Throw - 1 of 3,11:34
 11/09/25,401810049,MEM,OKC,OKC,4433255,Chet Holmgren,4277961,Jaren Jackson Jr.,Isaiah Hartenstein,OKC,Dunk Shot,11:42
 11/09/25,401810050,PHI,DET,PHI,6585,Andre Drummond,4433621,Jalen Duren,Kelly Oubre Jr.,PHI,Dunk Shot,11:53
 11/09/25,401810051,GS,IND,GS,4593016,Quinten Post,4432170,Isaiah Jackson,Quinten Post,GS,Jump Shot,10:55
@@ -150,7 +150,7 @@ game_start,game_id,home_team,away_team,tip_winner,tip_winner_player,tip_winner_p
 11/10/25,401810054,DET,WSH,DET,4433621,Jalen Duren,5160992,Alex Sarr,Cade Cunningham,DET,Fade Away Jump Shot,11:42
 11/10/25,401810055,ORL,POR,POR,5105565,Donovan Clingan,4277847,Wendell Carter Jr.,Toumani Camara,POR,Hook Driving Bank,11:42
 11/10/25,401810056,MIA,CLE,MIA,5105623,Kel'el Ware,4066328,Jarrett Allen,De'Andre Hunter,CLE,Jump Shot,11:34
-11/10/25,401810057,CHI,SA,SA,5104157,Victor Wembanyama,6478,Nikola Vucevic,De'Aaron Fox,SA,Pullup Jump Shot,10:52
+11/10/25,401810057,CHI,SA,SA,5104157,Victor Wembanyama,6478,Nikola Vucevic,Victor Wembanyama,SA,Free Throw - 1 of 2,11:31
 11/10/25,401810058,DAL,MIL,DAL,4278049,Daniel Gafford,3133628,Myles Turner,Max Christie,DAL,Driving Layup Shot,11:40
 11/10/25,401810059,PHX,NO,PHX,4701232,Mark Williams,3155535,Kevon Looney,Devin Booker,PHX,Pullup Jump Shot,10:28
 11/10/25,401810060,UTAH,MIN,UTAH,3102530,Jusuf Nurkic,3032976,Rudy Gobert,Lauri Markkanen,UTAH,Running Layup Shot,11:23
@@ -168,7 +168,7 @@ game_start,game_id,home_team,away_team,tip_winner,tip_winner_player,tip_winner_p
 11/12/25,401810072,MIA,CLE,CLE,4066328,Jarrett Allen,5105623,Kel'el Ware,Norman Powell,MIA,Running Jump Shot,10:58
 11/12/25,401810073,HOU,WSH,WSH,5160992,Alex Sarr,4871144,Alperen Sengun,Jabari Smith Jr.,HOU,Driving Dunk Shot,10:50
 11/12/25,401810074,NO,POR,POR,5105565,Donovan Clingan,3155535,Kevon Looney,Trey Murphy III,NO,Jump Shot,11:20
-11/12/25,401810075,SA,GS,SA,5104157,Victor Wembanyama,6589,Draymond Green,Moses Moody,GS,Jump Shot,10:57
+11/12/25,401810075,SA,GS,SA,5104157,Victor Wembanyama,6589,Draymond Green,Stephon Castle,SA,Free Throw - 1 of 2,11:10
 11/12/25,401810076,DAL,PHX,PHX,4701232,Mark Williams,4278049,Daniel Gafford,Brandon Williams,DAL,Running Layup Shot,11:29
 11/12/25,401810077,OKC,LAL,LAL,4278129,Deandre Ayton,4433255,Chet Holmgren,Luka Doncic,LAL,Driving Layup Shot,11:24
 11/12/25,401810078,SAC,ATL,ATL,3102531,Kristaps Porzingis,3155942,Domantas Sabonis,Kristaps Porzingis,ATL,Jump Shot,11:41
@@ -212,7 +212,7 @@ game_start,game_id,home_team,away_team,tip_winner,tip_winner_player,tip_winner_p
 11/18/25,401810107,SA,MEM,MEM,4600663,Zach Edey,3064560,Luke Kornet,Cedric Coward,MEM,Jump Shot,11:43
 11/18/25,401810108,LAL,UTAH,UTAH,3102530,Jusuf Nurkic,4278129,Deandre Ayton,Svi Mykhailiuk,UTAH,Pullup Jump Shot,11:09
 11/18/25,401810109,POR,PHX,PHX,4701232,Mark Williams,5105565,Donovan Clingan,Mark Williams,PHX,Floating Jump Shot,11:37
-11/19/25,401810110,CLE,HOU,CLE,4066328,Jarrett Allen,2991235,Steven Adams,Jabari Smith Jr.,HOU,Jump Shot,10:52
+11/19/25,401810110,CLE,HOU,CLE,4066328,Jarrett Allen,2991235,Steven Adams,Steven Adams,HOU,Free Throw - 1 of 2,11:18
 11/19/25,401810111,IND,CHA,IND,4432170,Isaiah Jackson,4576060,Ryan Kalkbrenner,Bennedict Mathurin,IND,Jump Shot,11:42
 11/19/25,401810113,PHI,TOR,PHI,6585,Andre Drummond,3134908,Jakob Poeltl,Jakob Poeltl,TOR,Driving Hook Shot,11:29
 11/19/25,401810112,MIA,GS,MIA,4066261,Bam Adebayo,4431684,Trayce Jackson-Davis,Andrew Wiggins,MIA,Driving Layup Shot,11:44
@@ -237,7 +237,7 @@ game_start,game_id,home_team,away_team,tip_winner,tip_winner_player,tip_winner_p
 11/22/25,401810123,CHA,LAC,LAC,4017837,Ivica Zubac,4576060,Ryan Kalkbrenner,Brandon Miller,CHA,Running Dunk Shot,11:37
 11/22/25,401810124,ORL,NY,NY,4351852,Mitchell Robinson,4277847,Wendell Carter Jr.,Jalen Brunson,NY,Turnaround Jump Shot,11:35
 11/22/25,401810125,NO,ATL,ATL,3102531,Kristaps Porzingis,4869780,Derik Queen,Dyson Daniels,ATL,Tip Shot,10:53
-11/22/25,401810126,CHI,WSH,WSH,5160992,Alex Sarr,6478,Nikola Vucevic,Matas Buzelis,CHI,Cutting Layup Shot,11:30
+11/22/25,401810126,CHI,WSH,WSH,5160992,Alex Sarr,6478,Nikola Vucevic,Kyshawn George,WSH,Free Throw - 1 of 2,11:46
 11/22/25,401810127,MIL,DET,MIL,3133628,Myles Turner,4433621,Jalen Duren,Bobby Portis,MIL,Jump Shot,11:41
 11/22/25,401810128,DAL,MEM,MEM,4600663,Zach Edey,4278049,Daniel Gafford,Max Christie,DAL,Hook Driving Bank,11:14
 11/22/25,401810129,DEN,SAC,SAC,3914285,Drew Eubanks,3112335,Nikola Jokic,Cameron Johnson,DEN,Jump Shot,11:32
@@ -245,17 +245,17 @@ game_start,game_id,home_team,away_team,tip_winner,tip_winner_player,tip_winner_p
 11/23/25,401810131,ATL,CHA,CHA,2488653,Mason Plumlee,4431680,Onyeka Okongwu,Mason Plumlee,CHA,Cutting Dunk Shot,11:46
 11/23/25,401810132,BOS,ORL,ORL,4593049,Orlando Robinson,4397424,Neemias Queta,Neemias Queta,BOS,Tip Dunk Shot,11:15
 11/23/25,401810133,CLE,LAC,CLE,4432158,Evan Mobley,4017837,Ivica Zubac,Ivica Zubac,LAC,Driving Hook Shot,11:23
-11/23/25,401810134,TOR,BKN,BKN,4278067,Nic Claxton,4278580,Sandro Mamukelashvili,Sandro Mamukelashvili,TOR,Jump Shot,11:12
+11/23/25,401810134,TOR,BKN,BKN,4278067,Nic Claxton,4278580,Sandro Mamukelashvili,RJ Barrett,TOR,Free Throw - 1 of 2,11:38
 11/23/25,401810135,OKC,POR,OKC,4433255,Chet Holmgren,5105565,Donovan Clingan,Isaiah Hartenstein,OKC,Cutting Layup Shot,11:42
 11/23/25,401810136,PHX,SA,PHX,4701232,Mark Williams,3064560,Luke Kornet,Jordan Goodwin,PHX,Layup Shot Putback,11:36
 11/23/25,401810137,UTAH,LAL,LAL,4278129,Deandre Ayton,3102530,Jusuf Nurkic,LeBron James,LAL,Running Dunk Shot,11:04
 11/24/25,401810138,IND,DET,DET,4433621,Jalen Duren,4432170,Isaiah Jackson,Pascal Siakam,IND,Running Finger Roll Layup,11:23
 11/24/25,401810139,TOR,CLE,CLE,4432158,Evan Mobley,3134908,Jakob Poeltl,Donovan Mitchell,CLE,Step Back Jump Shot,11:35
 11/24/25,401810140,BKN,NY,BKN,4278067,Nic Claxton,3136195,Karl-Anthony Towns,Karl-Anthony Towns,NY,Driving Finger Roll Layup,11:17
-11/24/25,401810141,MIA,DAL,MIA,5105623,Kel'el Ware,4278049,Daniel Gafford,Brandon Williams,DAL,Pullup Jump Shot,9:14
+11/24/25,401810141,MIA,DAL,MIA,5105623,Kel'el Ware,4278049,Daniel Gafford,Kel'el Ware,MIA,Free Throw - 1 of 2,9:29
 11/24/25,401810142,MEM,DEN,DEN,3112335,Nikola Jokic,4600663,Zach Edey,Zach Edey,MEM,Driving Layup Shot,10:55
-11/24/25,401810143,MIL,POR,POR,5105565,Donovan Clingan,3133628,Myles Turner,Donovan Clingan,POR,Jump Shot,10:11
-11/24/25,401810144,NO,CHI,NO,4869780,Derik Queen,4431687,Patrick Williams,Josh Giddey,CHI,Driving Layup Shot,11:18
+11/24/25,401810143,MIL,POR,POR,5105565,Donovan Clingan,3133628,Myles Turner,Jerami Grant,POR,Free Throw - 1 of 2,10:32
+11/24/25,401810144,NO,CHI,NO,4869780,Derik Queen,4431687,Patrick Williams,Zion Williamson,NO,Free Throw - 2 of 2,11:40
 11/24/25,401810145,PHX,HOU,PHX,4278076,Nick Richards,4871144,Alperen Sengun,Nick Richards,PHX,Layup Shot Putback,11:18
 11/24/25,401810146,GS,UTAH,GS,4593016,Quinten Post,3102530,Jusuf Nurkic,Keyonte George,UTAH,Step Back Jump Shot,10:49
 11/24/25,401810147,SAC,MIN,SAC,3914285,Drew Eubanks,3032976,Rudy Gobert,Anthony Edwards,MIN,Layup Driving Reverse,11:02
@@ -271,12 +271,12 @@ game_start,game_id,home_team,away_team,tip_winner,tip_winner_player,tip_winner_p
 11/26/25,401809808,GS,HOU,HOU,4871144,Alperen Sengun,6589,Draymond Green,Jimmy Butler III,GS,Pullup Jump Shot,11:32
 11/26/25,401809809,POR,SA,SA,3064560,Luke Kornet,5105565,Donovan Clingan,Devin Vassell,SA,Pullup Jump Shot,11:45
 11/26/25,401809810,SAC,PHX,PHX,4701232,Mark Williams,3914285,Drew Eubanks,Dillon Brooks,PHX,Jump Shot,11:29
-11/28/25,401809811,ATL,CLE,CLE,4066328,Jarrett Allen,4431680,Onyeka Okongwu,De'Andre Hunter,CLE,Running Jump Shot,10:36
+11/28/25,401809811,ATL,CLE,CLE,4066328,Jarrett Allen,4431680,Onyeka Okongwu,Donovan Mitchell,CLE,Free Throw - 1 of 2,11:44
 11/28/25,401809812,BKN,PHI,BKN,4278067,Nic Claxton,6585,Andre Drummond,Dominick Barlow,PHI,Cutting Layup Shot,11:23
 11/28/25,401809813,CHA,CHI,CHA,4576060,Ryan Kalkbrenner,6478,Nikola Vucevic,Kon Knueppel,CHA,Driving Layup Shot,11:41
 11/28/25,401809814,DET,ORL,ORL,4277847,Wendell Carter Jr.,4433621,Jalen Duren,Ausar Thompson,DET,Driving Finger Roll Layup,11:20
 11/28/25,401809815,IND,WSH,IND,4065731,Jay Huff,5160992,Alex Sarr,Bennedict Mathurin,IND,Jump Shot,11:42
-11/28/25,401809816,NY,MIL,NY,3136195,Karl-Anthony Towns,3133628,Myles Turner,Giannis Antetokounmpo,MIL,Alley Oop Dunk Shot,11:15
+11/28/25,401809816,NY,MIL,NY,3136195,Karl-Anthony Towns,3133628,Myles Turner,Josh Hart,NY,Free Throw - 1 of 2,11:36
 11/28/25,401809817,OKC,PHX,OKC,4433255,Chet Holmgren,4701232,Mark Williams,Luguentz Dort,OKC,Jump Shot,11:45
 11/28/25,401809818,DEN,SA,SA,3064560,Luke Kornet,3112335,Nikola Jokic,Devin Vassell,SA,Pullup Jump Shot,11:37
 11/28/25,401809819,UTAH,SAC,SAC,3914285,Drew Eubanks,3102530,Jusuf Nurkic,Svi Mykhailiuk,UTAH,Running Finger Roll Layup,11:32
@@ -299,8 +299,8 @@ game_start,game_id,home_team,away_team,tip_winner,tip_winner_player,tip_winner_p
 11/30/25,401810162,SAC,MEM,MEM,4600663,Zach Edey,3914285,Drew Eubanks,Drew Eubanks,SAC,Tip Dunk Shot,11:33
 11/30/25,401810163,LAL,NO,LAL,4278129,Deandre Ayton,5061589,Yves Missi,Luka Doncic,LAL,Running Pullup Jump Shot,11:14
 12/01/25,401810164,DET,ATL,ATL,4431680,Onyeka Okongwu,4433621,Jalen Duren,Nickeil Alexander-Walker,ATL,Floating Jump Shot,11:45
-12/01/25,401810165,IND,CLE,CLE,4432158,Evan Mobley,4065731,Jay Huff,Evan Mobley,CLE,Driving Floating Jump Shot,11:15
-12/01/25,401810166,WSH,MIL,WSH,4277848,Marvin Bagley III,3133628,Myles Turner,Giannis Antetokounmpo,MIL,Fade Away Jump Shot,11:16
+12/01/25,401810165,IND,CLE,CLE,4432158,Evan Mobley,4065731,Jay Huff,Pascal Siakam,IND,Free Throw - 1 of 2,11:29
+12/01/25,401810166,WSH,MIL,WSH,4277848,Marvin Bagley III,3133628,Myles Turner,CJ McCollum,WSH,Free Throw - 2 of 2,11:40
 12/01/25,401810167,BKN,CHA,CHA,4576060,Ryan Kalkbrenner,4278067,Nic Claxton,Kon Knueppel,CHA,Jump Shot,11:51
 12/01/25,401810168,MIA,LAC,LAC,4017837,Ivica Zubac,4066261,Bam Adebayo,Bam Adebayo,MIA,Running Jump Shot,11:33
 12/01/25,401810169,ORL,CHI,ORL,4277847,Wendell Carter Jr.,6478,Nikola Vucevic,Wendell Carter Jr.,ORL,Jump Shot,11:44
@@ -331,7 +331,7 @@ game_start,game_id,home_team,away_team,tip_winner,tip_winner_player,tip_winner_p
 12/05/25,401810194,ORL,MIA,ORL,4277847,Wendell Carter Jr.,5105623,Kel'el Ware,Jalen Suggs,ORL,Jump Shot,11:43
 12/05/25,401810195,ATL,DEN,DEN,3112335,Nikola Jokic,4431680,Onyeka Okongwu,Dyson Daniels,ATL,Driving Floating Jump Shot,11:39
 12/05/25,401810196,CLE,SA,SA,6427,Bismack Biyombo,4432158,Evan Mobley,Bismack Biyombo,SA,Alley Oop Dunk Shot,11:46
-12/05/25,401810197,DET,POR,DET,4433621,Jalen Duren,4066211,Robert Williams III,Jerami Grant,POR,Jump Shot,11:07
+12/05/25,401810197,DET,POR,DET,4433621,Jalen Duren,4066211,Robert Williams III,Ausar Thompson,DET,Free Throw - 1 of 2,11:35
 12/05/25,401810198,NY,UTAH,UTAH,3102530,Jusuf Nurkic,3136195,Karl-Anthony Towns,Karl-Anthony Towns,NY,Jump Shot,10:17
 12/05/25,401810199,TOR,CHA,TOR,3134908,Jakob Poeltl,4576060,Ryan Kalkbrenner,Scottie Barnes,TOR,Pullup Jump Shot,11:41
 12/05/25,401810200,CHI,IND,CHI,6478,Nikola Vucevic,4065731,Jay Huff,Coby White,CHI,Running Pullup Jump Shot,10:53
@@ -343,24 +343,24 @@ game_start,game_id,home_team,away_team,tip_winner,tip_winner_player,tip_winner_p
 12/06/25,401810206,WSH,ATL,WSH,4277848,Marvin Bagley III,4431680,Onyeka Okongwu,CJ McCollum,WSH,Step Back Jump Shot,11:41
 12/06/25,401810207,CLE,GS,CLE,4432158,Evan Mobley,4593016,Quinten Post,Evan Mobley,CLE,Alley Oop Dunk Shot,11:34
 12/06/25,401810208,DET,MIL,DET,4433621,Jalen Duren,3133628,Myles Turner,Cade Cunningham,DET,Pullup Jump Shot,10:52
-12/06/25,401810209,MIA,SAC,MIA,5105623,Kel'el Ware,4898371,Maxime Raynaud,Andrew Wiggins,MIA,Driving Finger Roll Layup,11:15
-12/06/25,401810210,MIN,LAC,MIN,3032976,Rudy Gobert,4017837,Ivica Zubac,Anthony Edwards,MIN,Driving Dunk Shot,11:01
+12/06/25,401810209,MIA,SAC,MIA,5105623,Kel'el Ware,4898371,Maxime Raynaud,Kel'el Ware,MIA,Free Throw - 2 of 2,11:41
+12/06/25,401810210,MIN,LAC,MIN,3032976,Rudy Gobert,4017837,Ivica Zubac,Kawhi Leonard,LAC,Free Throw - 1 of 2,11:19
 12/06/25,401810211,DAL,HOU,DAL,6583,Anthony Davis,3102529,Clint Capela,Clint Capela,HOU,Tip Shot,11:17
 12/07/25,401810212,NY,ORL,NY,4351852,Mitchell Robinson,4277847,Wendell Carter Jr.,Mikal Bridges,NY,Driving Finger Roll Layup,11:44
 12/07/25,401810213,TOR,BOS,TOR,3134908,Jakob Poeltl,4397424,Neemias Queta,Derrick White,BOS,Pullup Jump Shot,10:20
-12/07/25,401810214,CHA,DEN,CHA,4576060,Ryan Kalkbrenner,3112335,Nikola Jokic,Jamal Murray,DEN,Jump Shot,10:46
+12/07/25,401810214,CHA,DEN,CHA,4576060,Ryan Kalkbrenner,3112335,Nikola Jokic,Miles Bridges,CHA,Free Throw - 1 of 2,11:40
 12/07/25,401810215,MEM,POR,MEM,4600663,Zach Edey,5217746,Yang Hansen,Cedric Coward,MEM,Driving Finger Roll Layup,11:33
 12/07/25,401810216,CHI,GS,CHI,6478,Nikola Vucevic,4593016,Quinten Post,Buddy Hield,GS,Jump Shot,11:21
 12/07/25,401810217,PHI,LAL,LAL,4278129,Deandre Ayton,4870562,Dominick Barlow,Luka Doncic,LAL,Step Back Jump Shot,11:44
-12/07/25,401810218,UTAH,OKC,OKC,4433255,Chet Holmgren,3102530,Jusuf Nurkic,Jaylin Williams,OKC,Jump Shot,11:02
-12/08/25,401810219,IND,SAC,IND,4065731,Jay Huff,4898371,Maxime Raynaud,Russell Westbrook,SAC,Jump Shot,10:59
+12/07/25,401810218,UTAH,OKC,OKC,4433255,Chet Holmgren,3102530,Jusuf Nurkic,Jusuf Nurkic,UTAH,Free Throw - 1 of 2,11:17
+12/08/25,401810219,IND,SAC,IND,4065731,Jay Huff,4898371,Maxime Raynaud,Jay Huff,IND,Free Throw - 1 of 2,11:13
 12/08/25,401810220,MIN,PHX,PHX,4701232,Mark Williams,3032976,Rudy Gobert,Grayson Allen,PHX,Driving Finger Roll Layup,11:39
 12/08/25,401810221,NO,SA,SA,3064560,Luke Kornet,4869780,Derik Queen,Herbert Jones,NO,Running Layup Shot,11:45
 12/09/25,401809833,ORL,MIA,ORL,4277847,Wendell Carter Jr.,4066261,Bam Adebayo,Andrew Wiggins,MIA,Step Back Jump Shot,11:31
 12/09/25,401809834,TOR,NY,TOR,3134908,Jakob Poeltl,3136195,Karl-Anthony Towns,Jalen Brunson,NY,Step Back Jump Shot,11:31
 12/10/25,401809835,OKC,PHX,PHX,4701232,Mark Williams,4433255,Chet Holmgren,Cason Wallace,OKC,Running Finger Roll Layup,11:48
 12/10/25,401809836,LAL,SA,LAL,4278129,Deandre Ayton,3064560,Luke Kornet,LeBron James,LAL,Fade Away Jump Shot,11:11
-12/11/25,401836746,HOU,LAC,LAC,4017837,Ivica Zubac,4871144,Alperen Sengun,Alperen Sengun,HOU,Turnaround Jump Shot,10:37
+12/11/25,401836746,HOU,LAC,LAC,4017837,Ivica Zubac,4871144,Alperen Sengun,Josh Okogie,HOU,Free Throw - 2 of 2,11:05
 12/11/25,401836747,MIL,BOS,MIL,3133628,Myles Turner,4397424,Neemias Queta,Kyle Kuzma,MIL,Cutting Layup Shot,11:40
 12/11/25,401836748,NO,POR,POR,4594326,Kris Murray,4869780,Derik Queen,Herbert Jones,NO,Driving Layup Shot,11:30
 12/11/25,401836749,SAC,DEN,SAC,4898371,Maxime Raynaud,3112335,Nikola Jokic,Keegan Murray,SAC,Running Layup Shot,10:20
@@ -374,7 +374,7 @@ game_start,game_id,home_team,away_team,tip_winner,tip_winner_player,tip_winner_p
 12/13/25,401809837,ORL,NY,NY,3136195,Karl-Anthony Towns,4277847,Wendell Carter Jr.,Jalen Suggs,ORL,Driving Floating Jump Shot,11:34
 12/13/25,401809838,OKC,SA,SA,3064560,Luke Kornet,4433255,Chet Holmgren,Chet Holmgren,OKC,Jump Shot,11:02
 12/14/25,401836797,IND,WSH,IND,4065731,Jay Huff,4277848,Marvin Bagley III,Marvin Bagley III,WSH,Layup Shot,11:20
-12/14/25,401836799,CLE,CHA,CHA,4576060,Ryan Kalkbrenner,4066328,Jarrett Allen,Brandon Miller,CHA,Running Dunk Shot,10:37
+12/14/25,401836799,CLE,CHA,CHA,4576060,Ryan Kalkbrenner,4066328,Jarrett Allen,Jarrett Allen,CLE,Free Throw - 1 of 2,11:06
 12/14/25,401836798,ATL,PHI,ATL,4431680,Onyeka Okongwu,4870562,Dominick Barlow,Nickeil Alexander-Walker,ATL,Jump Shot,11:25
 12/14/25,401836800,BKN,MIL,BKN,4278067,Nic Claxton,3133628,Myles Turner,Egor Demin,BKN,Jump Shot,11:44
 12/14/25,401836801,MIN,SAC,SAC,4898371,Maxime Raynaud,3032976,Rudy Gobert,Bones Hyland,MIN,Step Back Jump Shot,11:23
@@ -401,7 +401,7 @@ game_start,game_id,home_team,away_team,tip_winner,tip_winner_player,tip_winner_p
 12/18/25,401810233,PHX,GS,PHX,4701232,Mark Williams,4593016,Quinten Post,Quinten Post,GS,Jump Shot,11:24
 12/18/25,401810234,UTAH,LAL,UTAH,3102530,Jusuf Nurkic,4397077,Jaxson Hayes,Kyle Filipowski,UTAH,Cutting Dunk Shot,11:32
 12/18/25,401810235,POR,SAC,POR,5105565,Donovan Clingan,4898371,Maxime Raynaud,Donovan Clingan,POR,Alley Oop Dunk Shot,11:07
-12/19/25,401810236,BOS,MIA,MIA,5105623,Kel'el Ware,4397424,Neemias Queta,Kel'el Ware,MIA,Jump Shot,11:15
+12/19/25,401810236,BOS,MIA,MIA,5105623,Kel'el Ware,4397424,Neemias Queta,Jordan Walsh,BOS,Free Throw - 1 of 2,11:26
 12/19/25,401810237,NY,PHI,PHI,6585,Andre Drummond,3136195,Karl-Anthony Towns,Jalen Brunson,NY,Driving Finger Roll Layup,11:21
 12/19/25,401810238,ATL,SA,SA,3064560,Luke Kornet,4431680,Onyeka Okongwu,De'Aaron Fox,SA,Step Back Jump Shot,11:42
 12/19/25,401810239,CLE,CHI,CHI,6478,Nikola Vucevic,4066328,Jarrett Allen,Tyrese Proctor,CLE,Step Back Jump Shot,11:22
@@ -422,7 +422,7 @@ game_start,game_id,home_team,away_team,tip_winner,tip_winner_player,tip_winner_p
 12/21/25,401810254,WSH,SA,SA,3064560,Luke Kornet,4997537,Tristan Vukcevic,Luke Kornet,SA,Alley Oop Dunk Shot,11:44
 12/21/25,401810255,MIN,MIL,MIN,3032976,Rudy Gobert,3133628,Myles Turner,Bobby Portis,MIL,Jump Shot,10:32
 12/21/25,401810256,SAC,HOU,SAC,4898371,Maxime Raynaud,4871144,Alperen Sengun,Russell Westbrook,SAC,Pullup Jump Shot,11:43
-12/22/25,401810257,CLE,CHA,CLE,4066328,Jarrett Allen,2488653,Mason Plumlee,LaMelo Ball,CHA,Step Back Jump Shot,11:04
+12/22/25,401810257,CLE,CHA,CLE,4066328,Jarrett Allen,2488653,Mason Plumlee,Jarrett Allen,CLE,Free Throw - 1 of 2,11:20
 12/22/25,401810258,BOS,IND,BOS,4397424,Neemias Queta,4065731,Jay Huff,Derrick White,BOS,Jump Shot,11:40
 12/22/25,401810259,NO,DAL,DAL,6583,Anthony Davis,4869780,Derik Queen,Anthony Davis,DAL,Cutting Finger Roll Layup Shot,11:45
 12/22/25,401810260,DEN,UTAH,DEN,3112335,Nikola Jokic,3102530,Jusuf Nurkic,Nikola Jokic,DEN,Jump Shot,11:38
@@ -434,7 +434,7 @@ game_start,game_id,home_team,away_team,tip_winner,tip_winner_player,tip_winner_p
 12/23/25,401810266,ATL,CHI,CHI,6478,Nikola Vucevic,4431680,Onyeka Okongwu,Nickeil Alexander-Walker,ATL,Jump Shot,11:37
 12/23/25,401810267,CLE,NO,CLE,4066328,Jarrett Allen,4869780,Derik Queen,Trey Murphy III,NO,Running Jump Shot,11:36
 12/23/25,401810268,IND,MIL,MIL,3133628,Myles Turner,4065731,Jay Huff,Bennedict Mathurin,IND,Jump Shot,11:25
-12/23/25,401810269,MIA,TOR,MIA,5105623,Kel'el Ware,4433134,Scottie Barnes,Sandro Mamukelashvili,TOR,Jump Shot,11:24
+12/23/25,401810269,MIA,TOR,MIA,5105623,Kel'el Ware,4433134,Scottie Barnes,Bam Adebayo,MIA,Free Throw - 2 of 2,11:46
 12/23/25,401810270,DAL,DEN,DAL,6583,Anthony Davis,3112335,Nikola Jokic,Anthony Davis,DAL,Alley Oop Layup Shot,11:36
 12/23/25,401810271,MIN,NY,NY,4351852,Mitchell Robinson,3032976,Rudy Gobert,Julius Randle,MIN,Step Back Bank Jump Shot,11:23
 12/23/25,401810272,SA,OKC,OKC,4433255,Chet Holmgren,3064560,Luke Kornet,Chet Holmgren,OKC,Cutting Dunk Shot,11:39
@@ -443,7 +443,7 @@ game_start,game_id,home_team,away_team,tip_winner,tip_winner_player,tip_winner_p
 12/23/25,401810275,POR,ORL,ORL,4277847,Wendell Carter Jr.,5105565,Donovan Clingan,Anthony Black,ORL,Pullup Jump Shot,11:46
 12/23/25,401810276,SAC,DET,SAC,4898371,Maxime Raynaud,4433621,Jalen Duren,Precious Achiuwa,SAC,Driving Hook Shot,11:43
 12/23/25,401810277,LAC,HOU,LAC,3448,Brook Lopez,4871144,Alperen Sengun,Kevin Durant,HOU,Turnaround Jump Shot,11:21
-12/25/25,401809238,NY,CLE,NY,3136195,Karl-Anthony Towns,4066328,Jarrett Allen,Donovan Mitchell,CLE,Driving Layup Shot,10:15
+12/25/25,401809238,NY,CLE,NY,3136195,Karl-Anthony Towns,4066328,Jarrett Allen,Jarrett Allen,CLE,Free Throw - 1 of 2,10:51
 12/25/25,401809239,OKC,SA,OKC,4433255,Chet Holmgren,3064560,Luke Kornet,Jalen Williams,OKC,Driving Layup Shot,11:45
 12/25/25,401809240,GS,DAL,GS,4593016,Quinten Post,6583,Anthony Davis,Quinten Post,GS,Turnaround Hook Shot,11:19
 12/25/25,401809241,LAL,HOU,HOU,4871144,Alperen Sengun,4278129,Deandre Ayton,Tari Eason,HOU,Jump Shot,11:35
@@ -456,10 +456,10 @@ game_start,game_id,home_team,away_team,tip_winner,tip_winner_player,tip_winner_p
 12/26/25,401810283,MEM,MIL,MEM,4277961,Jaren Jackson Jr.,3133628,Myles Turner,Kevin Porter Jr.,MIL,Running Dunk Shot,10:43
 12/26/25,401810284,NO,PHX,PHX,4701232,Mark Williams,4869780,Derik Queen,Trey Murphy III,NO,Alley Oop Dunk Shot,11:26
 12/26/25,401810285,UTAH,DET,DET,4433621,Jalen Duren,3102530,Jusuf Nurkic,Cade Cunningham,DET,Driving Finger Roll Layup,11:44
-12/26/25,401810286,POR,LAC,LAC,3448,Brook Lopez,5105565,Donovan Clingan,Shaedon Sharpe,POR,Running Alley Oop Dunk Shot,11:04
+12/26/25,401810286,POR,LAC,LAC,3448,Brook Lopez,5105565,Donovan Clingan,Deni Avdija,POR,Free Throw - 1 of 2,11:25
 12/27/25,401810287,SAC,DAL,SAC,4898371,Maxime Raynaud,4278049,Daniel Gafford,Daniel Gafford,DAL,Running Dunk Shot,11:31
 12/27/25,401810288,ORL,DEN,DEN,3112335,Nikola Jokic,4277847,Wendell Carter Jr.,Jamal Murray,DEN,Pullup Jump Shot,11:38
-12/27/25,401810289,NO,PHX,PHX,4601023,Oso Ighodaro,4869780,Derik Queen,Jeremiah Fears,NO,Pullup Jump Shot,11:07
+12/27/25,401810289,NO,PHX,PHX,4601023,Oso Ighodaro,4869780,Derik Queen,Dillon Brooks,PHX,Free Throw - 1 of 2,11:37
 12/27/25,401810290,ATL,NY,NY,3136195,Karl-Anthony Towns,4431680,Onyeka Okongwu,Jalen Brunson,NY,Turnaround Jump Shot,11:10
 12/27/25,401810291,MIA,IND,IND,4065731,Jay Huff,5105623,Kel'el Ware,Andrew Nembhard,IND,Pullup Jump Shot,11:37
 12/27/25,401810292,CHI,MIL,CHI,6478,Nikola Vucevic,3133628,Myles Turner,Coby White,CHI,Running Jump Shot,11:26
@@ -494,13 +494,13 @@ game_start,game_id,home_team,away_team,tip_winner,tip_winner_player,tip_winner_p
 12/31/25,401810321,CHI,NO,NO,4869780,Derik Queen,6478,Nikola Vucevic,Zion Williamson,NO,Cutting Layup Shot,11:43
 12/31/25,401810322,SA,NY,SA,5104157,Victor Wembanyama,3136195,Karl-Anthony Towns,Victor Wembanyama,SA,Pullup Jump Shot,11:38
 12/31/25,401810323,TOR,DEN,DEN,6477,Jonas Valanciunas,4433134,Scottie Barnes,Jonas Valanciunas,DEN,Driving Dunk Shot,11:45
-12/31/25,401810324,MIL,WSH,WSH,5160992,Alex Sarr,3133628,Myles Turner,Giannis Antetokounmpo,MIL,Driving Finger Roll Layup,10:44
+12/31/25,401810324,MIL,WSH,WSH,5160992,Alex Sarr,3133628,Myles Turner,Giannis Antetokounmpo,MIL,Free Throw - 1 of 2,11:30
 12/31/25,401810325,OKC,POR,POR,5105565,Donovan Clingan,4433255,Chet Holmgren,Sidy Cissoko,POR,Jump Shot,11:39
 01/01/26,401810326,BKN,HOU,HOU,4871144,Alperen Sengun,4278067,Nic Claxton,Alperen Sengun,HOU,Driving Layup Shot,11:39
 01/01/26,401810327,DET,MIA,MIA,5105623,Kel'el Ware,4433621,Jalen Duren,Andrew Wiggins,MIA,Driving Floating Jump Shot,11:45
 01/01/26,401810328,DAL,PHI,DAL,6583,Anthony Davis,3059318,Joel Embiid,Cooper Flagg,DAL,Driving Floating Bank Jump Shot,11:47
 01/01/26,401810329,SAC,BOS,BOS,4397424,Neemias Queta,4898371,Maxime Raynaud,Precious Achiuwa,SAC,Jump Shot,11:30
-01/01/26,401810330,LAC,UTAH,LAC,3448,Brook Lopez,4684793,Kyle Filipowski,John Collins,LAC,Tip Shot,10:31
+01/01/26,401810330,LAC,UTAH,LAC,3448,Brook Lopez,4684793,Kyle Filipowski,James Harden,LAC,Free Throw - 1 of 2,11:14
 01/02/26,401810331,IND,SA,SA,3064560,Luke Kornet,4066399,Micah Potter,Andrew Nembhard,IND,Layup Driving Reverse,11:31
 01/02/26,401810332,WSH,BKN,BKN,4432194,Day'Ron Sharpe,5160992,Alex Sarr,Day'Ron Sharpe,BKN,Driving Layup Shot,11:38
 01/02/26,401810333,CLE,DEN,CLE,4066328,Jarrett Allen,4433607,DaRon Holmes II,Spencer Jones,DEN,Jump Shot,11:24
@@ -527,7 +527,7 @@ game_start,game_id,home_team,away_team,tip_winner,tip_winner_player,tip_winner_p
 01/04/26,401810354,PHX,OKC,PHX,4701232,Mark Williams,4433255,Chet Holmgren,Shai Gilgeous-Alexander,OKC,Driving Floating Bank Jump Shot,11:29
 01/04/26,401810355,SAC,MIL,SAC,4898371,Maxime Raynaud,3133628,Myles Turner,Kevin Porter Jr.,MIL,Driving Finger Roll Layup,11:32
 01/04/26,401810356,LAL,MEM,LAL,4278129,Deandre Ayton,4277961,Jaren Jackson Jr.,Deandre Ayton,LAL,Turnaround Hook Shot,11:38
-01/05/26,401810357,DET,NY,NY,4351852,Mitchell Robinson,4278562,Paul Reed,Duncan Robinson,DET,Jump Shot,11:33
+01/05/26,401810357,DET,NY,NY,4351852,Mitchell Robinson,4278562,Paul Reed,OG Anunoby,NY,Free Throw - 1 of 2,11:46
 01/05/26,401810358,BOS,CHI,BOS,4397424,Neemias Queta,6478,Nikola Vucevic,Neemias Queta,BOS,Tip Shot,11:04
 01/05/26,401810359,TOR,ATL,ATL,4431680,Onyeka Okongwu,4433134,Scottie Barnes,RJ Barrett,TOR,Driving Floating Jump Shot,11:34
 01/05/26,401810360,HOU,PHX,HOU,2991235,Steven Adams,4701232,Mark Williams,Collin Gillespie,PHX,Running Jump Shot,11:35
@@ -550,13 +550,13 @@ game_start,game_id,home_team,away_team,tip_winner,tip_winner_player,tip_winner_p
 01/07/26,401810377,NY,LAC,LAC,4017837,Ivica Zubac,3136195,Karl-Anthony Towns,Kawhi Leonard,LAC,Running Jump Shot,11:14
 01/07/26,401810379,MEM,PHX,PHX,4701232,Mark Williams,4277961,Jaren Jackson Jr.,Jaren Jackson Jr.,MEM,Driving Hook Shot,11:18
 01/07/26,401810380,OKC,UTAH,UTAH,3102530,Jusuf Nurkic,4433255,Chet Holmgren,Keyonte George,UTAH,Cutting Layup Shot,11:46
-01/07/26,401810378,SA,LAL,LAL,4278129,Deandre Ayton,3064560,Luke Kornet,Luka Doncic,LAL,Driving Floating Jump Shot,10:29
+01/07/26,401810378,SA,LAL,LAL,4278129,Deandre Ayton,3064560,Luke Kornet,Harrison Barnes,SA,Free Throw - 1 of 2,11:29
 01/07/26,401810381,GS,MIL,MIL,3133628,Myles Turner,4593016,Quinten Post,Giannis Antetokounmpo,MIL,Cutting Dunk Shot,11:42
 01/07/26,401810382,POR,HOU,POR,5105565,Donovan Clingan,2991235,Steven Adams,Kevin Durant,HOU,Jump Shot,11:20
 01/08/26,401810383,CHA,IND,IND,4065731,Jay Huff,4433249,Moussa Diabate,Collin Sexton,CHA,Running Layup Shot,10:45
 01/08/26,401810385,MIN,CLE,CLE,4066328,Jarrett Allen,3032976,Rudy Gobert,Anthony Edwards,MIN,Alley Oop Layup Shot,11:24
 01/08/26,401810386,UTAH,DAL,DAL,4278049,Daniel Gafford,4066336,Lauri Markkanen,Max Christie,DAL,Driving Floating Bank Jump Shot,11:35
-01/09/26,401810387,BOS,TOR,BOS,4397424,Neemias Queta,4278580,Sandro Mamukelashvili,Payton Pritchard,BOS,Jump Shot,10:58
+01/09/26,401810387,BOS,TOR,BOS,4397424,Neemias Queta,4278580,Sandro Mamukelashvili,Jaylen Brown,BOS,Free Throw - 1 of 2,11:37
 01/09/26,401810388,ORL,PHI,ORL,4277847,Wendell Carter Jr.,3059318,Joel Embiid,Wendell Carter Jr.,ORL,Cutting Dunk Shot,11:44
 01/09/26,401810389,WSH,NO,WSH,5160992,Alex Sarr,4869780,Derik Queen,Jeremiah Fears,NO,Jump Shot,11:36
 01/09/26,401810390,BKN,LAC,BKN,4278067,Nic Claxton,4017837,Ivica Zubac,John Collins,LAC,Jump Shot,11:25
@@ -568,7 +568,7 @@ game_start,game_id,home_team,away_team,tip_winner,tip_winner_player,tip_winner_p
 01/09/26,401810396,LAL,MIL,LAL,4278129,Deandre Ayton,3133628,Myles Turner,Luka Doncic,LAL,Jump Shot,11:38
 01/10/26,401810397,CLE,MIN,MIN,3032976,Rudy Gobert,4066328,Jarrett Allen,Rudy Gobert,MIN,Layup Shot Putback,11:08
 01/10/26,401810398,IND,MIA,MIA,4066261,Bam Adebayo,3149673,Pascal Siakam,Pascal Siakam,IND,Running Layup Shot,11:40
-01/10/26,401810399,DET,LAC,LAC,4017837,Ivica Zubac,4278562,Paul Reed,Paul Reed,DET,Step Back Jump Shot,11:16
+01/10/26,401810399,DET,LAC,LAC,4017837,Ivica Zubac,4278562,Paul Reed,Kawhi Leonard,LAC,Free Throw - 2 of 2,11:34
 01/10/26,401810400,BOS,SA,BOS,4397424,Neemias Queta,3064560,Luke Kornet,De'Aaron Fox,SA,Driving Layup Shot,11:25
 01/10/26,401810401,CHI,DAL,CHI,6478,Nikola Vucevic,4278049,Daniel Gafford,Coby White,CHI,Running Layup Shot,11:36
 01/10/26,401810402,UTAH,CHA,CHA,4433249,Moussa Diabate,4684806,Taylor Hendricks,Brandon Miller,CHA,Jump Shot,11:34
@@ -582,7 +582,7 @@ game_start,game_id,home_team,away_team,tip_winner,tip_winner_player,tip_winner_p
 01/11/26,401810410,PHX,WSH,PHX,4701232,Mark Williams,5160992,Alex Sarr,Royce O'Neale,PHX,Driving Floating Jump Shot,11:43
 01/11/26,401810411,GS,ATL,GS,4593016,Quinten Post,4431680,Onyeka Okongwu,Stephen Curry,GS,Step Back Jump Shot,11:14
 01/11/26,401810412,SAC,HOU,SAC,4898371,Maxime Raynaud,4871144,Alperen Sengun,Zach LaVine,SAC,Fade Away Jump Shot,11:36
-01/12/26,401810413,CLE,UTAH,UTAH,3102530,Jusuf Nurkic,4066328,Jarrett Allen,Jarrett Allen,CLE,Running Alley Oop Dunk Shot,10:27
+01/12/26,401810413,CLE,UTAH,UTAH,3102530,Jusuf Nurkic,4066328,Jarrett Allen,Keyonte George,UTAH,Free Throw - 1 of 2,11:44
 01/12/26,401810414,IND,BOS,IND,4065731,Jay Huff,4397424,Neemias Queta,Neemias Queta,BOS,Dunk Shot,11:23
 01/12/26,401810415,TOR,PHI,TOR,4433134,Scottie Barnes,3059318,Joel Embiid,Brandon Ingram,TOR,Pullup Jump Shot,11:37
 01/12/26,401810416,DAL,BKN,BKN,4278067,Nic Claxton,2531367,Dwight Powell,Nic Claxton,BKN,Hook Turnaround Bank,11:41
@@ -625,9 +625,9 @@ game_start,game_id,home_team,away_team,tip_winner,tip_winner_player,tip_winner_p
 01/17/26,401810453,SA,MIN,SA,5104157,Victor Wembanyama,4396971,Naz Reid,De'Aaron Fox,SA,Driving Finger Roll Layup,11:46
 01/17/26,401810454,GS,CHA,GS,4593016,Quinten Post,4576060,Ryan Kalkbrenner,Moses Moody,GS,Jump Shot,11:07
 01/17/26,401810455,DEN,WSH,DEN,3064290,Aaron Gordon,5160992,Alex Sarr,Jalen Pickett,DEN,Pullup Jump Shot,11:50
-01/17/26,401810456,POR,LAL,LAL,2960236,Maxi Kleber,5105565,Donovan Clingan,Jrue Holiday,POR,Running Layup Shot,11:09
+01/17/26,401810456,POR,LAL,LAL,2960236,Maxi Kleber,5105565,Donovan Clingan,Maxi Kleber,LAL,Free Throw - 1 of 2,11:40
 01/18/26,401810457,MEM,ORL,MEM,4277961,Jaren Jackson Jr.,4277847,Wendell Carter Jr.,Jaren Jackson Jr.,MEM,Jump Shot,11:40
-01/18/26,401810458,CHI,BKN,BKN,4278067,Nic Claxton,4397189,Jalen Smith,Egor Demin,BKN,Jump Shot,11:22
+01/18/26,401810458,CHI,BKN,BKN,4278067,Nic Claxton,4397189,Jalen Smith,Isaac Okoro,CHI,Free Throw - 1 of 2,11:35
 01/18/26,401810459,HOU,NO,HOU,2991235,Steven Adams,4869780,Derik Queen,Amen Thompson,HOU,Running Layup Shot,11:12
 01/18/26,401810460,DEN,CHA,CHA,4433249,Moussa Diabate,4433607,DaRon Holmes II,Brandon Miller,CHA,Jump Shot,11:39
 01/18/26,401810461,SAC,POR,SAC,4898371,Maxime Raynaud,5105565,Donovan Clingan,DeMar DeRozan,SAC,Pullup Jump Shot,11:44
@@ -678,7 +678,7 @@ game_start,game_id,home_team,away_team,tip_winner,tip_winner_player,tip_winner_p
 01/24/26,401810504,UTAH,MIA,UTAH,3102530,Jusuf Nurkic,4066261,Bam Adebayo,Jusuf Nurkic,UTAH,Driving Hook Shot,11:46
 01/25/26,401810505,DET,SAC,DET,4433621,Jalen Duren,3155942,Domantas Sabonis,Jalen Duren,DET,Turnaround Hook Shot,11:50
 01/25/26,401857824,MIN,GS,MIN,3032976,Rudy Gobert,3213,Al Horford,Julius Randle,MIN,Pullup Jump Shot,11:36
-01/25/26,401810508,OKC,TOR,OKC,4433255,Chet Holmgren,4433134,Scottie Barnes,Immanuel Quickley,TOR,Jump Shot,11:14
+01/25/26,401810508,OKC,TOR,OKC,4433255,Chet Holmgren,4433134,Scottie Barnes,Luguentz Dort,OKC,Free Throw - 1 of 2,11:33
 01/25/26,401810509,SA,NO,SA,5104157,Victor Wembanyama,4869780,Derik Queen,Saddiq Bey,NO,Driving Floating Jump Shot,11:26
 01/25/26,401810510,PHX,MIA,MIA,4066261,Bam Adebayo,4701232,Mark Williams,Bam Adebayo,MIA,Jump Shot,11:38
 01/25/26,401810511,LAC,BKN,BKN,4278067,Nic Claxton,4017837,Ivica Zubac,Michael Porter Jr.,BKN,Reverse Layup Shot,11:39
@@ -688,18 +688,18 @@ game_start,game_id,home_team,away_team,tip_winner,tip_winner_player,tip_winner_p
 01/26/26,401810515,BOS,POR,POR,5105565,Donovan Clingan,4397424,Neemias Queta,Neemias Queta,BOS,Floating Jump Shot,10:22
 01/26/26,401810516,CHI,LAL,LAL,4278129,Deandre Ayton,6478,Nikola Vucevic,LeBron James,LAL,Fade Away Jump Shot,11:36
 01/26/26,401810517,HOU,MEM,HOU,4871144,Alperen Sengun,4277961,Jaren Jackson Jr.,Tari Eason,HOU,Running Jump Shot,11:27
-01/26/26,401810518,MIN,GS,MIN,3032976,Rudy Gobert,4593016,Quinten Post,Pat Spencer,GS,Jump Shot,11:22
+01/26/26,401810518,MIN,GS,MIN,3032976,Rudy Gobert,4593016,Quinten Post,Rudy Gobert,MIN,Free Throw - 1 of 2,11:47
 01/27/26,401810519,WSH,POR,POR,5105565,Donovan Clingan,5160992,Alex Sarr,Toumani Camara,POR,Step Back Jump Shot,11:39
 01/27/26,401810520,NY,SAC,SAC,3155942,Domantas Sabonis,3136195,Karl-Anthony Towns,DeMar DeRozan,SAC,Pullup Jump Shot,11:43
 01/27/26,401810521,PHI,MIL,PHI,3059318,Joel Embiid,3133628,Myles Turner,Tyrese Maxey,PHI,Pullup Jump Shot,11:40
 01/27/26,401810522,OKC,NO,OKC,4433255,Chet Holmgren,4869780,Derik Queen,Derik Queen,NO,Jump Shot,11:05
-01/27/26,401810523,DEN,DET,DEN,6477,Jonas Valanciunas,4433621,Jalen Duren,Tobias Harris,DET,Layup Shot Putback,11:20
+01/27/26,401810523,DEN,DET,DEN,6477,Jonas Valanciunas,4433621,Jalen Duren,Jamal Murray,DEN,Free Throw - 1 of 2,11:40
 01/27/26,401810524,PHX,BKN,PHX,4701232,Mark Williams,4278067,Nic Claxton,Mark Williams,PHX,Turnaround Hook Shot,10:58
 01/27/26,401810525,UTAH,LAC,UTAH,4066336,Lauri Markkanen,4017837,Ivica Zubac,Ace Bailey,UTAH,Jump Shot,11:08
 01/28/26,401810526,CLE,LAL,CLE,4066328,Jarrett Allen,4278129,Deandre Ayton,Jarrett Allen,CLE,Layup Shot Putback,11:21
 01/28/26,401810527,IND,CHI,IND,5106060,Jarace Walker,6478,Nikola Vucevic,Matas Buzelis,CHI,Tip Dunk Shot,11:20
 01/28/26,401810528,BOS,ATL,ATL,4431680,Onyeka Okongwu,4702745,Amari Williams,Onyeka Okongwu,ATL,Jump Shot,11:41
-01/28/26,401810529,MIA,ORL,MIA,4066261,Bam Adebayo,4277847,Wendell Carter Jr.,Desmond Bane,ORL,Driving Finger Roll Layup,10:09
+01/28/26,401810529,MIA,ORL,MIA,4066261,Bam Adebayo,4277847,Wendell Carter Jr.,Bam Adebayo,MIA,Free Throw - 1 of 2,11:18
 01/28/26,401810530,TOR,NY,NY,3136195,Karl-Anthony Towns,4433134,Scottie Barnes,Collin Murray-Boyles,TOR,Running Layup Shot,11:33
 01/28/26,401810531,MEM,CHA,MEM,4277961,Jaren Jackson Jr.,4433249,Moussa Diabate,Jaren Jackson Jr.,MEM,Jump Shot,11:40
 01/28/26,401810532,DAL,MIN,DAL,4278049,Daniel Gafford,3032976,Rudy Gobert,Julius Randle,MIN,Step Back Jump Shot,11:35
@@ -710,27 +710,27 @@ game_start,game_id,home_team,away_team,tip_winner,tip_winner_player,tip_winner_p
 01/29/26,401810537,ATL,HOU,ATL,4431778,Christian Koloko,4871144,Alperen Sengun,Corey Kispert,ATL,Driving Layup Shot,11:27
 01/29/26,401850920,CHI,MIA,MIA,4066261,Bam Adebayo,6478,Nikola Vucevic,Bam Adebayo,MIA,Jump Shot,11:43
 01/29/26,401810538,DAL,CHA,CHA,4433249,Moussa Diabate,4278049,Daniel Gafford,LaMelo Ball,CHA,Pullup Jump Shot,11:20
-01/29/26,401810539,DEN,BKN,DEN,6477,Jonas Valanciunas,4278067,Nic Claxton,Michael Porter Jr.,BKN,Jump Shot,10:46
-01/29/26,401810540,PHX,DET,PHX,4701232,Mark Williams,4433621,Jalen Duren,Jalen Duren,DET,Driving Layup Shot,11:06
+01/29/26,401810539,DEN,BKN,DEN,6477,Jonas Valanciunas,4278067,Nic Claxton,Michael Porter Jr.,BKN,Free Throw - 1 of 2,11:20
+01/29/26,401810540,PHX,DET,PHX,4701232,Mark Williams,4433621,Jalen Duren,Dillon Brooks,PHX,Free Throw - 1 of 2,11:21
 01/29/26,401810541,MIN,OKC,OKC,4433255,Chet Holmgren,3032976,Rudy Gobert,Anthony Edwards,MIN,Running Pullup Jump Shot,11:39
 01/30/26,401810543,WSH,LAL,LAL,4278129,Deandre Ayton,5160992,Alex Sarr,Deandre Ayton,LAL,Layup Shot,11:43
 01/30/26,401810542,ORL,TOR,ORL,4277847,Wendell Carter Jr.,4433134,Scottie Barnes,Jalen Suggs,ORL,Driving Hook Shot,11:42
 01/30/26,401810544,BOS,SAC,BOS,4397424,Neemias Queta,4898371,Maxime Raynaud,Neemias Queta,BOS,Alley Oop Dunk Shot,11:46
-01/30/26,401810545,NY,POR,NY,3136195,Karl-Anthony Towns,5105565,Donovan Clingan,OG Anunoby,NY,Turnaround Jump Shot,10:37
+01/30/26,401810545,NY,POR,NY,3136195,Karl-Anthony Towns,5105565,Donovan Clingan,Josh Hart,NY,Free Throw - 2 of 2,11:41
 01/30/26,401810546,NO,MEM,MEM,4277961,Jaren Jackson Jr.,4869780,Derik Queen,Jaren Jackson Jr.,MEM,Hook Driving Bank,11:39
 01/30/26,401810548,PHX,CLE,CLE,4066328,Jarrett Allen,4701232,Mark Williams,Grayson Allen,PHX,Pullup Jump Shot,11:30
 01/30/26,401810550,DEN,LAC,DEN,3112335,Nikola Jokic,4017837,Ivica Zubac,Spencer Jones,DEN,Jump Shot,11:37
 01/30/26,401810549,UTAH,BKN,UTAH,4684793,Kyle Filipowski,4278067,Nic Claxton,Cody Williams,UTAH,Driving Layup Shot,11:35
-01/30/26,401810551,GS,DET,GS,3213,Al Horford,4433621,Jalen Duren,Cade Cunningham,DET,Driving Layup Shot,11:28
+01/30/26,401810551,GS,DET,GS,3213,Al Horford,4433621,Jalen Duren,Al Horford,GS,Free Throw - 1 of 2,11:44
 01/31/26,401810552,CHA,SA,SA,5104157,Victor Wembanyama,4433249,Moussa Diabate,Victor Wembanyama,SA,Jump Shot,11:37
 01/31/26,401810553,IND,ATL,ATL,4712863,Mouhamed Gueye,5106060,Jarace Walker,Dyson Daniels,ATL,Driving Layup Shot,11:39
 01/31/26,401810554,PHI,NO,PHI,3059318,Joel Embiid,4869780,Derik Queen,Tyrese Maxey,PHI,Driving Floating Bank Jump Shot,11:48
-01/31/26,401810547,MIA,CHI,MIA,4066261,Bam Adebayo,4711294,Matas Buzelis,Myron Gardner,MIA,Tip Dunk Shot,10:44
+01/31/26,401810547,MIA,CHI,MIA,4066261,Bam Adebayo,4711294,Matas Buzelis,Pelle Larsson,MIA,Free Throw - 2 of 2,11:14
 01/31/26,401810555,MEM,MIN,MIN,3032976,Rudy Gobert,3146557,Jock Landale,Ty Jerome,MEM,Driving Floating Bank Jump Shot,11:20
 01/31/26,401810556,HOU,DAL,HOU,4871144,Alperen Sengun,4278049,Daniel Gafford,P.J. Washington,DAL,Driving Floating Jump Shot,11:19
 02/01/26,401810557,BOS,MIL,MIL,3133628,Myles Turner,4397424,Neemias Queta,Ryan Rollins,MIL,Pullup Jump Shot,11:21
-02/01/26,401810559,DET,BKN,BKN,4278067,Nic Claxton,4433621,Jalen Duren,Danny Wolf,BKN,Layup Driving Reverse,11:18
-02/01/26,401810560,MIA,CHI,MIA,4066261,Bam Adebayo,6478,Nikola Vucevic,Andrew Wiggins,MIA,Jump Shot,11:10
+02/01/26,401810559,DET,BKN,BKN,4278067,Nic Claxton,4433621,Jalen Duren,Egor Demin,BKN,Free Throw - Technical,12:00
+02/01/26,401810560,MIA,CHI,MIA,4066261,Bam Adebayo,6478,Nikola Vucevic,Andrew Wiggins,MIA,Free Throw - 1 of 2,11:47
 02/01/26,401810561,TOR,UTAH,UTAH,3102530,Jusuf Nurkic,4433134,Scottie Barnes,Immanuel Quickley,TOR,Jump Shot,11:28
 02/01/26,401810562,WSH,SAC,SAC,4898371,Maxime Raynaud,4277848,Marvin Bagley III,Maxime Raynaud,SAC,Driving Hook Shot,11:36
 02/01/26,401810563,NY,LAL,NY,3136195,Karl-Anthony Towns,4278129,Deandre Ayton,Luka Doncic,LAL,Running Layup Shot,11:31
@@ -742,7 +742,7 @@ game_start,game_id,home_team,away_team,tip_winner,tip_winner_player,tip_winner_p
 02/02/26,401810568,IND,HOU,IND,4065731,Jay Huff,4871144,Alperen Sengun,Alperen Sengun,HOU,Driving Hook Shot,11:25
 02/02/26,401810569,MEM,MIN,MEM,4277961,Jaren Jackson Jr.,3032976,Rudy Gobert,Anthony Edwards,MIN,Driving Floating Jump Shot,11:24
 02/02/26,401810570,LAC,PHI,PHI,3059318,Joel Embiid,4017837,Ivica Zubac,Joel Embiid,PHI,Step Back Jump Shot,11:43
-02/03/26,401810571,DET,DEN,DET,4433621,Jalen Duren,3112335,Nikola Jokic,Peyton Watson,DEN,Driving Floating Jump Shot,10:32
+02/03/26,401810571,DET,DEN,DET,4433621,Jalen Duren,3112335,Nikola Jokic,Jalen Duren,DET,Free Throw - 1 of 2,11:46
 02/03/26,401810572,IND,UTAH,UTAH,4066336,Lauri Markkanen,4065731,Jay Huff,Lauri Markkanen,UTAH,Jump Shot,11:44
 02/03/26,401810573,WSH,NY,NY,3136195,Karl-Anthony Towns,5160992,Alex Sarr,Jalen Brunson,NY,Driving Floating Jump Shot,11:40
 02/03/26,401810574,BKN,LAL,BKN,4278067,Nic Claxton,4278129,Deandre Ayton,Egor Demin,BKN,Jump Shot,11:35
@@ -761,7 +761,7 @@ game_start,game_id,home_team,away_team,tip_winner,tip_winner_player,tip_winner_p
 02/04/26,401810587,LAC,CLE,CLE,4066328,Jarrett Allen,3448,Brook Lopez,Jaylon Tyson,CLE,Jump Shot,11:37
 02/05/26,401810588,DET,WSH,WSH,5160992,Alex Sarr,4433621,Jalen Duren,Alex Sarr,WSH,Driving Layup Shot,11:09
 02/05/26,401810589,ORL,BKN,ORL,4277847,Wendell Carter Jr.,4278067,Nic Claxton,Jalen Suggs,ORL,Jump Shot,11:08
-02/05/26,401810590,ATL,UTAH,ATL,3146557,Jock Landale,4066336,Lauri Markkanen,Dyson Daniels,ATL,Jump Shot,9:50
+02/05/26,401810590,ATL,UTAH,ATL,3146557,Jock Landale,4066336,Lauri Markkanen,Jock Landale,ATL,Free Throw - 2 of 2,11:01
 02/05/26,401810591,TOR,CHI,TOR,4433134,Scottie Barnes,4397189,Jalen Smith,Brandon Ingram,TOR,Layup Driving Reverse,11:45
 02/05/26,401810592,HOU,CHA,CHA,4433249,Moussa Diabate,4871144,Alperen Sengun,LaMelo Ball,CHA,Driving Floating Jump Shot,11:39
 02/05/26,401810593,DAL,SA,SA,5104157,Victor Wembanyama,4278049,Daniel Gafford,Max Christie,DAL,Driving Layup Shot,11:14
@@ -773,7 +773,7 @@ game_start,game_id,home_team,away_team,tip_winner,tip_winner_player,tip_winner_p
 02/06/26,401810599,MIN,NO,NO,4869780,Derik Queen,3032976,Rudy Gobert,Anthony Edwards,MIN,Driving Finger Roll Layup,11:26
 02/06/26,401810600,POR,MEM,POR,5105565,Donovan Clingan,4595400,Olivier-Maxence Prosper,Olivier-Maxence Prosper,MEM,Jump Shot,10:31
 02/06/26,401810601,SAC,LAC,SAC,4898371,Maxime Raynaud,3448,Brook Lopez,De'Andre Hunter,SAC,Pullup Jump Shot,11:42
-02/07/26,401810602,BKN,WSH,BKN,4278067,Nic Claxton,4997537,Tristan Vukcevic,Will Riley,WSH,Jump Shot,10:25
+02/07/26,401810602,BKN,WSH,BKN,4278067,Nic Claxton,4997537,Tristan Vukcevic,Nic Claxton,BKN,Free Throw - 2 of 2,11:43
 02/07/26,401810603,OKC,HOU,OKC,4433255,Chet Holmgren,4871144,Alperen Sengun,Cason Wallace,OKC,Layup Driving Reverse,11:48
 02/07/26,401810604,SA,DAL,SA,5104157,Victor Wembanyama,4278049,Daniel Gafford,Victor Wembanyama,SA,Running Alley Oop Dunk Shot,10:41
 02/07/26,401810605,ORL,UTAH,UTAH,3102530,Jusuf Nurkic,4277847,Wendell Carter Jr.,Jaren Jackson Jr.,UTAH,Floating Jump Shot,10:53
@@ -789,22 +789,22 @@ game_start,game_id,home_team,away_team,tip_winner,tip_winner_player,tip_winner_p
 02/08/26,401810615,MIN,LAC,LAC,3448,Brook Lopez,3032976,Rudy Gobert,Anthony Edwards,MIN,Pullup Jump Shot,11:14
 02/09/26,401810616,CHA,DET,DET,4433621,Jalen Duren,4433249,Moussa Diabate,Duncan Robinson,DET,Pullup Jump Shot,11:45
 02/09/26,401810617,BKN,CHI,CHI,4711294,Matas Buzelis,4278067,Nic Claxton,Matas Buzelis,CHI,Cutting Dunk Shot,11:39
-02/09/26,401810618,MIA,UTAH,UTAH,3102530,Jusuf Nurkic,5105623,Kel'el Ware,Jaren Jackson Jr.,UTAH,Driving Floating Jump Shot,10:32
+02/09/26,401810618,MIA,UTAH,UTAH,3102530,Jusuf Nurkic,5105623,Kel'el Ware,Jusuf Nurkic,UTAH,Free Throw - 1 of 2,10:58
 02/09/26,401810619,ORL,MIL,ORL,4277847,Wendell Carter Jr.,3133628,Myles Turner,AJ Green,MIL,Running Jump Shot,10:26
 02/09/26,401810620,MIN,ATL,MIN,3032976,Rudy Gobert,4431680,Onyeka Okongwu,Anthony Edwards,MIN,Pullup Jump Shot,11:35
 02/09/26,401810621,NO,SAC,SAC,4898371,Maxime Raynaud,4869780,Derik Queen,DeMar DeRozan,SAC,Jump Shot,11:32
 02/09/26,401810622,DEN,CLE,DEN,3112335,Nikola Jokic,4066328,Jarrett Allen,Jarrett Allen,CLE,Tip Shot,11:35
-02/09/26,401810623,GS,MEM,GS,6589,Draymond Green,5105550,GG Jackson,Cedric Coward,MEM,Driving Layup Shot,10:11
+02/09/26,401810623,GS,MEM,GS,6589,Draymond Green,5105550,GG Jackson,Kyle Anderson,MEM,Free Throw - 1 of 2,10:47
 02/09/26,401810624,LAL,OKC,LAL,4278129,Deandre Ayton,4433255,Chet Holmgren,Cason Wallace,OKC,Driving Finger Roll Layup,11:08
 02/09/26,401810625,POR,PHI,POR,5105565,Donovan Clingan,6585,Andre Drummond,Deni Avdija,POR,Driving Layup Shot,11:48
 02/10/26,401810626,NY,IND,NY,3136195,Karl-Anthony Towns,4066399,Micah Potter,Karl-Anthony Towns,NY,Turnaround Bank Jump Shot,11:39
 02/10/26,401810627,HOU,LAC,HOU,4871144,Alperen Sengun,3448,Brook Lopez,Jabari Smith Jr.,HOU,Pullup Jump Shot,11:37
-02/10/26,401810628,PHX,DAL,PHX,4701232,Mark Williams,4278049,Daniel Gafford,Dillon Brooks,PHX,Turnaround Jump Shot,10:01
+02/10/26,401810628,PHX,DAL,PHX,4701232,Mark Williams,4278049,Daniel Gafford,P.J. Washington,DAL,Free Throw - 2 of 2,11:20
 02/10/26,401810629,LAL,SA,SA,5104157,Victor Wembanyama,4397077,Jaxson Hayes,Julian Champagnie,SA,Jump Shot,11:45
-02/11/26,401810630,CHA,ATL,ATL,4431680,Onyeka Okongwu,4576060,Ryan Kalkbrenner,Brandon Miller,CHA,Jump Shot,11:20
+02/11/26,401810630,CHA,ATL,ATL,4431680,Onyeka Okongwu,4576060,Ryan Kalkbrenner,Nickeil Alexander-Walker,ATL,Free Throw - 1 of 2,11:45
 02/11/26,401810631,CLE,WSH,CLE,4066328,Jarrett Allen,4845374,Bub Carrington,Jarrett Allen,CLE,Driving Layup Shot,11:40
 02/11/26,401810632,ORL,MIL,ORL,4277847,Wendell Carter Jr.,3133628,Myles Turner,Jericho Sims,MIL,Cutting Dunk Shot,11:13
-02/11/26,401810633,BOS,CHI,BOS,4397424,Neemias Queta,4711294,Matas Buzelis,Neemias Queta,BOS,Cutting Layup Shot,11:24
+02/11/26,401810633,BOS,CHI,BOS,4397424,Neemias Queta,4711294,Matas Buzelis,Collin Sexton,CHI,Free Throw - 1 of 2,11:35
 02/11/26,401810634,BKN,IND,IND,4065731,Jay Huff,4432194,Day'Ron Sharpe,Jarace Walker,IND,Fade Away Jump Shot,11:43
 02/11/26,401810635,PHI,NY,PHI,5105637,Adem Bona,3136195,Karl-Anthony Towns,Adem Bona,PHI,Turnaround Hook Shot,11:38
 02/11/26,401810636,TOR,DET,TOR,3134908,Jakob Poeltl,4278562,Paul Reed,Paul Reed,DET,Jump Shot,11:22
@@ -819,7 +819,7 @@ game_start,game_id,home_team,away_team,tip_winner,tip_winner_player,tip_winner_p
 02/12/26,401810645,UTAH,POR,POR,5105565,Donovan Clingan,4684793,Kyle Filipowski,Cody Williams,UTAH,Cutting Dunk Shot,11:27
 02/12/26,401810646,LAL,DAL,LAL,4397077,Jaxson Hayes,4278049,Daniel Gafford,Marcus Smart,LAL,Fade Away Jump Shot,11:27
 02/19/26,401810647,CHA,HOU,CHA,4576060,Ryan Kalkbrenner,4871144,Alperen Sengun,Ryan Kalkbrenner,CHA,Driving Layup Shot,11:34
-02/19/26,401810648,CLE,BKN,CLE,4066328,Jarrett Allen,4432194,Day'Ron Sharpe,Dean Wade,CLE,Jump Shot,11:21
+02/19/26,401810648,CLE,BKN,CLE,4066328,Jarrett Allen,4432194,Day'Ron Sharpe,Jarrett Allen,CLE,Free Throw - 2 of 2,11:45
 02/19/26,401810649,PHI,ATL,PHI,6585,Andre Drummond,4431680,Onyeka Okongwu,Tyrese Maxey,PHI,Driving Finger Roll Layup,11:41
 02/19/26,401810650,WSH,IND,IND,4065731,Jay Huff,4997537,Tristan Vukcevic,Jay Huff,IND,Jump Shot,12:00
 02/19/26,401810651,NY,DET,NY,3136195,Karl-Anthony Towns,4278562,Paul Reed,Jalen Brunson,NY,Jump Shot,11:53
@@ -830,7 +830,7 @@ game_start,game_id,home_team,away_team,tip_winner,tip_winner_player,tip_winner_p
 02/19/26,401810656,LAC,DEN,DEN,3112335,Nikola Jokic,3448,Brook Lopez,Cameron Johnson,DEN,Driving Layup Shot,11:45
 02/20/26,401810657,CHA,CLE,CLE,4066328,Jarrett Allen,4576060,Ryan Kalkbrenner,Jarrett Allen,CLE,Jump Shot,11:45
 02/20/26,401810658,WSH,IND,IND,4065731,Jay Huff,4997537,Tristan Vukcevic,Jay Huff,IND,Running Jump Shot,11:15
-02/20/26,401810659,MEM,UTAH,MEM,4596528,Lawson Lovering,4684793,Kyle Filipowski,Isaiah Collier,UTAH,Fade Away Jump Shot,11:13
+02/20/26,401810659,MEM,UTAH,MEM,4596528,Lawson Lovering,4684793,Kyle Filipowski,Lawson Lovering,MEM,Free Throw - 1 of 2,11:27
 02/20/26,401810660,ATL,MIA,MIA,4066261,Bam Adebayo,4431680,Onyeka Okongwu,Bam Adebayo,MIA,Driving Floating Jump Shot,10:47
 02/20/26,401810661,MIN,DAL,MIN,3032976,Rudy Gobert,4278049,Daniel Gafford,Donte DiVincenzo,MIN,Jump Shot,11:46
 02/20/26,401810662,NO,MIL,NO,4869780,Derik Queen,4277922,Jericho Sims,Herbert Jones,NO,Running Dunk Shot,11:26
@@ -838,9 +838,9 @@ game_start,game_id,home_team,away_team,tip_winner,tip_winner_player,tip_winner_p
 02/20/26,401810665,POR,DEN,DEN,3112335,Nikola Jokic,5105565,Donovan Clingan,Nikola Jokic,DEN,Pullup Jump Shot,11:46
 02/20/26,401810664,LAL,LAC,LAL,4278129,Deandre Ayton,3448,Brook Lopez,Brook Lopez,LAC,Hook Shot,11:06
 02/21/26,401810666,PHX,ORL,PHX,4701232,Mark Williams,4277847,Wendell Carter Jr.,Paolo Banchero,ORL,Driving Layup Shot,11:27
-02/21/26,401810667,NO,PHI,PHI,6585,Andre Drummond,3442,DeAndre Jordan,Kelly Oubre Jr.,PHI,Jump Shot,9:20
+02/21/26,401810667,NO,PHI,PHI,6585,Andre Drummond,3442,DeAndre Jordan,Andre Drummond,PHI,Free Throw - 2 of 2,11:40
 02/21/26,401810668,MIA,MEM,MIA,4066261,Bam Adebayo,4595400,Olivier-Maxence Prosper,Andrew Wiggins,MIA,Layup Shot,11:42
-02/21/26,401810669,CHI,DET,DET,4433621,Jalen Duren,4397189,Jalen Smith,Jalen Duren,DET,Reverse Dunk Shot,11:11
+02/21/26,401810669,CHI,DET,DET,4433621,Jalen Duren,4397189,Jalen Smith,Jalen Duren,DET,Free Throw - 1 of 2,11:45
 02/21/26,401810670,SA,SAC,SA,5104157,Victor Wembanyama,4898371,Maxime Raynaud,De'Aaron Fox,SA,Step Back Jump Shot,11:45
 02/21/26,401810671,NY,HOU,HOU,4871144,Alperen Sengun,3136195,Karl-Anthony Towns,OG Anunoby,NY,Running Jump Shot,11:29
 02/22/26,401810672,OKC,CLE,CLE,4066328,Jarrett Allen,4433255,Chet Holmgren,Chet Holmgren,OKC,Jump Shot,11:28
@@ -850,7 +850,7 @@ game_start,game_id,home_team,away_team,tip_winner,tip_winner_player,tip_winner_p
 02/22/26,401810676,IND,DAL,DAL,4278049,Daniel Gafford,4065731,Jay Huff,Khris Middleton,DAL,Step Back Jump Shot,11:31
 02/22/26,401810677,WSH,CHA,CHA,4576060,Ryan Kalkbrenner,2581184,Anthony Gill,Bilal Coulibaly,WSH,Running Layup Shot,11:34
 02/22/26,401810678,LAL,BOS,LAL,4278129,Deandre Ayton,4397424,Neemias Queta,LeBron James,LAL,Running Dunk Shot,11:33
-02/22/26,401810679,MIN,PHI,PHI,6585,Andre Drummond,5279133,Joan Beringer,Anthony Edwards,MIN,Running Dunk Shot,10:28
+02/22/26,401810679,MIN,PHI,PHI,6585,Andre Drummond,5279133,Joan Beringer,Andre Drummond,PHI,Free Throw - 2 of 2,11:22
 02/22/26,401810680,CHI,NY,CHI,4397189,Jalen Smith,3136195,Karl-Anthony Towns,OG Anunoby,NY,Jump Shot,11:21
 02/22/26,401810681,PHX,POR,POR,5105565,Donovan Clingan,4701232,Mark Williams,Collin Gillespie,PHX,Pullup Jump Shot,10:31
 02/22/26,401810682,LAC,ORL,LAC,3448,Brook Lopez,4277847,Wendell Carter Jr.,Kawhi Leonard,LAC,Running Dunk Shot,11:21
@@ -858,7 +858,7 @@ game_start,game_id,home_team,away_team,tip_winner,tip_winner_player,tip_winner_p
 02/23/26,401810684,MEM,SAC,SAC,4898371,Maxime Raynaud,4595400,Olivier-Maxence Prosper,DeMar DeRozan,SAC,Pullup Bank Jump Shot,11:37
 02/23/26,401810685,HOU,UTAH,HOU,4871144,Alperen Sengun,4684793,Kyle Filipowski,Jabari Smith Jr.,HOU,Jump Shot,11:40
 02/24/26,401810686,IND,PHI,PHI,4870562,Dominick Barlow,4065731,Jay Huff,Kelly Oubre Jr.,PHI,Layup Driving Reverse,11:53
-02/24/26,401810687,ATL,WSH,ATL,4431680,Onyeka Okongwu,4997537,Tristan Vukcevic,CJ McCollum,ATL,Running Layup Shot,10:36
+02/24/26,401810687,ATL,WSH,ATL,4431680,Onyeka Okongwu,4997537,Tristan Vukcevic,Jalen Johnson,ATL,Free Throw - 2 of 2,10:56
 02/24/26,401810688,BKN,DAL,BKN,4278067,Nic Claxton,4278049,Daniel Gafford,Michael Porter Jr.,BKN,Cutting Layup Shot,11:37
 02/24/26,401810689,TOR,OKC,OKC,4433255,Chet Holmgren,4433134,Scottie Barnes,Immanuel Quickley,TOR,Running Jump Shot,11:27
 02/24/26,401810690,CLE,NY,NY,3136195,Karl-Anthony Towns,4066328,Jarrett Allen,Josh Hart,NY,Jump Shot,11:04
@@ -869,7 +869,7 @@ game_start,game_id,home_team,away_team,tip_winner,tip_winner_player,tip_winner_p
 02/24/26,401810696,POR,MIN,POR,5105565,Donovan Clingan,3032976,Rudy Gobert,Kris Murray,POR,Driving Layup Shot,11:03
 02/24/26,401810695,LAL,ORL,LAL,4278129,Deandre Ayton,4277847,Wendell Carter Jr.,Deandre Ayton,LAL,Alley Oop Dunk Shot,11:36
 02/25/26,401810697,DET,OKC,DET,4433621,Jalen Duren,4432823,Jaylin Williams,Jaylin Williams,OKC,Jump Shot,11:25
-02/25/26,401810698,TOR,SA,SA,5104157,Victor Wembanyama,5093267,Collin Murray-Boyles,De'Aaron Fox,SA,Driving Finger Roll Layup,11:24
+02/25/26,401810698,TOR,SA,SA,5104157,Victor Wembanyama,5093267,Collin Murray-Boyles,Victor Wembanyama,SA,Free Throw - 1 of 2,11:45
 02/25/26,401810699,MEM,GS,GS,3213,Al Horford,4595400,Olivier-Maxence Prosper,Al Horford,GS,Turnaround Hook Shot,11:41
 02/25/26,401810700,HOU,SAC,SAC,4898371,Maxime Raynaud,4871144,Alperen Sengun,Russell Westbrook,SAC,Fade Away Jump Shot,11:12
 02/25/26,401810701,MIL,CLE,CLE,4066328,Jarrett Allen,3133628,Myles Turner,Jarrett Allen,CLE,Putback Dunk Shot,11:14
@@ -893,13 +893,13 @@ game_start,game_id,home_team,away_team,tip_winner,tip_winner_player,tip_winner_p
 02/28/26,401810719,MIA,HOU,HOU,4871144,Alperen Sengun,4066261,Bam Adebayo,Pelle Larsson,MIA,Running Layup Shot,11:34
 02/28/26,401810720,WSH,TOR,WSH,4997537,Tristan Vukcevic,3134908,Jakob Poeltl,Brandon Ingram,TOR,Running Jump Shot,10:52
 02/28/26,401810721,GS,LAL,GS,6589,Draymond Green,4278129,Deandre Ayton,Draymond Green,GS,Cutting Dunk Shot,11:10
-02/28/26,401810722,UTAH,NO,NO,3442,DeAndre Jordan,4873138,Ace Bailey,Saddiq Bey,NO,Jump Shot,11:01
-03/01/26,401810723,NY,SA,SA,5104157,Victor Wembanyama,3136195,Karl-Anthony Towns,OG Anunoby,NY,Putback Dunk Shot,10:49
+02/28/26,401810722,UTAH,NO,NO,3442,DeAndre Jordan,4873138,Ace Bailey,DeAndre Jordan,NO,Free Throw - 1 of 2,11:45
+03/01/26,401810723,NY,SA,SA,5104157,Victor Wembanyama,3136195,Karl-Anthony Towns,Josh Hart,NY,Free Throw - 2 of 2,11:23
 03/01/26,401810724,BKN,CLE,CLE,4066328,Jarrett Allen,4432194,Day'Ron Sharpe,Jarrett Allen,CLE,Driving Dunk Shot,11:48
 03/01/26,401810725,CHI,MIL,CHI,4711294,Matas Buzelis,3133628,Myles Turner,Matas Buzelis,CHI,Jump Shot,11:27
 03/01/26,401810726,DEN,MIN,DEN,3112335,Nikola Jokic,3032976,Rudy Gobert,Donte DiVincenzo,MIN,Step Back Jump Shot,11:07
 03/01/26,401810727,IND,MEM,IND,4065731,Jay Huff,4595400,Olivier-Maxence Prosper,Obi Toppin,IND,Jump Shot,11:36
-03/01/26,401810728,ATL,POR,ATL,4431680,Onyeka Okongwu,5105565,Donovan Clingan,Jrue Holiday,POR,Driving Layup Shot,11:18
+03/01/26,401810728,ATL,POR,ATL,4431680,Onyeka Okongwu,5105565,Donovan Clingan,CJ McCollum,ATL,Free Throw - 1 of 2,11:43
 03/01/26,401810730,ORL,DET,ORL,4277847,Wendell Carter Jr.,4433621,Jalen Duren,Desmond Bane,ORL,Pullup Jump Shot,11:38
 03/01/26,401810729,BOS,PHI,PHI,6585,Andre Drummond,4397424,Neemias Queta,Kelly Oubre Jr.,PHI,Pullup Jump Shot,11:45
 03/01/26,401810731,DAL,OKC,DAL,4278049,Daniel Gafford,4433255,Chet Holmgren,Daniel Gafford,DAL,Alley Oop Layup Shot,11:47
@@ -907,15 +907,15 @@ game_start,game_id,home_team,away_team,tip_winner,tip_winner_player,tip_winner_p
 03/01/26,401810733,LAL,SAC,SAC,4898371,Maxime Raynaud,4278129,Deandre Ayton,DeMar DeRozan,SAC,Turnaround Jump Shot,11:42
 03/02/26,401810734,WSH,HOU,HOU,4871144,Alperen Sengun,4683742,Julian Reese,Alperen Sengun,HOU,Driving Hook Shot,10:49
 03/02/26,401810735,MIL,BOS,BOS,6478,Nikola Vucevic,3133628,Myles Turner,Ousmane Dieng,MIL,Pullup Jump Shot,11:17
-03/02/26,401810736,UTAH,DEN,UTAH,4684793,Kyle Filipowski,3112335,Nikola Jokic,Ace Bailey,UTAH,Running Layup Shot,11:03
+03/02/26,401810736,UTAH,DEN,UTAH,4684793,Kyle Filipowski,3112335,Nikola Jokic,Jamal Murray,DEN,Free Throw - 1 of 2,11:25
 03/02/26,401810737,GS,LAC,LAC,3448,Brook Lopez,3213,Al Horford,Moses Moody,GS,Driving Layup Shot,11:12
 03/03/26,401810738,CHA,DAL,DAL,4278049,Daniel Gafford,4433249,Moussa Diabate,Max Christie,DAL,Driving Layup Shot,11:47
 03/03/26,401810739,CLE,DET,CLE,4066328,Jarrett Allen,4433621,Jalen Duren,Jaylon Tyson,CLE,Running Layup Shot,11:03
 03/03/26,401810740,ORL,WSH,WSH,4683742,Julian Reese,4348700,Goga Bitadze,Jalen Suggs,ORL,Driving Floating Jump Shot,11:12
-03/03/26,401810741,MIA,BKN,MIA,4066261,Bam Adebayo,4278067,Nic Claxton,Bam Adebayo,MIA,Tip Shot,10:33
+03/03/26,401810741,MIA,BKN,MIA,4066261,Bam Adebayo,4278067,Nic Claxton,Tyler Herro,MIA,Free Throw - 1 of 2,10:54
 03/03/26,401810742,TOR,NY,NY,3136195,Karl-Anthony Towns,3134908,Jakob Poeltl,OG Anunoby,NY,Pullup Jump Shot,11:36
 03/03/26,401810743,PHI,SA,PHI,6585,Andre Drummond,5104157,Victor Wembanyama,Julian Champagnie,SA,Driving Finger Roll Layup,11:22
-03/03/26,401810744,CHI,OKC,CHI,4711294,Matas Buzelis,4433255,Chet Holmgren,Tre Jones,CHI,Jump Shot,10:35
+03/03/26,401810744,CHI,OKC,CHI,4711294,Matas Buzelis,4433255,Chet Holmgren,Cason Wallace,OKC,Free Throw - 1 of 2,11:22
 03/03/26,401810745,MIN,MEM,MIN,3032976,Rudy Gobert,4595400,Olivier-Maxence Prosper,GG Jackson,MEM,Running Dunk Shot,11:45
 03/03/26,401810746,LAL,NO,LAL,4278129,Deandre Ayton,4277813,Herbert Jones,Luka Doncic,LAL,Step Back Jump Shot,11:42
 03/03/26,401810747,SAC,PHX,PHX,4701232,Mark Williams,4898371,Maxime Raynaud,Collin Gillespie,PHX,Pullup Jump Shot,11:41
@@ -927,12 +927,12 @@ game_start,game_id,home_team,away_team,tip_winner,tip_winner_player,tip_winner_p
 03/04/26,401810753,LAC,IND,LAC,3448,Brook Lopez,4065731,Jay Huff,Jay Huff,IND,Driving Dunk Shot,11:27
 03/05/26,401810754,ORL,DAL,ORL,4277847,Wendell Carter Jr.,4278049,Daniel Gafford,Khris Middleton,DAL,Pullup Jump Shot,11:30
 03/05/26,401810755,WSH,UTAH,UTAH,4684793,Kyle Filipowski,4683742,Julian Reese,Isaiah Collier,UTAH,Pullup Jump Shot,11:37
-03/05/26,401810756,MIA,BKN,BKN,4278067,Nic Claxton,4066261,Bam Adebayo,Nolan Traore,BKN,Driving Finger Roll Layup,11:18
+03/05/26,401810756,MIA,BKN,BKN,4278067,Nic Claxton,4066261,Bam Adebayo,Bam Adebayo,MIA,Free Throw - 1 of 2,11:34
 03/05/26,401810757,HOU,GS,GS,3213,Al Horford,4871144,Alperen Sengun,Draymond Green,GS,Cutting Layup Shot,11:47
 03/05/26,401810758,MIN,TOR,TOR,3134908,Jakob Poeltl,3032976,Rudy Gobert,Brandon Ingram,TOR,Jump Shot,11:39
 03/05/26,401810759,SA,DET,SA,5104157,Victor Wembanyama,4433621,Jalen Duren,Victor Wembanyama,SA,Jump Shot,11:31
 03/05/26,401810760,PHX,CHI,PHX,4601023,Oso Ighodaro,4017844,Guerschon Yabusele,Collin Sexton,CHI,Pullup Jump Shot,11:15
-03/05/26,401810761,DEN,LAL,DEN,3112335,Nikola Jokic,4278129,Deandre Ayton,Nikola Jokic,DEN,Layup Shot,11:09
+03/05/26,401810761,DEN,LAL,DEN,3112335,Nikola Jokic,4278129,Deandre Ayton,Jamal Murray,DEN,Free Throw - 1 of 3,11:41
 03/05/26,401810762,SAC,NO,SAC,4898371,Maxime Raynaud,5061589,Yves Missi,DeMar DeRozan,SAC,Jump Shot,11:41
 03/06/26,401810763,BOS,DAL,BOS,4397424,Neemias Queta,2531367,Dwight Powell,Neemias Queta,BOS,Alley Oop Dunk Shot,10:07
 03/06/26,401810764,CHA,MIA,MIA,4066261,Bam Adebayo,4433249,Moussa Diabate,Kon Knueppel,CHA,Running Jump Shot,11:31
@@ -948,14 +948,14 @@ game_start,game_id,home_team,away_team,tip_winner,tip_winner_player,tip_winner_p
 03/07/26,401810774,MIL,UTAH,MIL,3133628,Myles Turner,4684793,Kyle Filipowski,Kyle Kuzma,MIL,Turnaround Jump Shot,11:41
 03/07/26,401810775,OKC,GS,GS,3213,Al Horford,4432823,Jaylin Williams,Cason Wallace,OKC,Pullup Jump Shot,11:38
 03/08/26,401810776,CLE,BOS,CLE,4432158,Evan Mobley,4397424,Neemias Queta,Evan Mobley,CLE,Cutting Dunk Shot,11:45
-03/08/26,401810777,LAL,NY,LAL,4278129,Deandre Ayton,3136195,Karl-Anthony Towns,Austin Reaves,LAL,Jump Shot,11:02
+03/08/26,401810777,LAL,NY,LAL,4278129,Deandre Ayton,3136195,Karl-Anthony Towns,Austin Reaves,LAL,Free Throw - 1 of 3,11:44
 03/08/26,401810778,MIA,DET,MIA,4066261,Bam Adebayo,4433621,Jalen Duren,Jalen Duren,DET,Driving Layup Shot,11:28
 03/08/26,401810779,TOR,DAL,TOR,3134908,Jakob Poeltl,4278049,Daniel Gafford,Brandon Ingram,TOR,Tip Dunk Shot,11:38
 03/08/26,401810780,NO,WSH,WSH,5160992,Alex Sarr,4395628,Zion Williamson,Saddiq Bey,NO,Tip Shot,10:55
-03/08/26,401810781,MIL,ORL,ORL,4277847,Wendell Carter Jr.,3133628,Myles Turner,Tristan da Silva,ORL,Jump Shot,11:00
+03/08/26,401810781,MIL,ORL,ORL,4277847,Wendell Carter Jr.,3133628,Myles Turner,Desmond Bane,ORL,Free Throw - 1 of 2,11:47
 03/08/26,401810782,SA,HOU,SA,5104157,Victor Wembanyama,4871144,Alperen Sengun,Victor Wembanyama,SA,Pullup Jump Shot,11:39
 03/08/26,401810784,POR,IND,IND,4065731,Jay Huff,5105565,Donovan Clingan,Aaron Nesmith,IND,Jump Shot,11:52
-03/08/26,401810785,SAC,CHI,SAC,4898371,Maxime Raynaud,4711294,Matas Buzelis,Precious Achiuwa,SAC,Driving Layup Shot,10:33
+03/08/26,401810785,SAC,CHI,SAC,4898371,Maxime Raynaud,4711294,Matas Buzelis,Russell Westbrook,SAC,Free Throw - 1 of 2,11:38
 03/08/26,401810783,PHX,CHA,PHX,4601023,Oso Ighodaro,4433249,Moussa Diabate,Brandon Miller,CHA,Pullup Jump Shot,11:24
 03/09/26,401810786,CLE,PHI,CLE,4432158,Evan Mobley,5105637,Adem Bona,Dominick Barlow,PHI,Driving Floating Jump Shot,11:20
 03/09/26,401810787,BKN,MEM,BKN,4278067,Nic Claxton,4595400,Olivier-Maxence Prosper,Nic Claxton,BKN,Alley Oop Dunk Shot,11:16
@@ -969,7 +969,7 @@ game_start,game_id,home_team,away_team,tip_winner,tip_winner_player,tip_winner_p
 03/10/26,401810795,HOU,TOR,HOU,4871144,Alperen Sengun,4433134,Scottie Barnes,Kevin Durant,HOU,Jump Shot,11:39
 03/10/26,401810796,MIL,PHX,PHX,4601023,Oso Ighodaro,3133628,Myles Turner,Jalen Green,PHX,Step Back Jump Shot,11:38
 03/10/26,401810797,SA,BOS,SA,5104157,Victor Wembanyama,4397424,Neemias Queta,Victor Wembanyama,SA,Layup Shot,11:18
-03/10/26,401810798,GS,CHI,GS,3213,Al Horford,4711294,Matas Buzelis,Draymond Green,GS,Jump Shot,10:34
+03/10/26,401810798,GS,CHI,GS,3213,Al Horford,4711294,Matas Buzelis,Brandin Podziemski,GS,Free Throw - 1 of 2,11:47
 03/10/26,401810799,POR,CHA,POR,5105565,Donovan Clingan,4433249,Moussa Diabate,Kon Knueppel,CHA,Jump Shot,11:31
 03/10/26,401810800,SAC,IND,SAC,4898371,Maxime Raynaud,4065731,Jay Huff,Maxime Raynaud,SAC,Cutting Dunk Shot,11:45
 03/10/26,401810801,LAL,MIN,LAL,4278129,Deandre Ayton,3032976,Rudy Gobert,Anthony Edwards,MIN,Driving Floating Jump Shot,10:27
@@ -982,7 +982,7 @@ game_start,game_id,home_team,away_team,tip_winner,tip_winner_player,tip_winner_p
 03/12/26,401810808,DET,PHI,DET,4433621,Jalen Duren,4870562,Dominick Barlow,Cade Cunningham,DET,Driving Layup Shot,11:46
 03/12/26,401810809,IND,PHX,IND,4017837,Ivica Zubac,4601023,Oso Ighodaro,Jarace Walker,IND,Driving Layup Shot,11:37
 03/12/26,401810810,ORL,WSH,ORL,4277847,Wendell Carter Jr.,5160992,Alex Sarr,Wendell Carter Jr.,ORL,Jump Shot,11:58
-03/12/26,401810811,ATL,BKN,BKN,4278067,Nic Claxton,4431680,Onyeka Okongwu,Nickeil Alexander-Walker,ATL,Jump Shot,11:24
+03/12/26,401810811,ATL,BKN,BKN,4278067,Nic Claxton,4431680,Onyeka Okongwu,Ben Saraf,BKN,Free Throw - 1 of 2,11:42
 03/12/26,401810812,MIA,MIL,MIA,5105623,Kel'el Ware,3133628,Myles Turner,Pelle Larsson,MIA,Driving Layup Shot,11:49
 03/12/26,401810966,MEM,DAL,DAL,4278049,Daniel Gafford,4595400,Olivier-Maxence Prosper,Daniel Gafford,DAL,Dunk Shot,11:47
 03/12/26,401810813,SA,DEN,SA,3064560,Luke Kornet,3112335,Nikola Jokic,Devin Vassell,SA,Jump Shot,11:42
@@ -1000,7 +1000,7 @@ game_start,game_id,home_team,away_team,tip_winner,tip_winner_player,tip_winner_p
 03/14/26,401810825,ATL,MIL,ATL,4431680,Onyeka Okongwu,3133628,Myles Turner,Nickeil Alexander-Walker,ATL,Jump Shot,11:16
 03/14/26,401810828,SA,CHA,SA,5104157,Victor Wembanyama,4433249,Moussa Diabate,Julian Champagnie,SA,Driving Layup Shot,11:43
 03/14/26,401810826,BOS,WSH,WSH,5160992,Alex Sarr,4397424,Neemias Queta,Neemias Queta,BOS,Driving Layup Shot,11:26
-03/14/26,401810827,MIA,ORL,ORL,4277847,Wendell Carter Jr.,5105623,Kel'el Ware,Davion Mitchell,MIA,Step Back Jump Shot,11:15
+03/14/26,401810827,MIA,ORL,ORL,4277847,Wendell Carter Jr.,5105623,Kel'el Ware,Desmond Bane,ORL,Free Throw - 1 of 2,11:40
 03/14/26,401810829,LAL,DEN,DEN,3112335,Nikola Jokic,4278129,Deandre Ayton,Jamal Murray,DEN,Pullup Jump Shot,11:32
 03/14/26,401810830,LAC,SAC,SAC,4898371,Maxime Raynaud,3448,Brook Lopez,Maxime Raynaud,SAC,Layup Shot,11:27
 03/15/26,401810831,OKC,MIN,MIN,3032976,Rudy Gobert,4433255,Chet Holmgren,Chet Holmgren,OKC,Jump Shot,11:14
@@ -1014,11 +1014,11 @@ game_start,game_id,home_team,away_team,tip_winner,tip_winner_player,tip_winner_p
 03/16/26,401810839,WSH,GS,WSH,4683742,Julian Reese,6589,Draymond Green,Will Riley,WSH,Driving Finger Roll Layup,11:42
 03/16/26,401810840,BKN,POR,BKN,4278067,Nic Claxton,5105565,Donovan Clingan,Jerami Grant,POR,Jump Shot,11:26
 03/16/26,401810841,BOS,PHX,PHX,4601023,Oso Ighodaro,4397424,Neemias Queta,Royce O'Neale,PHX,Jump Shot,11:46
-03/16/26,401810842,CHI,MEM,CHI,4397189,Jalen Smith,4595400,Olivier-Maxence Prosper,Walter Clayton Jr.,MEM,Pullup Jump Shot,11:27
+03/16/26,401810842,CHI,MEM,CHI,4397189,Jalen Smith,4595400,Olivier-Maxence Prosper,Leonard Miller,CHI,Free Throw - 2 of 2,11:40
 03/16/26,401810843,NO,DAL,NO,5061589,Yves Missi,4278078,P.J. Washington,Herbert Jones,NO,Driving Layup Shot,11:42
-03/16/26,401810844,HOU,LAL,HOU,3102529,Clint Capela,4278129,Deandre Ayton,Clint Capela,HOU,Dunk Shot,11:15
+03/16/26,401810844,HOU,LAL,HOU,3102529,Clint Capela,4278129,Deandre Ayton,Clint Capela,HOU,Free Throw - 2 of 2,11:39
 03/16/26,401810845,LAC,SA,LAC,3448,Brook Lopez,5104157,Victor Wembanyama,Derrick Jones Jr.,LAC,Jump Shot,10:50
-03/17/26,401810846,CHA,MIA,MIA,5105623,Kel'el Ware,4433249,Moussa Diabate,Moussa Diabate,CHA,Tip Dunk Shot,10:37
+03/17/26,401810846,CHA,MIA,MIA,5105623,Kel'el Ware,4433249,Moussa Diabate,Tyler Herro,MIA,Free Throw - 1 of 2,11:12
 03/17/26,401810847,ORL,OKC,ORL,4277847,Wendell Carter Jr.,4433255,Chet Holmgren,Paolo Banchero,ORL,Pullup Jump Shot,11:44
 03/17/26,401810848,WSH,DET,DET,4433621,Jalen Duren,2581184,Anthony Gill,Will Riley,WSH,Fade Away Jump Shot,11:33
 03/17/26,401810849,NY,IND,IND,4017837,Ivica Zubac,3136195,Karl-Anthony Towns,Kobe Brown,IND,Hook Shot,11:40
@@ -1028,7 +1028,7 @@ game_start,game_id,home_team,away_team,tip_winner,tip_winner_player,tip_winner_p
 03/17/26,401810853,SAC,SA,SAC,4898371,Maxime Raynaud,5104157,Victor Wembanyama,Victor Wembanyama,SA,Driving Dunk Shot,11:27
 03/18/26,401810854,BOS,GS,GS,3102531,Kristaps Porzingis,4397424,Neemias Queta,Kristaps Porzingis,GS,Jump Shot,10:59
 03/18/26,401810855,BKN,OKC,BKN,4278067,Nic Claxton,4433255,Chet Holmgren,Cason Wallace,OKC,Running Dunk Shot,11:14
-03/18/26,401810856,IND,POR,IND,4017837,Ivica Zubac,5105565,Donovan Clingan,Deni Avdija,POR,Turnaround Fade Away Jump Shot,10:37
+03/18/26,401810856,IND,POR,IND,4017837,Ivica Zubac,5105565,Donovan Clingan,Donovan Clingan,POR,Free Throw - 1 of 2,11:12
 03/18/26,401810857,CHI,TOR,TOR,3134908,Jakob Poeltl,4397189,Jalen Smith,RJ Barrett,TOR,Driving Floating Jump Shot,11:17
 03/18/26,401810859,MIN,UTAH,MIN,3032976,Rudy Gobert,4684793,Kyle Filipowski,Rudy Gobert,MIN,Cutting Finger Roll Layup Shot,11:46
 03/18/26,401810860,NO,LAC,NO,4395628,Zion Williamson,3448,Brook Lopez,John Collins,LAC,Dunk Shot,11:22
@@ -1037,16 +1037,16 @@ game_start,game_id,home_team,away_team,tip_winner,tip_winner_player,tip_winner_p
 03/18/26,401810862,HOU,LAL,LAL,4278129,Deandre Ayton,4871144,Alperen Sengun,LeBron James,LAL,Jump Shot,11:46
 03/19/26,401810863,CHA,ORL,ORL,4348700,Goga Bitadze,4433249,Moussa Diabate,Desmond Bane,ORL,Pullup Jump Shot,11:48
 03/19/26,401810864,WSH,DET,WSH,5160992,Alex Sarr,4433621,Jalen Duren,Tobias Harris,DET,Pullup Jump Shot,11:10
-03/19/26,401810865,MIA,LAL,MIA,4066261,Bam Adebayo,4278129,Deandre Ayton,Davion Mitchell,MIA,Running Jump Shot,11:19
+03/19/26,401810865,MIA,LAL,MIA,4066261,Bam Adebayo,4278129,Deandre Ayton,Bam Adebayo,MIA,Free Throw - 1 of 2,11:38
 03/19/26,401810866,CHI,CLE,CHI,4278076,Nick Richards,4432158,Evan Mobley,Collin Sexton,CHI,Running Layup Shot,11:14
 03/19/26,401810867,NO,LAC,NO,5061589,Yves Missi,3448,Brook Lopez,Trey Murphy III,NO,Jump Shot,11:42
 03/19/26,401810868,SA,PHX,SA,5104157,Victor Wembanyama,4601023,Oso Ighodaro,De'Aaron Fox,SA,Pullup Jump Shot,11:12
 03/19/26,401810869,UTAH,MIL,UTAH,4684793,Kyle Filipowski,3133628,Myles Turner,Ryan Rollins,MIL,Step Back Jump Shot,11:01
 03/19/26,401810870,SAC,PHI,SAC,4898371,Maxime Raynaud,5105637,Adem Bona,Daeqwon Plowden,SAC,Driving Floating Jump Shot,11:39
 03/20/26,401810871,BKN,NY,BKN,4278067,Nic Claxton,3136195,Karl-Anthony Towns,Nolan Traore,BKN,Running Pullup Jump Shot,10:18
-03/20/26,401810872,DET,GS,DET,4433621,Jalen Duren,3102531,Kristaps Porzingis,De'Anthony Melton,GS,Running Pullup Jump Shot,10:21
+03/20/26,401810872,DET,GS,DET,4433621,Jalen Duren,3102531,Kristaps Porzingis,De'Anthony Melton,GS,Free Throw - 1 of 2,11:20
 03/20/26,401810873,HOU,ATL,HOU,4871144,Alperen Sengun,4431680,Onyeka Okongwu,Amen Thompson,HOU,Turnaround Jump Shot,11:23
-03/20/26,401810874,MEM,BOS,BOS,4397424,Neemias Queta,4595400,Olivier-Maxence Prosper,Ty Jerome,MEM,Driving Floating Jump Shot,11:26
+03/20/26,401810874,MEM,BOS,BOS,4397424,Neemias Queta,4595400,Olivier-Maxence Prosper,Jaylen Brown,BOS,Free Throw - 1 of 2,11:38
 03/20/26,401810875,MIN,POR,MIN,3032976,Rudy Gobert,5105565,Donovan Clingan,Jerami Grant,POR,Pullup Jump Shot,11:30
 03/20/26,401810876,DEN,TOR,DEN,3112335,Nikola Jokic,3134908,Jakob Poeltl,Nikola Jokic,DEN,Driving Hook Shot,11:38
 03/21/26,401810877,WSH,OKC,OKC,4433255,Chet Holmgren,5160992,Alex Sarr,Alex Sarr,WSH,Jump Shot,10:58
@@ -1068,7 +1068,7 @@ game_start,game_id,home_team,away_team,tip_winner,tip_winner_player,tip_winner_p
 03/23/26,401810894,ORL,IND,ORL,4432573,Paolo Banchero,4065731,Jay Huff,Wendell Carter Jr.,ORL,Layup Shot,11:47
 03/23/26,401810895,PHI,OKC,OKC,4433255,Chet Holmgren,5105637,Adem Bona,Isaiah Hartenstein,OKC,Alley Oop Layup Shot,11:41
 03/23/26,401810896,MIA,SA,SA,5104157,Victor Wembanyama,4066261,Bam Adebayo,Victor Wembanyama,SA,Alley Oop Dunk Shot,11:46
-03/23/26,401810892,ATL,MEM,ATL,4431680,Onyeka Okongwu,4595400,Olivier-Maxence Prosper,Ty Jerome,MEM,Jump Shot,11:01
+03/23/26,401810892,ATL,MEM,ATL,4431680,Onyeka Okongwu,4595400,Olivier-Maxence Prosper,GG Jackson,MEM,Free Throw - 1 of 2,11:36
 03/23/26,401810897,CHI,HOU,HOU,4871144,Alperen Sengun,4278076,Nick Richards,Kevin Durant,HOU,Pullup Jump Shot,11:43
 03/23/26,401810898,UTAH,TOR,UTAH,4684793,Kyle Filipowski,4278580,Sandro Mamukelashvili,Scottie Barnes,TOR,Hook Shot,11:24
 03/23/26,401810899,DAL,GS,GS,3102531,Kristaps Porzingis,4278049,Daniel Gafford,Naji Marshall,DAL,Jump Shot,10:17
@@ -1129,7 +1129,7 @@ game_start,game_id,home_team,away_team,tip_winner,tip_winner_player,tip_winner_p
 03/31/26,401810954,ORL,PHX,ORL,4277847,Wendell Carter Jr.,4601023,Oso Ighodaro,Jalen Suggs,ORL,Jump Shot,11:42
 03/31/26,401810955,BKN,CHA,BKN,4278067,Nic Claxton,4433249,Moussa Diabate,Brandon Miller,CHA,Pullup Jump Shot,11:26
 03/31/26,401810956,DET,TOR,TOR,3134908,Jakob Poeltl,4433621,Jalen Duren,Jalen Duren,DET,Driving Finger Roll Layup,11:24
-03/31/26,401810957,HOU,NY,HOU,4871144,Alperen Sengun,3136195,Karl-Anthony Towns,Amen Thompson,HOU,Driving Dunk Shot,11:11
+03/31/26,401810957,HOU,NY,HOU,4871144,Alperen Sengun,3136195,Karl-Anthony Towns,Jalen Brunson,NY,Free Throw - 2 of 2,11:21
 03/31/26,401858694,MIL,DAL,MIL,4277922,Jericho Sims,4278049,Daniel Gafford,Kyle Kuzma,MIL,Driving Floating Jump Shot,11:15
 03/31/26,401810958,LAL,CLE,CLE,4066328,Jarrett Allen,4278129,Deandre Ayton,Jarrett Allen,CLE,Turnaround Hook Shot,11:16
 03/31/26,401810959,LAC,POR,LAC,3448,Brook Lopez,5105565,Donovan Clingan,Scoot Henderson,POR,Pullup Jump Shot,11:17
@@ -1139,14 +1139,14 @@ game_start,game_id,home_team,away_team,tip_winner,tip_winner_player,tip_winner_p
 04/01/26,401810858,MEM,NY,NY,3136195,Karl-Anthony Towns,4595400,Olivier-Maxence Prosper,OG Anunoby,NY,Alley Oop Dunk Shot,11:46
 04/01/26,401810963,TOR,SAC,TOR,3134908,Jakob Poeltl,4898371,Maxime Raynaud,Jakob Poeltl,TOR,Running Layup Shot,11:16
 04/01/26,401810964,CHI,IND,IND,4065731,Jay Huff,4711294,Matas Buzelis,Pascal Siakam,IND,Cutting Layup Shot,11:44
-04/01/26,401810965,HOU,MIL,HOU,4684740,Amen Thompson,4277843,Gary Trent Jr.,Kevin Durant,HOU,Pullup Jump Shot,10:59
+04/01/26,401810965,HOU,MIL,HOU,4684740,Amen Thompson,4277843,Gary Trent Jr.,Alperen Sengun,HOU,Free Throw - 1 of 2,11:43
 04/01/26,401810967,UTAH,DEN,DEN,3112335,Nikola Jokic,4873138,Ace Bailey,Jamal Murray,DEN,Jump Shot,11:48
 04/01/26,401810968,GS,SA,SA,5104157,Victor Wembanyama,6589,Draymond Green,Victor Wembanyama,SA,Driving Floating Bank Jump Shot,11:42
 04/02/26,401810969,CHA,PHX,PHX,4601023,Oso Ighodaro,4433249,Moussa Diabate,Collin Gillespie,PHX,Jump Shot,11:46
 04/02/26,401810970,DET,MIN,DET,4433621,Jalen Duren,3032976,Rudy Gobert,Daniss Jenkins,DET,Driving Finger Roll Layup,11:45
 04/02/26,401810971,OKC,LAL,LAL,4278129,Deandre Ayton,4433255,Chet Holmgren,Isaiah Hartenstein,OKC,Alley Oop Dunk Shot,11:09
 04/02/26,401810972,GS,CLE,CLE,4066328,Jarrett Allen,3102531,Kristaps Porzingis,Draymond Green,GS,Jump Shot,11:10
-04/02/26,401810973,POR,NO,POR,5105565,Donovan Clingan,4395628,Zion Williamson,Scoot Henderson,POR,Step Back Jump Shot,11:30
+04/02/26,401810973,POR,NO,POR,5105565,Donovan Clingan,4395628,Zion Williamson,Deni Avdija,POR,Free Throw - 1 of 2,11:42
 04/02/26,401810974,LAC,SA,LAC,3448,Brook Lopez,3064560,Luke Kornet,Brook Lopez,LAC,Floating Jump Shot,11:41
 04/03/26,401810975,CHA,IND,IND,4065731,Jay Huff,4576060,Ryan Kalkbrenner,Pascal Siakam,IND,Cutting Layup Shot,11:45
 04/03/26,401810976,PHI,MIN,MIN,3032976,Rudy Gobert,4870562,Dominick Barlow,VJ Edgecombe,PHI,Turnaround Jump Shot,11:20
@@ -1159,12 +1159,12 @@ game_start,game_id,home_team,away_team,tip_winner,tip_winner_player,tip_winner_p
 04/03/26,401810983,SAC,NO,SAC,4898371,Maxime Raynaud,5061589,Yves Missi,Zion Williamson,NO,Driving Layup Shot,11:05
 04/04/26,401810984,MIA,WSH,MIA,4066261,Bam Adebayo,2581184,Anthony Gill,Bam Adebayo,MIA,Running Jump Shot,11:19
 04/04/26,401810985,DEN,SA,SA,5104157,Victor Wembanyama,3112335,Nikola Jokic,Cameron Johnson,DEN,Jump Shot,11:23
-04/04/26,401810986,PHI,DET,DET,4433621,Jalen Duren,6585,Andre Drummond,Ausar Thompson,DET,Alley Oop Dunk Shot,11:13
+04/04/26,401810986,PHI,DET,DET,4433621,Jalen Duren,6585,Andre Drummond,Paul George,PHI,Free Throw - 1 of 2,11:28
 04/05/26,401810987,BOS,TOR,BOS,4397424,Neemias Queta,3134908,Jakob Poeltl,Jaylen Brown,BOS,Layup Driving Reverse,11:53
 04/05/26,401810988,BKN,WSH,BKN,5174655,Chaney Johnson,4683742,Julian Reese,Nolan Traore,BKN,Jump Shot,10:52
 04/05/26,401810989,CHI,PHX,PHX,4701232,Mark Williams,4017844,Guerschon Yabusele,Devin Booker,PHX,Step Back Jump Shot,9:38
 04/05/26,401810990,MIL,MEM,MIL,3133628,Myles Turner,4684806,Taylor Hendricks,Rayan Rupert,MEM,Running Layup Shot,11:05
-04/05/26,401810991,CLE,IND,CLE,3934723,Thomas Bryant,4066399,Micah Potter,Kobe Brown,IND,Running Pullup Jump Shot,10:47
+04/05/26,401810991,CLE,IND,CLE,3934723,Thomas Bryant,4066399,Micah Potter,Micah Potter,IND,Free Throw - 1 of 2,11:28
 04/05/26,401810992,MIN,CHA,CHA,4433249,Moussa Diabate,3032976,Rudy Gobert,LaMelo Ball,CHA,Jump Shot,10:49
 04/05/26,401810993,NO,ORL,ORL,4277847,Wendell Carter Jr.,5061589,Yves Missi,Paolo Banchero,ORL,Running Layup Shot,11:17
 04/05/26,401810994,OKC,UTAH,UTAH,4432827,Oscar Tshiebwe,4433255,Chet Holmgren,Kyle Filipowski,UTAH,Fade Away Jump Shot,11:37
@@ -1182,7 +1182,7 @@ game_start,game_id,home_team,away_team,tip_winner,tip_winner_player,tip_winner_p
 04/07/26,401811006,TOR,MIA,TOR,3134908,Jakob Poeltl,4066261,Bam Adebayo,Brandon Ingram,TOR,Driving Finger Roll Layup,11:46
 04/07/26,401811004,BOS,CHA,BOS,4397424,Neemias Queta,4433249,Moussa Diabate,Jaylen Brown,BOS,Cutting Layup Shot,11:44
 04/07/26,401811008,NO,UTAH,UTAH,4432827,Oscar Tshiebwe,3155535,Kevon Looney,Jeremiah Fears,NO,Running Layup Shot,11:17
-04/07/26,401811009,GS,SAC,SAC,4898371,Maxime Raynaud,6589,Draymond Green,Maxime Raynaud,SAC,Floating Jump Shot,11:08
+04/07/26,401811009,GS,SAC,SAC,4898371,Maxime Raynaud,6589,Draymond Green,Brandin Podziemski,GS,Free Throw - 1 of 2,11:29
 04/07/26,401811010,LAL,OKC,OKC,4433255,Chet Holmgren,4278129,Deandre Ayton,Shai Gilgeous-Alexander,OKC,Turnaround Jump Shot,11:02
 04/07/26,401811011,LAC,DAL,LAC,3448,Brook Lopez,2531367,Dwight Powell,Brook Lopez,LAC,Driving Dunk Shot,11:47
 04/07/26,401811012,PHX,HOU,PHX,4701232,Mark Williams,4871144,Alperen Sengun,Jabari Smith Jr.,HOU,Jump Shot,11:27
@@ -1199,7 +1199,7 @@ game_start,game_id,home_team,away_team,tip_winner,tip_winner_player,tip_winner_p
 04/09/26,401811023,NY,BOS,BOS,4397424,Neemias Queta,3136195,Karl-Anthony Towns,Mikal Bridges,NY,Running Layup Shot,11:39
 04/09/26,401811024,HOU,PHI,HOU,4871144,Alperen Sengun,5105637,Adem Bona,Kelly Oubre Jr.,PHI,Running Dunk Shot,11:36
 04/09/26,401811025,GS,LAL,LAL,4278129,Deandre Ayton,6589,Draymond Green,Deandre Ayton,LAL,Fade Away Jump Shot,11:34
-04/10/26,401811026,CHA,DET,CHA,4433249,Moussa Diabate,4433621,Jalen Duren,Brandon Miller,CHA,Running Alley Oop Dunk Shot,10:19
+04/10/26,401811026,CHA,DET,CHA,4433249,Moussa Diabate,4433621,Jalen Duren,Brandon Miller,CHA,Free Throw - 1 of 2,11:34
 04/10/26,401811027,WSH,MIA,WSH,4683742,Julian Reese,5105623,Kel'el Ware,Kel'el Ware,MIA,Alley Oop Layup Shot,11:03
 04/10/26,401811028,ATL,CLE,CLE,4432158,Evan Mobley,4431680,Onyeka Okongwu,Evan Mobley,CLE,Cutting Layup Shot,11:45
 04/10/26,401811029,BOS,NO,NO,3155535,Kevon Looney,4397424,Neemias Queta,Derik Queen,NO,Driving Layup Shot,11:08
@@ -1208,10 +1208,10 @@ game_start,game_id,home_team,away_team,tip_winner,tip_winner_player,tip_winner_p
 04/10/26,401811032,CHI,ORL,CHI,4711294,Matas Buzelis,4277847,Wendell Carter Jr.,Wendell Carter Jr.,ORL,Running Dunk Shot,11:31
 04/10/26,401811034,MIL,BKN,MIL,3133628,Myles Turner,3934620,Trevon Scott,Myles Turner,MIL,Step Back Jump Shot,11:40
 04/10/26,401811035,SA,DAL,SA,5104157,Victor Wembanyama,4277848,Marvin Bagley III,Victor Wembanyama,SA,Driving Dunk Shot,11:41
-04/10/26,401811037,DEN,OKC,DEN,6477,Jonas Valanciunas,4592435,Branden Carlson,Aaron Wiggins,OKC,Jump Shot,10:28
+04/10/26,401811037,DEN,OKC,DEN,6477,Jonas Valanciunas,4592435,Branden Carlson,Jonas Valanciunas,DEN,Free Throw - 1 of 2,11:10
 04/10/26,401811033,HOU,MIN,MIN,5279133,Joan Beringer,4871144,Alperen Sengun,Jaden McDaniels,MIN,Fade Away Jump Shot,11:07
 04/10/26,401811036,UTAH,MEM,UTAH,4432827,Oscar Tshiebwe,4700873,Toby Okani,Dariq Whitehead,MEM,Running Layup Shot,10:56
-04/10/26,401811038,POR,LAC,POR,5105565,Donovan Clingan,3448,Brook Lopez,Brook Lopez,LAC,Floating Jump Shot,11:06
+04/10/26,401811038,POR,LAC,POR,5105565,Donovan Clingan,3448,Brook Lopez,Jrue Holiday,POR,Free Throw - 1 of 2,11:39
 04/10/26,401811039,SAC,GS,GS,3102531,Kristaps Porzingis,4898371,Maxime Raynaud,Stephen Curry,GS,Jump Shot,11:44
 04/10/26,401811040,LAL,PHX,LAL,4278129,Deandre Ayton,4701232,Mark Williams,Rui Hachimura,LAL,Layup Driving Reverse,11:36
 04/12/26,401811041,BOS,ORL,ORL,4277847,Wendell Carter Jr.,4277951,Luka Garza,Luka Garza,BOS,Jump Shot,11:42
@@ -1223,7 +1223,7 @@ game_start,game_id,home_team,away_team,tip_winner,tip_winner_player,tip_winner_p
 04/12/26,401811047,TOR,BKN,TOR,3134908,Jakob Poeltl,3934620,Trevon Scott,E.J. Liddell,BKN,Jump Shot,11:34
 04/12/26,401811048,DAL,CHI,CHI,5107156,Lachlan Olbrich,2531367,Dwight Powell,Leonard Miller,CHI,Driving Dunk Shot,11:54
 04/12/26,401811049,HOU,MEM,MEM,3986,Taj Gibson,3102529,Clint Capela,Tari Eason,HOU,Driving Finger Roll Layup,11:09
-04/12/26,401811050,MIN,NO,MIN,5279133,Joan Beringer,4869780,Derik Queen,Jaylen Clark,MIN,Jump Shot,11:21
+04/12/26,401811050,MIN,NO,MIN,5279133,Joan Beringer,4869780,Derik Queen,Terrence Shannon Jr.,MIN,Free Throw - 1 of 2,11:49
 04/12/26,401811051,OKC,PHX,OKC,4592435,Branden Carlson,4601023,Oso Ighodaro,Jamaree Bouyea,PHX,Pullup Jump Shot,11:29
 04/12/26,401811052,SA,DEN,SA,2488653,Mason Plumlee,3112335,Nikola Jokic,De'Aaron Fox,SA,Jump Shot,11:43
 04/12/26,401811053,LAL,UTAH,LAL,4278129,Deandre Ayton,4432827,Oscar Tshiebwe,Luke Kennard,LAL,Pullup Jump Shot,11:45
@@ -1231,15 +1231,15 @@ game_start,game_id,home_team,away_team,tip_winner,tip_winner_player,tip_winner_p
 04/12/26,401811055,POR,SAC,POR,5105565,Donovan Clingan,4898371,Maxime Raynaud,Jrue Holiday,POR,Fade Away Jump Shot,11:37
 04/14/26,401866755,CHA,MIA,MIA,5105623,Kel'el Ware,4433249,Moussa Diabate,LaMelo Ball,CHA,Driving Floating Jump Shot,11:19
 04/14/26,401866754,PHX,POR,PHX,4701232,Mark Williams,5105565,Donovan Clingan,Jalen Green,PHX,Driving Layup Shot,11:45
-04/15/26,401866757,PHI,ORL,PHI,5105637,Adem Bona,4277847,Wendell Carter Jr.,Desmond Bane,ORL,Pullup Jump Shot,10:49
+04/15/26,401866757,PHI,ORL,PHI,5105637,Adem Bona,4277847,Wendell Carter Jr.,Adem Bona,PHI,Free Throw - 1 of 2,11:49
 04/15/26,401866756,LAC,GS,LAC,3448,Brook Lopez,3102531,Kristaps Porzingis,Gui Santos,GS,Running Layup Shot,11:33
 04/17/26,401866758,ORL,CHA,ORL,4277847,Wendell Carter Jr.,4433249,Moussa Diabate,Paolo Banchero,ORL,Pullup Jump Shot,11:06
 04/17/26,401866759,PHX,GS,GS,3102531,Kristaps Porzingis,4601023,Oso Ighodaro,Draymond Green,GS,Driving Layup Shot,11:47
 04/18/26,401869187,CLE,TOR,CLE,4066328,Jarrett Allen,3134908,Jakob Poeltl,Jarrett Allen,CLE,Alley Oop Dunk Shot,10:53
-04/18/26,401869188,DEN,MIN,MIN,3032976,Rudy Gobert,3112335,Nikola Jokic,Donte DiVincenzo,MIN,Pullup Jump Shot,11:13
+04/18/26,401869188,DEN,MIN,MIN,3032976,Rudy Gobert,3112335,Nikola Jokic,Aaron Gordon,DEN,Free Throw - 1 of 2,11:25
 04/18/26,401869189,NY,ATL,NY,3136195,Karl-Anthony Towns,4431680,Onyeka Okongwu,Mikal Bridges,NY,Fade Away Jump Shot,11:09
-04/18/26,401869190,LAL,HOU,LAL,4278129,Deandre Ayton,4871144,Alperen Sengun,Deandre Ayton,LAL,Turnaround Hook Shot,11:20
-04/19/26,401869191,BOS,PHI,PHI,5105637,Adem Bona,4397424,Neemias Queta,Sam Hauser,BOS,Jump Shot,11:15
+04/18/26,401869190,LAL,HOU,LAL,4278129,Deandre Ayton,4871144,Alperen Sengun,Josh Okogie,HOU,Free Throw - 1 of 2,11:42
+04/19/26,401869191,BOS,PHI,PHI,5105637,Adem Bona,4397424,Neemias Queta,Neemias Queta,BOS,Free Throw - 1 of 2,11:38
 04/19/26,401869192,OKC,PHX,PHX,4601023,Oso Ighodaro,4433255,Chet Holmgren,Dillon Brooks,PHX,Jump Shot,11:11
 04/19/26,401869193,DET,ORL,DET,4433621,Jalen Duren,4277847,Wendell Carter Jr.,Jalen Suggs,ORL,Jump Shot,11:19
 04/19/26,401869194,SA,POR,SA,5104157,Victor Wembanyama,5105565,Donovan Clingan,Stephon Castle,SA,Pullup Bank Jump Shot,11:09
@@ -1276,7 +1276,7 @@ game_start,game_id,home_team,away_team,tip_winner,tip_winner_player,tip_winner_p
 04/29/26,401869407,LAL,HOU,LAL,4278129,Deandre Ayton,4871144,Alperen Sengun,Marcus Smart,LAL,Jump Shot,11:37
 04/30/26,401869393,ATL,NY,NY,3136195,Karl-Anthony Towns,4431680,Onyeka Okongwu,Jalen Brunson,NY,Jump Shot,11:41
 04/30/26,401869410,PHI,BOS,PHI,3059318,Joel Embiid,4397424,Neemias Queta,Joel Embiid,PHI,Turnaround Fade Away Jump Shot,11:46
-05/01/26,401869417,ORL,DET,DET,4433621,Jalen Duren,4277847,Wendell Carter Jr.,Jalen Duren,DET,Tip Shot,10:45
+05/01/26,401869417,ORL,DET,DET,4433621,Jalen Duren,4277847,Wendell Carter Jr.,Paolo Banchero,ORL,Free Throw - 1 of 2,11:24
 05/01/26,401869381,TOR,CLE,CLE,4066328,Jarrett Allen,3134908,Jakob Poeltl,Jarrett Allen,CLE,Reverse Dunk Shot,11:42
 05/01/26,401869409,HOU,LAL,HOU,4871144,Alperen Sengun,4278129,Deandre Ayton,Tari Eason,HOU,Jump Shot,11:43
 05/02/26,401869412,BOS,PHI,PHI,3059318,Joel Embiid,4277951,Luka Garza,Joel Embiid,PHI,Jump Shot,11:41
@@ -1314,7 +1314,7 @@ game_start,game_id,home_team,away_team,tip_winner,tip_winner_player,tip_winner_p
 06/03/26,401859963,SA,NY,NY,3136195,Karl-Anthony Towns,5104157,Victor Wembanyama,Jalen Brunson,NY,Jump Shot,11:45
 06/05/26,401859964,SA,NY,SA,5104157,Victor Wembanyama,3136195,Karl-Anthony Towns,Devin Vassell,SA,Jump Shot,11:36
 06/08/26,401859965,NY,SA,SA,5104157,Victor Wembanyama,3136195,Karl-Anthony Towns,Victor Wembanyama,SA,Alley Oop Dunk Shot,10:42
-06/10/26,401859966,NY,SA,SA,5104157,Victor Wembanyama,3136195,Karl-Anthony Towns,Karl-Anthony Towns,NY,Driving Floating Jump Shot,11:21
+06/10/26,401859966,NY,SA,SA,5104157,Victor Wembanyama,3136195,Karl-Anthony Towns,De'Aaron Fox,SA,Free Throw - 1 of 2,11:42
 06/13/26,401859967,SA,NY,NY,3136195,Karl-Anthony Towns,5104157,Victor Wembanyama,Victor Wembanyama,SA,Running Dunk Shot,9:44
 10/20/26,401909088,DET,BOS,BOS,4351852,Mitchell Robinson,4433621,Jalen Duren,John Collins,DET,Layup Shot Putback,11:09
 10/20/26,401909089,NY,PHI,PHI,3059318,Joel Embiid,3136195,Karl-Anthony Towns,Tyrese Maxey,PHI,Jump Shot,11:44
@@ -1343,15 +1343,15 @@ game_start,game_id,home_team,away_team,tip_winner,tip_winner_player,tip_winner_p
 10/23/26,401909849,UTAH,NO,UTAH,4277961,Jaren Jackson Jr.,5061589,Yves Missi,Ace Bailey,UTAH,Turnaround Hook Shot,11:17
 10/23/26,401909850,GS,MEM,MEM,4600663,Zach Edey,4703396,Graham Ike,Zach Edey,MEM,Cutting Dunk Shot,11:47
 10/23/26,401909851,LAL,LAC,LAL,4433136,Walker Kessler,4432170,Isaiah Jackson,Austin Reaves,LAL,Driving Floating Jump Shot,10:31
-10/23/26,401909852,SAC,POR,POR,5105565,Donovan Clingan,3155942,Domantas Sabonis,Keegan Murray,SAC,Cutting Layup Shot,10:34
+10/23/26,401909852,SAC,POR,POR,5105565,Donovan Clingan,3155942,Domantas Sabonis,Domantas Sabonis,SAC,Free Throw - 1 of 2,11:25
 10/24/26,401909853,CHA,MIA,MIA,4066261,Bam Adebayo,4433249,Moussa Diabate,Bam Adebayo,MIA,Turnaround Jump Shot,11:42
-10/24/26,401909854,CLE,BKN,BKN,4432194,Day'Ron Sharpe,4066328,Jarrett Allen,Peyton Watson,CLE,Jump Shot,10:51
+10/24/26,401909854,CLE,BKN,BKN,4432194,Day'Ron Sharpe,4066328,Jarrett Allen,Jarrett Allen,CLE,Free Throw - 1 of 2,11:16
 10/24/26,401909855,PHI,MIL,PHI,3059318,Joel Embiid,3133628,Myles Turner,Dean Wade,PHI,Jump Shot,11:38
 10/24/26,401909857,CHI,WSH,WSH,6583,Anthony Davis,4397189,Jalen Smith,Trae Young,WSH,Step Back Jump Shot,11:35
-10/24/26,401909858,DAL,SA,SA,5104157,Victor Wembanyama,4278049,Daniel Gafford,De'Aaron Fox,SA,Jump Shot,11:00
+10/24/26,401909858,DAL,SA,SA,5104157,Victor Wembanyama,4278049,Daniel Gafford,Victor Wembanyama,SA,Free Throw - 2 of 2,11:43
 10/24/26,401909856,ATL,HOU,HOU,4871144,Alperen Sengun,4431680,Onyeka Okongwu,Dyson Daniels,ATL,Cutting Layup Shot,11:24
 10/24/26,401909859,DEN,NO,DEN,3112335,Nikola Jokic,3442,DeAndre Jordan,Aaron Gordon,DEN,Jump Shot,11:05
-10/24/26,401909860,PHX,GS,PHX,5203685,Khaman Maluach,4703396,Graham Ike,Yaxel Lendeborg,GS,Jump Shot,11:29
+10/24/26,401909860,PHX,GS,PHX,5203685,Khaman Maluach,4703396,Graham Ike,Khaman Maluach,PHX,Free Throw - 1 of 2,11:47
 10/25/26,401909861,UTAH,LAL,LAL,4433136,Walker Kessler,4277961,Jaren Jackson Jr.,Luka Doncic,LAL,Turnaround Fade Away Jump Shot,11:40
 10/25/26,401909862,BKN,IND,IND,4017837,Ivica Zubac,4432194,Day'Ron Sharpe,Ivica Zubac,IND,Running Layup Shot,11:06
 10/25/26,401909863,NY,ORL,ORL,4277847,Wendell Carter Jr.,3136195,Karl-Anthony Towns,Jalen Brunson,NY,Turnaround Fade Away Jump Shot,11:07
@@ -1362,7 +1362,7 @@ game_start,game_id,home_team,away_team,tip_winner,tip_winner_player,tip_winner_p
 10/26/26,401909868,CHA,WSH,WSH,6583,Anthony Davis,4433249,Moussa Diabate,Brandon Miller,CHA,Turnaround Fade Away Jump Shot,10:36
 10/26/26,401909869,CLE,MIN,CLE,4066328,Jarrett Allen,3032976,Rudy Gobert,Jarrett Allen,CLE,Floating Jump Shot,11:49
 10/26/26,401909870,BOS,CHI,BOS,4351852,Mitchell Robinson,4397189,Jalen Smith,Paul George,BOS,Jump Shot,11:09
-10/26/26,401909871,MIA,DAL,MIA,4066261,Bam Adebayo,4278049,Daniel Gafford,Davion Mitchell,MIA,Running Finger Roll Layup,10:37
+10/26/26,401909871,MIA,DAL,MIA,4066261,Bam Adebayo,4278049,Daniel Gafford,P.J. Washington,DAL,Free Throw - 1 of 2,11:07
 10/26/26,401909872,MIL,IND,MIL,3133628,Myles Turner,4065731,Jay Huff,Aaron Nesmith,IND,Cutting Layup Shot,10:46
 10/26/26,401909873,OKC,PHX,PHX,5203685,Khaman Maluach,4222252,Isaiah Hartenstein,Shai Gilgeous-Alexander,OKC,Pullup Jump Shot,11:26
 10/26/26,401909874,HOU,ATL,HOU,4871144,Alperen Sengun,4431680,Onyeka Okongwu,Amen Thompson,HOU,Alley Oop Dunk Shot,11:43
@@ -1373,24 +1373,24 @@ game_start,game_id,home_team,away_team,tip_winner,tip_winner_player,tip_winner_p
 10/27/26,401909879,SA,SAC,SA,5104157,Victor Wembanyama,3155942,Domantas Sabonis,Victor Wembanyama,SA,Alley Oop Dunk Shot,11:48
 10/27/26,401909880,LAL,POR,LAL,4433136,Walker Kessler,5105565,Donovan Clingan,Austin Reaves,LAL,Jump Shot,11:38
 10/28/26,401909881,ATL,MIA,MIA,4066261,Bam Adebayo,4431680,Onyeka Okongwu,Bam Adebayo,MIA,Fade Away Jump Shot,11:38
-10/28/26,401909882,CLE,WSH,WSH,6583,Anthony Davis,4066328,Jarrett Allen,Alex Sarr,WSH,Alley Oop Dunk Shot,11:22
+10/28/26,401909882,CLE,WSH,WSH,6583,Anthony Davis,4066328,Jarrett Allen,AJ Dybantsa,WSH,Free Throw - 1 of 2,11:44
 10/28/26,401909883,DET,CHA,DET,4278562,Paul Reed,4433249,Moussa Diabate,Naz Reid,CHA,Jump Shot,10:45
 10/28/26,401909884,IND,PHI,PHI,3059318,Joel Embiid,4065731,Jay Huff,Pascal Siakam,IND,Cutting Finger Roll Layup Shot,10:46
 10/28/26,401909885,TOR,ORL,ORL,4277847,Wendell Carter Jr.,3134908,Jakob Poeltl,Wendell Carter Jr.,ORL,Layup Shot,11:43
 10/28/26,401909887,MIL,HOU,HOU,4432639,Jabari Smith Jr.,3133628,Myles Turner,Tyler Herro,MIL,Jump Shot,11:20
 10/28/26,401909889,NO,DEN,DEN,3112335,Nikola Jokic,3442,DeAndre Jordan,Jamal Murray,DEN,Running Pullup Jump Shot,11:28
-10/28/26,401909886,CHI,NY,NY,3136195,Karl-Anthony Towns,4397189,Jalen Smith,Caleb Wilson,CHI,Cutting Dunk Shot,10:58
+10/28/26,401909886,CHI,NY,NY,3136195,Karl-Anthony Towns,4397189,Jalen Smith,OG Anunoby,NY,Free Throw - 1 of 2,11:12
 10/28/26,401909888,MIN,GS,MIN,3032976,Rudy Gobert,6589,Draymond Green,Jaden McDaniels,MIN,Driving Floating Jump Shot,11:23
 10/28/26,401909890,UTAH,SA,SA,5104157,Victor Wembanyama,4397077,Jaxson Hayes,De'Aaron Fox,SA,Driving Floating Jump Shot,11:47
 10/28/26,401909891,DAL,OKC,OKC,4222252,Isaiah Hartenstein,4278049,Daniel Gafford,Cooper Flagg,DAL,Driving Layup Shot,11:25
 10/28/26,401909892,LAC,LAL,LAL,4433136,Walker Kessler,4432170,Isaiah Jackson,Matisse Thybulle,LAL,Jump Shot,11:46
-10/29/26,401909893,ATL,CLE,CLE,4066328,Jarrett Allen,4431680,Onyeka Okongwu,James Harden,CLE,Driving Layup Shot,10:27
+10/29/26,401909893,ATL,CLE,CLE,4066328,Jarrett Allen,4431680,Onyeka Okongwu,Evan Mobley,CLE,Free Throw - 1 of 2,11:07
 10/29/26,401909894,NO,SAC,SAC,3155942,Domantas Sabonis,4997538,Karlo Matkovic,Trey Murphy III,NO,Running Dunk Shot,11:14
 10/29/26,401909895,POR,MEM,POR,5105565,Donovan Clingan,4600663,Zach Edey,Zach Edey,MEM,Dunk Shot,11:28
 10/30/26,401909277,WSH,CHA,CHA,4433249,Moussa Diabate,6583,Anthony Davis,Dennis Schroder,CHA,Fade Away Jump Shot,11:26
 10/30/26,401909278,BOS,CHI,BOS,4351852,Mitchell Robinson,4397189,Jalen Smith,Jayson Tatum,BOS,Cutting Layup Shot,11:50
 10/30/26,401909279,BKN,DET,BKN,4432194,Day'Ron Sharpe,4278562,Paul Reed,Michael Porter Jr.,BKN,Driving Finger Roll Layup,11:43
-10/30/26,401909280,PHI,NY,NY,3136195,Karl-Anthony Towns,3059318,Joel Embiid,OG Anunoby,NY,Jump Shot,11:07
+10/30/26,401909280,PHI,NY,NY,3136195,Karl-Anthony Towns,3059318,Joel Embiid,Joel Embiid,PHI,Free Throw - 1 of 2,11:24
 10/30/26,401909281,TOR,ORL,TOR,3134908,Jakob Poeltl,4277847,Wendell Carter Jr.,Scottie Barnes,TOR,Turnaround Jump Shot,10:45
 10/30/26,401909282,MIA,IND,MIA,4066261,Bam Adebayo,4065731,Jay Huff,Bam Adebayo,MIA,Driving Layup Shot,11:43
 10/30/26,401909283,DAL,HOU,DAL,4278049,Daniel Gafford,3102529,Clint Capela,Fred VanVleet,HOU,Pullup Jump Shot,11:33
@@ -1402,7 +1402,7 @@ game_start,game_id,home_team,away_team,tip_winner,tip_winner_player,tip_winner_p
 10/31/26,401909898,NO,ATL,ATL,4431680,Onyeka Okongwu,4997538,Karlo Matkovic,Nickeil Alexander-Walker,ATL,Running Layup Shot,11:19
 10/31/26,401909899,MEM,SAC,SAC,3155942,Domantas Sabonis,4600663,Zach Edey,De'Andre Hunter,SAC,Jump Shot,10:52
 10/31/26,401909900,MIL,CLE,CLE,4066328,Jarrett Allen,3133628,Myles Turner,Myles Turner,MIL,Jump Shot,11:26
-10/31/26,401909901,SA,MIN,SA,5104157,Victor Wembanyama,5279133,Joan Beringer,Victor Wembanyama,SA,Pullup Jump Shot,10:48
+10/31/26,401909901,SA,MIN,SA,5104157,Victor Wembanyama,5279133,Joan Beringer,De'Aaron Fox,SA,Free Throw - 1 of 2,11:45
 10/31/26,401909902,HOU,OKC,OKC,4222252,Isaiah Hartenstein,4871144,Alperen Sengun,Isaiah Hartenstein,OKC,Alley Oop Layup Shot,11:48
 11/01/26,401909903,ORL,BOS,ORL,4277847,Wendell Carter Jr.,4397424,Neemias Queta,Wendell Carter Jr.,ORL,Jump Shot,11:39
 11/01/26,401909904,IND,BKN,BKN,4432194,Day'Ron Sharpe,4065731,Jay Huff,Day'Ron Sharpe,BKN,Layup Shot,11:44
@@ -1413,7 +1413,7 @@ game_start,game_id,home_team,away_team,tip_winner,tip_winner_player,tip_winner_p
 11/02/26,401909909,IND,ATL,ATL,4431680,Onyeka Okongwu,4065731,Jay Huff,Nickeil Alexander-Walker,ATL,Jump Shot,11:34
 11/02/26,401909910,NY,BKN,NY,3136195,Karl-Anthony Towns,4432194,Day'Ron Sharpe,Michael Porter Jr.,BKN,Pullup Jump Shot,11:20
 11/02/26,401909911,ORL,WSH,WSH,6583,Anthony Davis,4277847,Wendell Carter Jr.,Franz Wagner,ORL,Running Layup Shot,11:34
-11/02/26,401909912,PHI,CHI,CHI,4397189,Jalen Smith,3059318,Joel Embiid,LeBron James,PHI,Running Dunk Shot,10:29
+11/02/26,401909912,PHI,CHI,CHI,4397189,Jalen Smith,3059318,Joel Embiid,Jaylen Brown,PHI,Free Throw - 1 of 2,10:50
 11/02/26,401909913,DAL,SAC,DAL,4278049,Daniel Gafford,3155942,Domantas Sabonis,Daniel Gafford,DAL,Layup Shot Putback,10:45
 11/02/26,401909914,MEM,NO,NO,4997538,Karlo Matkovic,4600663,Zach Edey,Zion Williamson,NO,Fade Away Jump Shot,10:58
 11/02/26,401909915,MIN,MIL,MIN,3032976,Rudy Gobert,3133628,Myles Turner,Jaime Jaquez Jr.,MIL,Running Layup Shot,11:36
@@ -1422,7 +1422,7 @@ game_start,game_id,home_team,away_team,tip_winner,tip_winner_player,tip_winner_p
 11/02/26,401909918,DEN,POR,POR,5105565,Donovan Clingan,3112335,Nikola Jokic,Jamal Murray,DEN,Driving Layup Shot,11:24
 11/02/26,401909919,GS,PHX,PHX,5203685,Khaman Maluach,6589,Draymond Green,Devin Booker,PHX,Turnaround Fade Away Jump Shot,9:53
 11/02/26,401909920,LAC,TOR,LAC,3448,Brook Lopez,5093267,Collin Murray-Boyles,Kobe Sanders,LAC,Jump Shot,11:40
-11/02/26,401909921,LAL,MIA,MIA,4066261,Bam Adebayo,4433136,Walker Kessler,Davion Mitchell,MIA,Jump Shot,10:29
+11/02/26,401909921,LAL,MIA,MIA,4066261,Bam Adebayo,4433136,Walker Kessler,Giannis Antetokounmpo,MIA,Free Throw - 2 of 2,11:09
 11/04/26,401909922,DET,PHI,PHI,3059318,Joel Embiid,4278562,Paul Reed,Duncan Robinson,DET,Jump Shot,11:35
 11/04/26,401909923,WSH,ATL,ATL,4431680,Onyeka Okongwu,6583,Anthony Davis,Kingston Flemings,ATL,Jump Shot,11:38
 11/04/26,401909924,BOS,MIL,MIL,3133628,Myles Turner,4397424,Neemias Queta,Sam Hauser,BOS,Jump Shot,11:22
@@ -1436,14 +1436,14 @@ game_start,game_id,home_team,away_team,tip_winner,tip_winner_player,tip_winner_p
 11/04/26,401909932,PHX,POR,POR,5105565,Donovan Clingan,5203685,Khaman Maluach,Damian Lillard,POR,Jump Shot,11:24
 11/04/26,401909933,SA,DAL,DAL,4278049,Daniel Gafford,5104157,Victor Wembanyama,Victor Wembanyama,SA,Driving Dunk Shot,11:10
 11/04/26,401909934,SAC,LAL,LAL,4433136,Walker Kessler,3155942,Domantas Sabonis,Jake LaRavia,LAL,Jump Shot,11:32
-11/04/26,401909935,LAC,MIA,MIA,4066261,Bam Adebayo,3448,Brook Lopez,Bam Adebayo,MIA,Tip Shot,10:33
-11/05/26,401909936,PHX,ORL,ORL,4277847,Wendell Carter Jr.,4601023,Oso Ighodaro,Devin Booker,PHX,Pullup Jump Shot,11:04
+11/04/26,401909935,LAC,MIA,MIA,4066261,Bam Adebayo,3448,Brook Lopez,Giannis Antetokounmpo,MIA,Free Throw - 1 of 2,10:49
+11/05/26,401909936,PHX,ORL,ORL,4277847,Wendell Carter Jr.,4601023,Oso Ighodaro,Franz Wagner,ORL,Free Throw - 1 of 2,11:47
 11/05/26,401909937,GS,MIA,MIA,4066261,Bam Adebayo,6589,Draymond Green,Andrew Wiggins,MIA,Driving Floating Jump Shot,11:45
 11/06/26,401909287,ATL,WSH,WSH,5160992,Alex Sarr,4431680,Onyeka Okongwu,Nickeil Alexander-Walker,ATL,Jump Shot,11:29
 11/06/26,401909288,CHA,BOS,CHA,4576060,Ryan Kalkbrenner,4397424,Neemias Queta,Jayson Tatum,BOS,Pullup Jump Shot,11:22
 11/07/26,401909938,IND,DEN,IND,4017837,Ivica Zubac,3112335,Nikola Jokic,Pascal Siakam,IND,Running Pullup Jump Shot,11:24
 11/07/26,401909939,ATL,BKN,ATL,4431680,Onyeka Okongwu,4432194,Day'Ron Sharpe,Nolan Traore,BKN,Driving Floating Bank Jump Shot,11:19
-11/07/26,401909940,CLE,NY,CLE,4432158,Evan Mobley,3136195,Karl-Anthony Towns,Jalen Brunson,NY,Step Back Jump Shot,11:18
+11/07/26,401909940,CLE,NY,CLE,4432158,Evan Mobley,3136195,Karl-Anthony Towns,Evan Mobley,CLE,Free Throw - 2 of 2,11:38
 11/07/26,401909941,OKC,WSH,OKC,5174983,Aday Mara,5160992,Alex Sarr,Aday Mara,OKC,Turnaround Hook Shot,11:28
 11/07/26,401909942,GS,ORL,ORL,4277847,Wendell Carter Jr.,6589,Draymond Green,Stephen Curry,GS,Driving Finger Roll Layup,11:26
 11/07/26,401909943,PHX,HOU,HOU,4871144,Alperen Sengun,4601023,Oso Ighodaro,Alperen Sengun,HOU,Turnaround Fade Away Jump Shot,10:19
@@ -1459,8 +1459,8 @@ game_start,game_id,home_team,away_team,tip_winner,tip_winner_player,tip_winner_p
 11/09/26,401909953,CHA,CLE,CLE,4066328,Jarrett Allen,4576060,Ryan Kalkbrenner,Jarrett Allen,CLE,Alley Oop Dunk Shot,11:44
 11/09/26,401909954,DET,WSH,WSH,6583,Anthony Davis,3908845,John Collins,John Collins,DET,Jump Shot,11:07
 11/09/26,401909955,TOR,MEM,TOR,3134908,Jakob Poeltl,4600663,Zach Edey,Ja'Kobe Walter,TOR,Fade Away Jump Shot,11:00
-11/09/26,401909956,DAL,IND,IND,4017837,Ivica Zubac,4278049,Daniel Gafford,Aaron Nesmith,IND,Jump Shot,11:14
-11/09/26,401909957,HOU,DEN,DEN,3112335,Nikola Jokic,4871144,Alperen Sengun,Kevin Durant,HOU,Jump Shot,11:26
+11/09/26,401909956,DAL,IND,IND,4017837,Ivica Zubac,4278049,Daniel Gafford,Ivica Zubac,IND,Free Throw - 1 of 2,11:48
+11/09/26,401909957,HOU,DEN,DEN,3112335,Nikola Jokic,4871144,Alperen Sengun,Jamal Murray,DEN,Free Throw - 1 of 2,11:43
 11/09/26,401909958,PHX,SA,SA,5104157,Victor Wembanyama,4601023,Oso Ighodaro,De'Aaron Fox,SA,Driving Layup Shot,11:15
 11/09/26,401909959,GS,NO,GS,6589,Draymond Green,4997538,Karlo Matkovic,Brandin Podziemski,GS,Pullup Bank Jump Shot,11:45
 11/10/26,401909960,NY,MIL,MIL,3133628,Myles Turner,3136195,Karl-Anthony Towns,Myles Turner,MIL,Jump Shot,10:59
@@ -1478,7 +1478,7 @@ game_start,game_id,home_team,away_team,tip_winner,tip_winner_player,tip_winner_p
 11/11/26,401909972,NO,BKN,NO,4997538,Karlo Matkovic,4432194,Day'Ron Sharpe,Zion Williamson,NO,Driving Layup Shot,11:41
 11/11/26,401909973,UTAH,ORL,ORL,4277847,Wendell Carter Jr.,4397077,Jaxson Hayes,Keyonte George,UTAH,Running Layup Shot,11:30
 11/11/26,401909974,HOU,GS,HOU,4871144,Alperen Sengun,3213,Al Horford,Jabari Smith Jr.,HOU,Jump Shot,11:42
-11/11/26,401909975,POR,OKC,OKC,5174983,Aday Mara,5105565,Donovan Clingan,Toumani Camara,POR,Driving Hook Shot,10:51
+11/11/26,401909975,POR,OKC,OKC,5174983,Aday Mara,5105565,Donovan Clingan,Aday Mara,OKC,Free Throw - 2 of 2,11:30
 11/12/26,401909976,PHI,TOR,PHI,3059318,Joel Embiid,3134908,Jakob Poeltl,Jakob Poeltl,TOR,Cutting Finger Roll Layup Shot,11:07
 11/12/26,401909977,WSH,DET,DET,3908845,John Collins,6583,Anthony Davis,Daniss Jenkins,DET,Jump Shot,11:52
 11/12/26,401909978,MIN,DAL,MIN,3032976,Rudy Gobert,4278049,Daniel Gafford,Jonathan Kuminga,MIN,Driving Layup Shot,11:45
@@ -1514,3 +1514,8 @@ game_start,game_id,home_team,away_team,tip_winner,tip_winner_player,tip_winner_p
 11/16/26,401909999,MIN,POR,POR,5105565,Donovan Clingan,3032976,Rudy Gobert,Jaden McDaniels,MIN,Pullup Jump Shot,11:19
 11/16/26,401910000,NO,GS,GS,3213,Al Horford,5061589,Yves Missi,Jeremiah Fears,NO,Turnaround Fade Away Jump Shot,11:30
 11/16/26,401910001,DEN,PHX,PHX,4601023,Oso Ighodaro,3112335,Nikola Jokic,Miles Bridges,PHX,Driving Finger Roll Layup,11:04
+11/17/26,401910002,TOR,NY,TOR,5093267,Collin Murray-Boyles,3136195,Karl-Anthony Towns,Mikal Bridges,NY,Fade Away Jump Shot,11:29
+11/17/26,401910003,MIN,POR,POR,5105565,Donovan Clingan,3032976,Rudy Gobert,Jaden McDaniels,MIN,Turnaround Jump Shot,11:27
+11/17/26,401910004,SA,DET,SA,5104157,Victor Wembanyama,3908845,John Collins,Devin Vassell,SA,Driving Dunk Shot,11:46
+11/17/26,401910006,LAC,UTAH,LAC,3448,Brook Lopez,4277919,Mo Bamba,Josh Green,UTAH,Turnaround Jump Shot,11:25
+11/17/26,401910005,LAL,CHA,LAL,3155535,Kevon Looney,4433249,Moussa Diabate,Kevon Looney,LAL,Tip Shot,11:05

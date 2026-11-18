@@ -1,5 +1,4 @@
 import sqlite3
-import pytest
 import starters as st
 
 
@@ -15,68 +14,6 @@ def add_game(con, gid, date, team, starters, bench=()):
     rows = [(gid, team, p, p.upper(), 1, 30.0) for p in starters]
     rows += [(gid, team, p, p.upper(), 0, 15.0) for p in bench]
     st.save_lineups(con, rows)
-
-
-OLD = ["a", "b", "c", "d", "e"]
-NEW = ["a", "b", "c", "d", "z"]  # 'e' traded away, 'z' arrived
-
-
-def test_2026_games_are_used_not_stale_2025():
-    """Regression: old SQL compared 'YYYYMMDD' to date('now') ('YYYY-MM-DD'),
-    which silently dropped every 2026 game and returned December-2025 lineups."""
-    con = make_db()
-    add_game(con, "g1", "20251230", "NY", OLD)
-    for i, d in enumerate(["20261030", "20261102", "20261104"]):
-        add_game(con, f"n{i}", d, "NY", NEW)
-    res = st.recent_starters(con, "NY", "2026-11-07", n_games=3)
-    ids = {p["player_id"] for p in res["players"]}
-    assert ids == set(NEW) and "e" not in ids
-    assert res["games_used"] == 3
-
-
-def test_before_date_excludes_that_day_and_later():
-    con = make_db()
-    add_game(con, "g1", "20261104", "NY", OLD)
-    add_game(con, "g2", "20261107", "NY", NEW)  # today's game: must not leak in
-    res = st.recent_starters(con, "NY", "20261107")
-    assert {p["player_id"] for p in res["players"]} == set(OLD)
-
-
-def test_out_player_replaced_by_top_bench():
-    con = make_db()
-    for i, d in enumerate(["20261101", "20261103", "20261105"]):
-        add_game(con, f"g{i}", d, "NY", OLD, bench=["x", "y"])
-    res = st.recent_starters(con, "NY", "20261107", out_names={"A"})
-    ids = [p["player_id"] for p in res["players"]]
-    assert "a" not in ids and len(ids) == 5 and res["complete"]
-    assert ids[-1] in ("x", "y")
-
-
-def test_day_to_day_kept_and_flagged():
-    con = make_db()
-    add_game(con, "g1", "20261105", "NY", OLD)
-    out, unc = st.split_injuries({"A": "Day-To-Day", "B": "Out"})
-    assert out == {"B"} and unc == {"A"}
-    res = st.recent_starters(con, "NY", "20261107", out_names=out, uncertain_names=unc)
-    a = next(p for p in res["players"] if p["player_id"] == "a")
-    assert a["uncertain"] is True
-    assert "b" not in [p["player_id"] for p in res["players"]]
-
-
-def test_incomplete_when_no_history():
-    con = make_db()
-    assert st.recent_starters(con, "NY", "20261107")["complete"] is False
-
-
-def test_starts_beat_minutes():
-    con = make_db()
-    for i, d in enumerate(["20261101", "20261103", "20261105"]):
-        add_game(con, f"g{i}", d, "NY", OLD)
-    # a sixth player who played huge minutes off the bench must not displace a starter
-    con.execute("UPDATE lineups SET minutes=40 WHERE player_id='a'")
-    con.execute("INSERT INTO lineups VALUES ('g2','NY','big','BIG',0,45.0)")
-    ids = {p["player_id"] for p in st.recent_starters(con, "NY", "20261107")["players"]}
-    assert ids == set(OLD)
 
 
 def test_yyyymmdd():
@@ -184,7 +121,7 @@ def test_daily_report_renders(monkeypatch):
             {"playerName": "A", "position": "PG", "lineupStatus": "Expected"}] +
             [{"playerName": f"X{i}", "position": "SF", "lineupStatus": "Expected"} for i in range(4)]}}]}
     monkeypatch.setattr(st, "_nba_json", lambda u: feed)
-    monkeypatch.setattr(st, "fetch_injury_report", lambda: [{"name": "A", "status": "Out", "detail": "ankle"}])
+    monkeypatch.setattr(st, "fetch_injury_report", lambda game_ids=None: [{"name": "A", "status": "Out", "detail": "ankle"}])
     out = st.daily_report(con, "20261109")
     assert "BKN @ ATL" in out and "[Expected]" in out and "Out" in out and "ankle" in out
 
@@ -248,7 +185,6 @@ def test_team_comes_from_espn_not_name_matching():
     r = st.parse_injury_rows([ESPN_ROW])
     assert [x["name"] for x in st.team_injuries("ATL", r, {})] == ["Asa Newell", "Dyson Daniels"]
     assert st.team_injuries("BKN", r, {}) == []
-    assert st.out_names_from_report(r) == {"Asa Newell"}
 
 
 def test_returning_by_flags_out_players_expected_back_today():
@@ -261,40 +197,6 @@ def test_returning_by_flags_out_players_expected_back_today():
          "details": {"type": "Ankle", "returnDate": "2026-11-09"}}]}])
     got = st.returning_by(rep, ["Luka Doncic", "Long Term", "Dtd Guy"], "2026-11-09")
     assert got == ["Luka Doncic"]
-
-
-def test_team_injury_lines_shows_whole_report_starters_first():
-    """Every listed player appears; starters (incl. a usual starter dropped from the projected
-    five, and one who isn't in it) come first and are marked."""
-    con = make_db()
-    for i, d in enumerate(["20261102", "20261104", "20261106"]):
-        add_game(con, f"g{i}", d, "CHA", ["a", "b", "c", "d", "e"], bench=["f"])
-    report = [
-        {"name": "f", "team": "CHA", "status": "Out", "detail": "G League"},
-        {"name": "A", "team": "CHA", "status": "Out", "detail": "Wrist"},          # usual starter, dropped
-        {"name": "b", "team": "CHA", "status": "Questionable", "detail": "Ankle"},  # usual starter, kept
-        {"name": "zz", "team": "NY", "status": "Out", "detail": "elsewhere"},       # other team: excluded
-    ]
-    lines = st.team_injury_lines(con, "CHA", "2026-11-09", report,
-                                 projected_names=["B", "C", "D", "E", "G"], dropped_names=["A"])
-    assert len(lines) == 3 and not any("elsewhere" in l for l in lines)
-    assert "removed from projected five" in lines[0] and lines[0].lstrip().startswith("★")
-    assert "STARTER" in lines[1] and "Questionable" in lines[1]
-    assert "★" not in lines[2] and "G League" in lines[2]                              # non-starter last
-
-
-def test_long_injured_regular_starter_is_still_marked_starter():
-    """A starter who hasn't played for 2+ weeks isn't in the last-5 window, but 6 starts in
-    the last 25 games still marks him a STARTER (and not in the projected five)."""
-    con = make_db()
-    for i in range(6):
-        add_game(con, f"old{i}", f"2026100{i + 1}", "DET", ["x", "b", "c", "d", "e"])
-    for i, d in enumerate(["20261102", "20261104", "20261106", "20261108", "20261109"][:4]):
-        add_game(con, f"new{i}", d, "DET", ["r", "b", "c", "d", "e"])       # 'r' replaced 'x'
-    report = [{"name": "X", "team": "DET", "status": "Day-To-Day", "detail": "Hamstring"}]
-    lines = st.team_injury_lines(con, "DET", "2026-11-10", report,
-                                 projected_names=["R", "B", "C", "D", "E"])
-    assert len(lines) == 1 and "STARTER" in lines[0] and "NOT in projected five" in lines[0]
 
 
 # ── injury hardening (2026-11-09) ────────────────────────────
@@ -315,9 +217,9 @@ def test_out_player_dropped_despite_accent_mismatch():
         con.execute("INSERT INTO games VALUES (?,?)", (f"g{i}", f"2026110{i+1}"))
         for j, n in enumerate(names):
             con.execute("INSERT INTO lineups VALUES (?,?,?,?,?,?)", (f"g{i}", "DEN", f"p{j}", n, 1 if j < 5 else 0, 30))
-    r = st.recent_starters(con, "DEN", "20261109", out_names={"Nikola Jokić"})
+    r = st.project_usual_starters(con, "DEN", "20261109", [{"name": "Nikola Jokić", "status": "Out"}])
     assert "Nikola Jokic" not in [p["name"] for p in r["players"]]
-    assert "E Five" in [p["name"] for p in r["players"]]
+    assert "E Five" in [p["name"] for p in r["players"]] and r["complete"]
 
 
 def test_parse_summary_injuries_and_merge_keeps_more_severe():
@@ -336,34 +238,14 @@ def test_missing_injury_data_is_loud():
     assert st.parse_summary_injuries({}) == [] and st.parse_summary_injuries(None) == []
 
 
-def test_game_card_is_organized(monkeypatch):
-    import sys, types
-    for m in ("sportsdataverse", "sportsdataverse.nba", "dotenv"):
-        sys.modules.setdefault(m, types.ModuleType(m))
-    sys.modules["dotenv"].load_dotenv = lambda *a, **k: None
-    for k in ("espn_nba_scoreboard", "espn_nba_pbp", "espn_nba_cdn_boxscore", "espn_nba_injuries"):
-        setattr(sys.modules["sportsdataverse.nba"], k, lambda *a, **k: None)
-    import nba
-    rep = [{"name": "Luka Doncic", "team": "LAL", "status": "Out", "detail": "Left Toe", "return": "2026-11-09"},
-           {"name": "Quentin Grimes", "team": "LAL", "status": "Day-To-Day", "detail": "Finger", "return": "2026-11-09"}]
-    mk = lambda ns: [{"name": n} for n in ns]
-    out = nba.render_game_card("LAL", "ATL", "PROJECTED", mk(list("ABCD") + ["Quentin Grimes"]),
-                               mk(list("VWXYZ")), rep, dropped=["Luka Doncic"],
-                               picks=[("V", "ATL", .136, 634, "")], today_iso="2026-11-09")
-    assert "PROJECTED LINEUP" in out and "STARTERS" in out and "INJURY WATCH" in out and "TOP PICKS" in out
-    assert "Luka Doncic (LAL)" in out and "REMOVED from lineup" in out and "may actually play" in out
-    assert out.count("may actually play") == 1          # only for the removed player, not the in-lineup one
-    assert "🟡 Quentin Grimes" in out
-
-
 # ── injury substitution (stateless: rebuilt from the CURRENT report every run) ──
 def star_db():
-    """NY: a,b,c,d start every game. XAVI starts games 1-6, then misses games 7-10 while ZED starts.
+    """NY: a,b,c,d start every game. XAVI starts games 1-8, then misses games 9-10 while ZED starts.
     FLO is a bench regular throughout."""
     con = make_db()
     for i in range(10):
-        starters = ["a", "b", "c", "d"] + (["Xavi"] if i < 6 else ["Zed"])
-        bench = ["Flo"] + (["Zed"] if i < 6 else [])
+        starters = ["a", "b", "c", "d"] + (["Xavi"] if i < 8 else ["Zed"])
+        bench = ["Flo"] + (["Zed"] if i < 8 else [])
         add_game(con, f"g{i}", f"202610{i + 10:02d}", "NY", starters, bench)
     return con
 
@@ -391,7 +273,7 @@ def test_cleared_player_goes_straight_back_into_the_lineup():
     ids = [p["player_id"] for p in afternoon["players"]]
     assert "Xavi" in ids and "Zed" not in ids
     assert afternoon["replaced"] == [] and afternoon["dropped"] == []
-    assert afternoon["returning"] == {"XAVI": 4}        # flagged: missed 4 of the last 5 team games
+    assert afternoon["returning"] == {"XAVI": 2}        # flagged: missed 2 of the last 3 team games
 
 
 def test_questionable_stays_in_with_an_if_he_sits_replacement():
@@ -481,12 +363,12 @@ def returning_star_db():
 
 
 def test_cleared_starter_who_missed_the_whole_recent_window_is_back():
-    """STAR missed all of the last 5 games and is no longer on the (loaded) report: he starts again."""
+    """STAR missed all of the recent games and is no longer on the (loaded) report: he starts again."""
     con = returning_star_db()
     r = st.project_usual_starters(con, "NY", "20261101", [rep("SOMEONE ELSE", "Out")])
     ids = [p["player_id"] for p in r["players"]]
     assert "Star" in ids and "Fill" not in ids and r["complete"]
-    assert r["returning"] == {"STAR": 5}
+    assert r["returning"] == {"STAR": 3}             # missed all of the last 3 (RECENT_GAMES) team games
 
 
 def test_missing_starter_not_assumed_back_when_report_is_empty_or_he_is_out():
@@ -525,3 +407,84 @@ def test_dotted_initials_match_undotted():
 def test_returning_by_handles_return_dates_with_a_time():
     report = [{"name": "Luka Doncic", "status": "Out", "return": "2026-11-09T00:00Z"}]
     assert st.returning_by(report, ["Luka Doncic"], "2026-11-09") == ["Luka Doncic"]
+
+
+# ── NBA.com official lineups stored for every game day (used to train the tip-off model) ──
+FEED_DAY = {"games": [{"homeTeam": {"teamAbbreviation": "NYK", "players": [
+    {"playerName": "Karl-Anthony Towns", "position": "C", "lineupStatus": "Confirmed"},
+    {"playerName": "Jalen Brunson", "position": "PG", "lineupStatus": "Confirmed"},
+    {"playerName": "Bench Guy", "position": "", "lineupStatus": ""}]},
+    "awayTeam": {"teamAbbreviation": "TOR", "players": [
+        {"playerName": "Jakob Poeltl", "position": "C", "lineupStatus": "Confirmed"}]}}]}
+
+
+def test_official_lineups_are_stored_with_espn_teams_and_ids():
+    con = make_db()
+    st.save_lineups(con, [("g0", "NY", "espn_kat", "Karl-Anthony Towns", 1, 30.0)])
+    n = st.store_official_lineups(con, "20261117", FEED_DAY)
+    assert n == 3                                                    # starters only (bench skipped)
+    rows = con.execute("SELECT team, player_id, player_name, position FROM official_lineups ORDER BY player_name").fetchall()
+    assert ("NY", "espn_kat", "Karl-Anthony Towns", "C") in rows       # NBA tricode -> ESPN, name -> ESPN id
+    assert ("TOR", None, "Jakob Poeltl", "C") in rows                  # unknown player: id left empty
+    assert st.listed_center(con, "20261117", "NY") == "espn_kat"
+    assert st.listed_center(con, "20261117", "TOR") is None            # no ESPN id -> can't be used
+    assert st.listed_center(con, "20261118", "NY") is None
+    st.store_official_lineups(con, "20261117", FEED_DAY)               # storing a day twice changes nothing
+    assert con.execute("SELECT COUNT(*) FROM official_lineups").fetchone()[0] == 3
+
+
+def test_days_without_a_file_are_remembered_so_they_are_not_fetched_again():
+    con = make_db()
+    assert st.store_official_lineups(con, "20260601", None) == 0
+    assert "20260601" in st.official_lineup_days(con)
+
+
+# ── current rosters (ESPN) override the team learned from box scores: traded players ──
+def test_traded_player_is_not_projected_for_his_old_team():
+    con = star_db()                          # XAVI started NY's games 1-6; ZED games 7-10
+    for i in range(10, 13):                  # ...then XAVI starts three more NY games
+        add_game(con, f"h{i}", f"202610{i + 10:02d}", "NY", ["a", "b", "c", "d", "Xavi"], bench=["Flo", "Zed"])
+    assert "Xavi" in [p["player_id"] for p in st.project_usual_starters(con, "NY", "20261101", [])["players"]]
+    traded = st.project_usual_starters(con, "NY", "20261101", [], rosters={"xavi": "BOS"})
+    ids = [p["player_id"] for p in traded["players"]]
+    assert "Xavi" not in ids and len(ids) == 5 and traded["complete"]
+    assert traded["filled"] == ["ZED"]                     # open spot filled by the next player in line
+
+
+def test_parse_espn_roster():
+    data = {"team": {"abbreviation": "LAL"}, "athletes": [{"displayName": "Luka Dončić", "id": "1"},
+                                                          {"displayName": "Austin Reaves", "id": "2"}]}
+    assert st.parse_roster(data) == {"luka doncic": "LAL", "austin reaves": "LAL"}
+
+
+# ── position-aware replacements (centre for centre, guard for guard) ──
+def test_position_group():
+    assert [st.position_group(p) for p in ("PG", "SG", "G", "SF", "PF", "F", "C", "F-C", "", None)] == \
+           ["G", "G", "G", "F", "F", "F", "C", "F", None, None]
+
+
+def utah_db():
+    """UTAH: CEN (a centre) starts every game; WING (a guard) is the bench player with the most minutes;
+    BIG (another centre) plays fewer minutes off the bench."""
+    con = make_db()
+    for i in range(10):
+        add_game(con, f"g{i}", f"202610{i + 10:02d}", "UTAH", ["a", "b", "c", "d", "Cen"], bench=["Wing", "Big"])
+    con.execute("UPDATE lineups SET minutes = 25 WHERE player_id = 'Wing'")
+    con.execute("UPDATE lineups SET minutes = 12 WHERE player_id = 'Big'")
+    return con
+
+
+def test_out_centre_is_replaced_by_a_centre_when_positions_are_known():
+    con = utah_db()
+    groups = {"cen": "C", "big": "C", "wing": "G", "a": "G", "b": "G", "c": "F", "d": "F"}
+    without = st.project_usual_starters(con, "UTAH", "20261101", [rep("CEN", "Out")])
+    assert without["replaced"][0]["in"] == "WING"                       # old behaviour: most minutes
+    r = st.project_usual_starters(con, "UTAH", "20261101", [rep("CEN", "Out")], groups=groups)
+    assert r["replaced"][0]["in"] == "BIG" and "same position" in r["replaced"][0]["evidence"]
+
+
+def test_position_is_ignored_when_unknown_or_nobody_matches():
+    con = utah_db()
+    no_centre = {"cen": "C", "wing": "G"}                                 # BIG's position unknown
+    r = st.project_usual_starters(con, "UTAH", "20261101", [rep("CEN", "Out")], groups=no_centre)
+    assert r["replaced"][0]["in"] == "WING"

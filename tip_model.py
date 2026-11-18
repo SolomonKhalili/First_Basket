@@ -28,60 +28,106 @@ def _logit(p: float) -> float:
     return math.log(p / (1 - p))
 
 
-def recent_jumpers(con, team: str, before: str) -> list:
+# The tip-off history the model reads. `extended=True` also counts the 2024-25 opening tips kept in `old_tips`.
+# Tested 2026-11-17: the extra season calls more tip winners right (2025-26 62.3% -> 65.1%, 2026-27 63.6% -> 67.2%)
+# but makes the FIRST-BASKET picks slightly worse (its tip chances are more confident), so it is used only for the
+# tip-off call shown to the owner (card + spreadsheet), never inside the first-basket model.
+def _tips(con, extended: bool) -> str:
+    if extended and con.execute("SELECT 1 FROM sqlite_master WHERE type='table' AND name='old_tips'").fetchone():
+        return """(SELECT game_id, game_date, home_team, away_team, tip_winner_team, tip_winner_player_id,
+                          tip_loser_player_id FROM games
+                   UNION ALL
+                   SELECT game_id, game_date, home_team, away_team, tip_winner_team, tip_winner_player_id,
+                          tip_loser_player_id FROM old_tips
+                   WHERE tip_winner_player_id != '' AND tip_winner_team IS NOT NULL
+                     AND game_id NOT IN (SELECT game_id FROM games))"""
+    return "games"
+
+
+def recent_jumpers(con, team: str, before: str, extended: bool = False) -> list:
     """Who jumped for `team` in its last RECENT_GAMES games before `before`, most recent first."""
     rows = con.execute(
-        """SELECT CASE WHEN tip_winner_team = ? THEN tip_winner_player_id ELSE tip_loser_player_id END
-           FROM games
+        f"""SELECT CASE WHEN tip_winner_team = ? THEN tip_winner_player_id ELSE tip_loser_player_id END
+           FROM {_tips(con, extended)}
            WHERE (home_team = ? OR away_team = ?) AND game_date < ? AND tip_winner_team IS NOT NULL
            ORDER BY game_date DESC, game_id DESC LIMIT ?""",
         (team, team, team, before, RECENT_GAMES)).fetchall()
     return [r[0] for r in rows if r[0]]
 
 
-def team_jumper(con, team: str, before: str, starter_ids=None):
-    """Most frequent recent jumper (ties -> most recent). If `starter_ids` is given, only a player in
-    tonight's starting five counts. None if nobody qualifies."""
-    jumps = recent_jumpers(con, team, before)
+REGULAR_JUMPER = 6  # a starter who took this many of the team's last 10 tips jumps even if not listed at C
+
+
+def team_jumper(con, team: str, before: str, starter_ids=None, listed_center=None, extended: bool = False):
+    """Who takes the opening tip for `team`. With tonight's starters (`starter_ids`):
+      1. a starter who took >= REGULAR_JUMPER of the team's last 10 tips (the team's clear regular jumper);
+      2. otherwise the starter NBA.com lists at C (`listed_center`), when NBA.com has posted the lineup;
+      3. otherwise the starter who jumped most for the team in its last 10 games (ties -> most recent);
+      4. otherwise the starter with the most opening tips before `before`, for any team.
+    Checked on 396 team-games of 2026-27 against NBA.com's lineups: steps 1-2 named the actual jumper 88.1% of
+    the time vs 85.1% without the listed centre. Without `starter_ids`: the most frequent recent jumper.
+    None if nobody qualifies."""
+    jumps = recent_jumpers(con, team, before, extended)
     if starter_ids is not None:
         starters = {str(s) for s in starter_ids}
         jumps = [j for j in jumps if j in starters]
+        counts = Counter(jumps)
+        if listed_center and str(listed_center) in starters:
+            regular = [j for j, n in counts.items() if n >= REGULAR_JUMPER and j != str(listed_center)]
+            return regular[0] if regular else str(listed_center)
+        if not jumps:
+            return most_experienced_jumper(con, starters, before, extended)
     if not jumps:
         return None
     counts = Counter(jumps)
     return max(counts, key=lambda j: (counts[j], -jumps.index(j)))
 
 
-def jumper_rate(con, player_id, before: str) -> float:
+def most_experienced_jumper(con, player_ids, before: str, extended: bool = False):
+    """The player in `player_ids` who took the most opening tips before `before`; None if none ever did."""
+    best, best_n = None, 0
+    for pid in sorted(player_ids):
+        n = con.execute(f"""SELECT COUNT(*) FROM {_tips(con, extended)} WHERE game_date < ?
+                           AND ? IN (tip_winner_player_id, tip_loser_player_id)""", (before, pid)).fetchone()[0]
+        if n > best_n:
+            best, best_n = pid, n
+    return best
+
+
+def jumper_rate(con, player_id, before: str, extended: bool = False) -> float:
     """Shrunk tip win rate from every tip he took before `before`."""
     if not player_id:
         return PRIOR_RATE
     wins, n = con.execute(
-        """SELECT COALESCE(SUM(tip_winner_player_id = ?), 0), COUNT(*) FROM games
+        f"""SELECT COALESCE(SUM(tip_winner_player_id = ?), 0), COUNT(*) FROM {_tips(con, extended)}
            WHERE game_date < ? AND ? IN (tip_winner_player_id, tip_loser_player_id)""",
         (player_id, before, player_id)).fetchone()
     return (wins + K * PRIOR_RATE) / (n + K)
 
 
-def home_advantage(con, before: str) -> float:
+def home_advantage(con, before: str, extended: bool = False) -> float:
     wins, n = con.execute(
-        """SELECT COALESCE(SUM(tip_winner_team = home_team), 0), COUNT(*) FROM games
+        f"""SELECT COALESCE(SUM(tip_winner_team = home_team), 0), COUNT(*) FROM {_tips(con, extended)}
            WHERE game_date < ? AND tip_winner_team IS NOT NULL""", (before,)).fetchone()
     return (wins + HCA_WEIGHT * DEFAULT_HCA) / (n + HCA_WEIGHT)
 
 
-def home_win_prob(con, home: str, away: str, before, home_starters=None, away_starters=None) -> float:
-    """P(home team wins the opening tip), using only games before `before` (YYYYMMDD)."""
+def home_win_prob(con, home: str, away: str, before, home_starters=None, away_starters=None,
+                  home_center=None, away_center=None, extended: bool = False) -> float:
+    """P(home team wins the opening tip), using only games before `before` (YYYYMMDD).
+    `home_center` / `away_center`: the starter NBA.com lists at C, when known.
+    `extended`: also count the 2024-25 tips (tip-off call shown to the owner only — see _tips)."""
     before = str(before).replace("-", "")[:8]
-    rh = jumper_rate(con, team_jumper(con, home, before, home_starters), before)
-    ra = jumper_rate(con, team_jumper(con, away, before, away_starters), before)
-    z = _logit(rh) - _logit(ra) + _logit(home_advantage(con, before))
+    rh = jumper_rate(con, team_jumper(con, home, before, home_starters, home_center, extended), before, extended)
+    ra = jumper_rate(con, team_jumper(con, away, before, away_starters, away_center, extended), before, extended)
+    z = _logit(rh) - _logit(ra) + _logit(home_advantage(con, before, extended))
     return 1 / (1 + math.exp(-z))
 
 
-def team_win_probs(con, home: str, away: str, before, home_starters=None, away_starters=None) -> tuple:
+def team_win_probs(con, home: str, away: str, before, home_starters=None, away_starters=None,
+                   home_center=None, away_center=None, extended: bool = False) -> tuple:
     """(P(home wins tip), P(away wins tip)) — they always add to 1."""
-    p = home_win_prob(con, home, away, before, home_starters, away_starters)
+    p = home_win_prob(con, home, away, before, home_starters, away_starters, home_center, away_center, extended)
     return p, 1 - p
 
 
@@ -99,7 +145,9 @@ def evaluate(con, since: str = "20251201"):
            WHERE tip_winner_team IS NOT NULL AND game_date >= ? ORDER BY game_date""", (since,)).fetchall()
     by_season = {}
     for gid, d, h, a, winner in games:
-        p = home_win_prob(con, h, a, d, starters_for_game(con, gid, h), starters_for_game(con, gid, a))
+        import starters as st
+        p = home_win_prob(con, h, a, d, starters_for_game(con, gid, h), starters_for_game(con, gid, a),
+                          st.listed_center(con, d, h), st.listed_center(con, d, a))
         home_won = winner == h
         s = by_season.setdefault("2026-27" if d >= "20260801" else "2025-26", [0, 0, 0.0, 0])
         s[0] += (p > 0.5) == home_won

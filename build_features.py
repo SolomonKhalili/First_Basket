@@ -13,24 +13,25 @@ import sqlite3
 import time
 import json
 import numpy as np
-import pandas as pd
-from datetime import date, datetime, timedelta
 from collections import defaultdict
 import warnings
 import signal
 import sys
 import os
-import shutil
 import argparse
-from concurrent.futures import ThreadPoolExecutor, as_completed
-import threading
 import pickle
-import tip_model as tm
 warnings.filterwarnings("ignore")
 
 DB = "nba_first_basket.db"
 BASE_SLEEP = 0.3  # base delay between requests
 CHECKPOINT_EVERY = 50
+# Columns saved in X_train.npy, in order. Only pre-game information (no play-by-play from the game itself).
+# The tip-off chance is not stored here: train_pregame.py and nba.py compute it with tip_model.py.
+NUMERIC_FEATURES = [
+    'is_home', 'first_basket_rate', 'L10_first_basket_rate', 'player_games_played',
+    'shot_attempts_per36', 'true_shooting_pct', 'minutes_per_game', 'points_per_game',
+    'team_tipoff_win_pct', 'first_shot_share', 'first_shot_starts', 'early_shot_share', 'early_shot_count',
+]
 CHECKPOINT_FILE = "build_features_checkpoint.npz"
 PLAYER_LOGS_CACHE = "player_game_logs.pkl"
 MAX_WORKERS = 3   # hard cap to avoid ESPN bans
@@ -60,6 +61,20 @@ def get_all_games():
 # ──────────────────────────────────────────────
 # PLAYER GAME LOGS - PRE-FETCH AND CACHE
 # ──────────────────────────────────────────────
+def sync_first_basket_flags(player_logs, con) -> int:
+    """Make each log entry's first_basket flag match the database's current label for that game (labels can
+    change: a retried game, or the 2026-11-17 switch to counting free throws). Returns entries changed."""
+    scorer = dict(con.execute("SELECT game_id, scorer_player_id FROM first_baskets"))
+    changed = 0
+    for pid, logs in player_logs.items():
+        for g in logs:
+            flag = 1 if scorer.get(g['game_id']) == pid else 0
+            if g['first_basket'] != flag:
+                g['first_basket'] = flag
+                changed += 1
+    return changed
+
+
 def build_player_game_logs():
     """
     Pre-fetch all boxscores and build a player game log index.
@@ -75,6 +90,7 @@ def build_player_game_logs():
     known = {g['game_id'] for logs in player_logs.values() for g in logs}
 
     con = db()
+    changed = sync_first_basket_flags(player_logs, con)
 
     # Get all games with first basket info
     all_games = [r for r in con.execute('''
@@ -85,6 +101,9 @@ def build_player_game_logs():
     ''').fetchall() if r[0] not in known]
 
     if not all_games:
+        if changed:
+            with open(PLAYER_LOGS_CACHE, 'wb') as f:
+                pickle.dump(dict(player_logs), f)
         return dict(player_logs)
 
     print(f"🔄 Adding box scores for {len(all_games)} games to player game logs...")
@@ -168,137 +187,92 @@ def build_player_game_logs():
 # SEASON STATS COMPUTATION (no leakage — up to game_date)
 # ──────────────────────────────────────────────
 def compute_player_season_stats(player_id, game_date, team_abbrev, player_logs):
-    """
-    Compute player season stats UP TO (but not including) game_date.
-    Uses pre-fetched player game logs — NO LEAKAGE.
-    Returns dict of features.
-    """
+    """A player's stats from his games BEFORE game_date (no leakage). Logs are newest first.
+    Keys: first_basket_rate, L10_first_basket_rate, games_played, shot_attempts_per36
+    ((FGA + 0.44 x FTA) per 36 minutes), true_shooting_pct, minutes_per_game, points_per_game."""
     game_date_str = str(game_date).replace('-', '')[:8]
+    prior = [g for g in player_logs.get(player_id, []) if g['game_date'] < game_date_str]
+    n = len(prior)
+    if n == 0:
+        return {'first_basket_rate': 0.0, 'L10_first_basket_rate': 0.0, 'games_played': 0,
+                'shot_attempts_per36': 0.0, 'true_shooting_pct': 0.0,
+                'minutes_per_game': 0.0, 'points_per_game': 0.0}
 
-    logs = player_logs.get(player_id, [])
-    if not logs:
-        return {
-            'first_basket_rate': 0.0,
-            'first_shot_rate': 0.0,
-            'L10_first_basket_rate': 0.0,
-            'L5_first_basket_rate': 0.0,
-            'games_played': 0,
-            'usage_rate': 0.0,
-            'true_shooting_pct': 0.0,
-            'minutes_per_game': 0.0,
-            'points_per_game': 0.0,
-        }
-
-    # Filter logs to only those before game_date
-    prior_logs = [g for g in logs if g['game_date'] < game_date_str]
-
-    games_played = len(prior_logs)
-    if games_played == 0:
-        return {
-            'first_basket_rate': 0.0,
-            'first_shot_rate': 0.0,
-            'L10_first_basket_rate': 0.0,
-            'L5_first_basket_rate': 0.0,
-            'games_played': 0,
-            'usage_rate': 0.0,
-            'true_shooting_pct': 0.0,
-            'minutes_per_game': 0.0,
-            'points_per_game': 0.0,
-        }
-
-    # Season averages
-    total_min = sum(g['minutes'] for g in prior_logs)
-    total_fgm = sum(g['fgm'] for g in prior_logs)
-    total_fga = sum(g['fga'] for g in prior_logs)
-    total_fg3m = sum(g['fg3m'] for g in prior_logs)
-    total_fg3a = sum(g['fg3a'] for g in prior_logs)
-    total_ftm = sum(g['ftm'] for g in prior_logs)
-    total_fta = sum(g['fta'] for g in prior_logs)
-    total_pts = sum(g['pts'] for g in prior_logs)
-    total_first_baskets = sum(g['first_basket'] for g in prior_logs)
-
-    minutes_per_game = total_min / games_played
-    points_per_game = total_pts / games_played
-
-    # True Shooting % = pts / (2 * (FGA + 0.44 * FTA))
-    ts_denom = 2 * (total_fga + 0.44 * total_fta)
-    true_shooting_pct = total_pts / ts_denom if ts_denom > 0 else 0.0
-
-    # Usage rate approximation (simplified)
-    usage_rate = (total_fga + 0.44 * total_fta) / (total_min / 36) if total_min > 0 else 0.0
-    usage_rate = min(usage_rate / 100, 1.0)  # normalize to 0-1 range
-
-    # First basket / shot rates
-    first_basket_rate = total_first_baskets / games_played if games_played > 0 else 0.0
-    first_shot_rate = first_basket_rate * 2.0  # rough proxy: assume ~50% FG on first shot
-
-    # Rolling windows (last 10, last 5 games played)
-    L10_logs = prior_logs[:10]
-    L5_logs = prior_logs[:5]
-
-    L10_fb = sum(g['first_basket'] for g in L10_logs)
-    L10_first_basket_rate = L10_fb / len(L10_logs) if L10_logs else 0.0
-
-    L5_fb = sum(g['first_basket'] for g in L5_logs)
-    L5_first_basket_rate = L5_fb / len(L5_logs) if L5_logs else 0.0
-
+    total_min = sum(g['minutes'] for g in prior)
+    total_fga = sum(g['fga'] for g in prior)
+    total_fta = sum(g['fta'] for g in prior)
+    total_pts = sum(g['pts'] for g in prior)
+    shots = total_fga + 0.44 * total_fta
+    last10 = prior[:10]
     return {
-        'first_basket_rate': first_basket_rate,
-        'first_shot_rate': first_shot_rate,
-        'L10_first_basket_rate': L10_first_basket_rate,
-        'L5_first_basket_rate': L5_first_basket_rate,
-        'games_played': games_played,
-        'usage_rate': usage_rate,
-        'true_shooting_pct': true_shooting_pct,
-        'minutes_per_game': minutes_per_game,
-        'points_per_game': points_per_game,
+        'first_basket_rate': sum(g['first_basket'] for g in prior) / n,
+        'L10_first_basket_rate': sum(g['first_basket'] for g in last10) / len(last10),
+        'games_played': n,
+        'shot_attempts_per36': shots * 36 / total_min if total_min > 0 else 0.0,
+        'true_shooting_pct': total_pts / (2 * shots) if shots > 0 else 0.0,
+        'minutes_per_game': total_min / n,
+        'points_per_game': total_pts / n,
     }
+
+
+def build_first_shot_index(con) -> dict:
+    """{player_id: (dates, took)} for every game he STARTED that has first-shot data for his team, sorted by date.
+    took[i] = 1 if he took his team's first field-goal attempt that game. Used by first_shot_share."""
+    from bisect import insort
+    rows = con.execute("""SELECT l.player_id, g.game_date, (fs.player_id = l.player_id)
+                          FROM lineups l JOIN games g ON g.game_id = l.game_id
+                          JOIN first_shots fs ON fs.game_id = l.game_id AND fs.team = l.team
+                          WHERE l.is_starter = 1""").fetchall()
+    per = defaultdict(list)
+    for pid, d, took in rows:
+        insort(per[str(pid)], (d, int(took or 0)))
+    return {pid: ([d for d, _ in v], [t for _, t in v]) for pid, v in per.items()}
+
+
+def first_shot_share(index: dict, player_id, game_date) -> tuple:
+    """(share of his starts BEFORE game_date in which he took the team's first shot, number of those starts)."""
+    from bisect import bisect_left
+    dates, took = index.get(str(player_id), ([], []))
+    n = bisect_left(dates, str(game_date).replace('-', '')[:8])
+    return (sum(took[:n]) / n, n) if n else (0.0, 0)
+
+
+def build_early_shot_index(con) -> dict:
+    """{player_id: (dates, mine, team_total)} over the games he STARTED that have early-shot data: how many of his
+    team's first (up to 5) field-goal attempts he took, and how many the team took. Sorted by date."""
+    from bisect import insort
+    rows = con.execute("""SELECT l.player_id, g.game_date, SUM(es.player_id = l.player_id), COUNT(*)
+                          FROM lineups l JOIN games g ON g.game_id = l.game_id
+                          JOIN early_shots es ON es.game_id = l.game_id AND es.team = l.team
+                          WHERE l.is_starter = 1 GROUP BY l.game_id, l.team, l.player_id""").fetchall()
+    per = defaultdict(list)
+    for pid, d, mine, tot in rows:
+        insort(per[str(pid)], (d, int(mine or 0), int(tot)))
+    return {pid: ([d for d, _, _ in v], np.cumsum([0] + [m for _, m, _ in v]), np.cumsum([0] + [t for _, _, t in v]))
+            for pid, v in per.items()}
+
+
+def early_shot_share(index: dict, player_id, game_date) -> tuple:
+    """(his share of his team's first shots over his starts BEFORE game_date, number of those team shots)."""
+    from bisect import bisect_left
+    if str(player_id) not in index:
+        return (0.0, 0)
+    dates, mine, tot = index[str(player_id)]
+    n = bisect_left(dates, str(game_date).replace('-', '')[:8])
+    return (float(mine[n]) / float(tot[n]), int(tot[n])) if tot[n] else (0.0, 0)
 
 
 def compute_team_stats_up_to_date(team_abbrev, game_date, con):
-    """Compute team stats up to game_date."""
+    """Team stats from games BEFORE game_date: how often the team won the opening tip.
+    Games without a recorded tip are left out (not counted as losses). 0.5 with no history."""
     game_date_str = str(game_date).replace('-', '')[:8]
-
-    team_games = con.execute('''
-        SELECT g.game_date, g.home_team, g.away_team, g.tip_winner_team,
-               fb.scorer_player_id, fb.scorer_name, fb.scorer_team
-        FROM games g
+    rows = con.execute('''
+        SELECT g.tip_winner_team FROM games g
         JOIN first_baskets fb ON g.game_id = fb.game_id
-        WHERE (g.home_team = ? OR g.away_team = ?)
-        AND g.game_date < ?
-        ORDER BY g.game_date DESC
+        WHERE (g.home_team = ? OR g.away_team = ?) AND g.game_date < ? AND g.tip_winner_team IS NOT NULL
     ''', (team_abbrev, team_abbrev, game_date_str)).fetchall()
-
-    if not team_games:
-        return {
-            'team_tipoff_win_pct': 0.5,
-            'home_fb_pct': 0.0,
-            'away_fb_pct': 0.0,
-            'games_played': 0,
-        }
-
-    games_played = len(team_games)
-    tip_wins = sum(1 for g in team_games if g[3] == team_abbrev)
-    team_tipoff_win_pct = tip_wins / games_played if games_played > 0 else 0.5
-
-    # Home/away first basket rates
-    home_fb_real = sum(1 for g in team_games
-                       if g[1] == team_abbrev and g[6] == team_abbrev)
-    away_fb_real = sum(1 for g in team_games
-                       if g[2] == team_abbrev and g[6] == team_abbrev)
-
-    home_games = [g for g in team_games if g[1] == team_abbrev]
-    away_games = [g for g in team_games if g[2] == team_abbrev]
-
-    home_fb_pct = home_fb_real / len(home_games) if home_games else 0.0
-    away_fb_pct = away_fb_real / len(away_games) if away_games else 0.0
-
-    return {
-        'team_tipoff_win_pct': team_tipoff_win_pct,
-        'home_fb_pct': home_fb_pct,
-        'away_fb_pct': away_fb_pct,
-        'games_played': games_played,
-    }
+    return {'team_tipoff_win_pct': sum(r[0] == team_abbrev for r in rows) / len(rows) if rows else 0.5,
+            'games_played': len(rows)}
 
 
 # ──────────────────────────────────────────────
@@ -347,8 +321,25 @@ cache = ESPNCache()
 # ──────────────────────────────────────────────
 # STARTER EXTRACTION
 # ──────────────────────────────────────────────
+def stored_starters(game_id, home_team, away_team):
+    """Starting fives saved in the `lineups` table (ESPN box scores), or None unless both teams have exactly 5."""
+    con = db()
+    out = {}
+    for team in (home_team, away_team):
+        rows = con.execute("""SELECT player_id, player_name FROM lineups
+                              WHERE game_id = ? AND team = ? AND is_starter = 1""", (str(game_id), team)).fetchall()
+        if len(rows) != 5:
+            return None
+        out[team] = [{'player_id': str(pid), 'name': name, 'position': '', 'jersey': ''} for pid, name in rows]
+    return out
+
+
 def get_game_starters(game_id, cache, home_team, away_team):
-    """Get starting 5 for each team — returns {home_abbrev: [...], away_abbrev: [...]}"""
+    """Get starting 5 for each team — returns {home_abbrev: [...], away_abbrev: [...]}.
+    Uses the saved lineups first (no download); falls back to ESPN only for games without them."""
+    saved = stored_starters(game_id, home_team, away_team)
+    if saved:
+        return saved
     # Try CDN boxscore (boxscore_player is DataFrame with starter column)
     bs = cache.get_boxscore(game_id)
     if bs and 'boxscore_player' in bs:
@@ -409,45 +400,6 @@ def get_game_starters(game_id, cache, home_team, away_team):
     return starters if len(starters) == 2 else None
 
 
-# ──────────────────────────────────────────────
-# EARLY GAME PBP FEATURES
-# ──────────────────────────────────────────────
-def extract_early_game_features(game_id, cache, n_plays=10):
-    """Extract features from first N plays of the game."""
-    pbp = cache.get_pbp(game_id)
-    if not pbp:
-        return {}
-
-    plays = pbp.get('plays', [])[:n_plays]
-    if not plays:
-        return {}
-
-    # Map player IDs to names from boxscore
-    names = {}
-    for team in pbp.get('boxscore', {}).get('players', []):
-        for stat in team.get('statistics', []):
-            for a in stat.get('athletes', []):
-                athlete = a.get('athlete', {})
-                pid = str(athlete.get('id', ''))
-                name = athlete.get('displayName', '')
-                if pid and name:
-                    names[pid] = name
-
-    # Count early touches/shot attempts per player
-    early_stats = defaultdict(lambda: {'touches': 0, 'shots': 0, 'points': 0, 'first_play_type': ''})
-
-    for i, p in enumerate(plays):
-        pid = str(p.get('participants.0.athlete.id', '') or '')
-        if not pid:
-            continue
-        action = p.get('type.text', '').lower().replace(' ', '_')
-        if i == 0:
-            early_stats[pid]['first_play_type'] = action
-        early_stats[pid]['touches'] += 1
-        if p.get('scoringPlay', False) and 'free_throw' not in action:
-            early_stats[pid]['shots'] += 1
-
-    return dict(early_stats)
 
 
 # ──────────────────────────────────────────────
@@ -510,7 +462,7 @@ def load_checkpoint():
             feature_names = feature_names.tolist()
 
         if len(features) == 0:
-            print(f"  ⚠️ Checkpoint has 0 features — starting fresh")
+            print("  ⚠️ Checkpoint has 0 features — starting fresh")
             return None, None, None, 0
 
         print(f"📂 Resuming from checkpoint: game {idx}/{total} ({len(features)} samples)")
@@ -552,18 +504,6 @@ def load_existing_data():
         return None
 
 
-def get_last_processed_date(game_ids):
-    """Get the last game date from existing game_ids by querying the DB."""
-    if not game_ids:
-        return None
-    last_game_id = game_ids[-1]
-    con = sqlite3.connect(DB)
-    con.row_factory = sqlite3.Row
-    row = con.execute("SELECT game_date FROM games WHERE game_id = ?", (last_game_id,)).fetchone()
-    con.close()
-    if row:
-        return row['game_date']
-    return None
 
 
 def append_to_arrays(X_old, y_old, groups_old, game_ids_old, X_new, y_new, groups_new, game_ids_new):
@@ -579,45 +519,32 @@ def append_to_arrays(X_old, y_old, groups_old, game_ids_old, X_new, y_new, group
 # MAIN FEATURE BUILDER (with checkpointing + incremental)
 # ──────────────────────────────────────────────
 def build_features(incremental: bool = False):
-    # Load existing data if incremental mode
-    existing = None
-    start_idx = 0
-    if incremental:
-        existing = load_existing_data()
-        if existing:
-            X_old, y_old, groups_old, game_ids_old, feature_names_old, meta_old = existing
-            # Find games after the last processed date
-            last_date = get_last_processed_date(game_ids_old)
-            if last_date:
-                print(f"📅 Last processed game date: {last_date}")
-                # Get all games and find the first one after last_date
-                all_games = get_all_games()
-                for i, game in enumerate(all_games):
-                    if game[1] > last_date:  # game_date is index 1
-                        start_idx = i
-                        break
-                print(f"🔄 Incremental mode: skipping {start_idx} already-processed games, processing {len(all_games) - start_idx} new games")
-            else:
-                print("⚠️ Could not determine last date, doing full rebuild")
-                existing = None
-        else:
-            print("📦 No existing data found, doing full build")
+    """Build the training matrices. incremental=True keeps the saved matrices and adds every labelled game
+    that is not in them yet — whatever its date, so a game labelled late is still added."""
+    existing = load_existing_data() if incremental else None
+    if incremental and not existing:
+        print("📦 No existing data found, doing full build")
+    if existing:
+        X_old, y_old, groups_old, game_ids_old, feature_names_old, meta_old = existing
+        if list(feature_names_old) != NUMERIC_FEATURES:
+            raise SystemExit("The saved training matrices have different columns than this code builds:\n"
+                             f"  saved: {feature_names_old}\n  code:  {NUMERIC_FEATURES}\n"
+                             "Rebuild them once: python3 build_features.py   (without --incremental)")
 
     games = get_all_games()
-
-    if existing and start_idx > 0:
-        # Incremental: only process new games
-        games = games[start_idx:]
-        total_games = len(games)
-        print(f"🔄 Incremental mode: processing {total_games} NEW games")
-    elif existing and start_idx == 0:
-        # No new games in DB since last build
-        print("✅ No new games to process — feature matrix is up to date")
-        return
+    appending = bool(existing)          # incremental run that adds games to the saved matrices
+    start_idx = 0
+    if appending:
+        have = {str(g) for g in game_ids_old}
+        games = [g for g in games if str(g[0]) not in have]
+        if not games:
+            print("✅ No new games to process — feature matrix is up to date")
+            return
+        print(f"🔄 Incremental mode: adding {len(games)} games not yet in the training data")
     else:
-        # Full build
-        total_games = len(games)
-        print(f"Building features for {total_games} games...")
+        print(f"Building features for {len(games)} games...")
+    total_games = len(games)
+    first_shots = None                   # built on first use (needs the database)
 
     # Pre-build player game logs (cached)
     player_logs = build_player_game_logs()
@@ -640,7 +567,7 @@ def build_features(incremental: bool = False):
     else:
         all_features = []
         all_labels = []
-        feature_names = ['game_id', 'player_id', 'player_name', 'team', 'opponent', 'is_home', 'tip_winner', 'position', 'early_touches', 'early_shots', 'first_play_type']
+        feature_names = ['game_id'] + NUMERIC_FEATURES
         if start_idx == 0:
             start_idx = 0
 
@@ -656,7 +583,8 @@ def build_features(incremental: bool = False):
     signal.signal(signal.SIGINT, signal_handler)
     signal.signal(signal.SIGTERM, signal_handler)
 
-    for idx in range(start_idx, total_games):
+    # `games` is already cut down to the new games when appending, so start at its first entry
+    for idx in range(0 if appending else start_idx, total_games):
         current_idx[0] = idx
         game = games[idx]
         game_id, game_date, home_team, away_team, tip_winner, scorer_id, scorer_name, scorer_team = game
@@ -681,17 +609,13 @@ def build_features(incremental: bool = False):
             print(f"    SKIP {game_id}: {len(all_starters)} starters (need 10)")
             continue
 
-        # Early game features
-        early_feats = extract_early_game_features(game_id, cache, n_plays=10)
-
         # Season stats (computed up to game_date, no leakage)
         con = db()
+        if first_shots is None:
+            first_shots = build_first_shot_index(con)     # who took each team's first shot, by player
+            early = build_early_shot_index(con)           # each player's share of his team's first 5 shots
         home_team_stats = compute_team_stats_up_to_date(home_team, game_date, con)
         away_team_stats = compute_team_stats_up_to_date(away_team, game_date, con)
-        # P(team wins the opening tip): tonight's starters + only earlier games (see tip_model.py)
-        tip_home, tip_away = tm.team_win_probs(con, home_team, away_team, game_date,
-                                               [s['player_id'] for s in home_starters],
-                                               [s['player_id'] for s in away_starters])
 
         # Build feature vector for each starter
         game_features = []
@@ -700,61 +624,22 @@ def build_features(incremental: bool = False):
         for starter in all_starters:
             pid = starter['player_id']
             is_home = starter in home_starters
-            team = home_team if is_home else away_team
-            opponent = away_team if is_home else home_team
-
-            # Player season stats - use pre-fetched logs
-            player_stats = compute_player_season_stats(pid, game_date, team, player_logs) or {
-                'first_basket_rate': 0.0, 'first_shot_rate': 0.0,
-                'L10_first_basket_rate': 0.0, 'L5_first_basket_rate': 0.0,
-                'games_played': 0,
-                'usage_rate': 0.0,
-                'true_shooting_pct': 0.0,
-                'minutes_per_game': 0.0,
-                'points_per_game': 0.0,
-            }
-            # Team stats
+            player_stats = compute_player_season_stats(pid, game_date, home_team if is_home else away_team, player_logs)
             team_stats = home_team_stats if is_home else away_team_stats
-            if team_stats is None:
-                team_stats = {
-                    'team_tipoff_win_pct': 0.5, 'home_fb_pct': 0.0,
-                    'away_fb_pct': 0.0, 'games_played': 0,
-                }
-
-            tip_win_prob = tip_home if is_home else tip_away
-
             feat = {
-                'game_id': game_id,
-                'player_id': pid,
-                'player_name': starter['name'],
-                'team': team,
-                'opponent': opponent,
+                'game_id': game_id,                          # used to group the 10 starters of a game
                 'is_home': int(is_home),
-                'tip_winner': int(team == tip_winner),
-                'position': starter.get('position', ''),  # metadata, not in X
-                # Early game features
-                'early_touches': early_feats.get(pid, {}).get('touches', 0),
-                'early_shots': early_feats.get(pid, {}).get('shots', 0),
-                'first_play_type': early_feats.get(pid, {}).get('first_play_type', ''),  # metadata
-                # Season stats (player)
-                'first_basket_rate': player_stats.get('first_basket_rate', 0.0),
-                'first_shot_rate': player_stats.get('first_shot_rate', 0.0),
-                'L10_first_basket_rate': player_stats.get('L10_first_basket_rate', 0.0),
-                'L5_first_basket_rate': player_stats.get('L5_first_basket_rate', 0.0),
-                'player_games_played': player_stats.get('games_played', 0),
-                'usage_rate': player_stats.get('usage_rate', 0.0),
-                'true_shooting_pct': player_stats.get('true_shooting_pct', 0.0),
-                'minutes_per_game': player_stats.get('minutes_per_game', 0.0),
-                'points_per_game': player_stats.get('points_per_game', 0.0),
-                # Season stats (team)
-                'team_tipoff_win_pct': team_stats.get('team_tipoff_win_pct', 0.5),
-                'home_fb_pct': team_stats.get('home_fb_pct', 0.0),
-                'away_fb_pct': team_stats.get('away_fb_pct', 0.0),
-                'team_games_played': team_stats.get('games_played', 0),
-                # Tip-off win probability (new feature)
-                'tip_win_prob': tip_win_prob,
+                'first_basket_rate': player_stats['first_basket_rate'],
+                'L10_first_basket_rate': player_stats['L10_first_basket_rate'],
+                'player_games_played': player_stats['games_played'],
+                'shot_attempts_per36': player_stats['shot_attempts_per36'],
+                'true_shooting_pct': player_stats['true_shooting_pct'],
+                'minutes_per_game': player_stats['minutes_per_game'],
+                'points_per_game': player_stats['points_per_game'],
+                'team_tipoff_win_pct': team_stats['team_tipoff_win_pct'],
             }
-
+            feat['first_shot_share'], feat['first_shot_starts'] = first_shot_share(first_shots, pid, game_date)
+            feat['early_shot_share'], feat['early_shot_count'] = early_shot_share(early, pid, game_date)
             game_features.append(feat)
             game_labels.append(1 if pid == scorer_id else 0)
 
@@ -773,15 +658,7 @@ def build_features(incremental: bool = False):
             save_checkpoint(all_features, all_labels, feature_names, idx + 1, total_games)
 
     # Convert new features to arrays
-    NUMERIC_FEATURES = [
-        'is_home', 'tip_winner', 'early_touches', 'early_shots',
-        'first_basket_rate', 'first_shot_rate', 'L10_first_basket_rate', 'L5_first_basket_rate',
-        'player_games_played',
-        'usage_rate', 'true_shooting_pct', 'minutes_per_game', 'points_per_game',
-        'team_tipoff_win_pct', 'home_fb_pct', 'away_fb_pct', 'team_games_played',
-        'tip_win_prob',
-    ]
-    X_new = np.array([[f.get(name, 0) for name in NUMERIC_FEATURES] for f in all_features], dtype=float)
+    X_new = np.array([[f[name] for name in NUMERIC_FEATURES] for f in all_features], dtype=float)
     y_new = np.array(all_labels, dtype=int)
     groups_new = []  # for ranking: group by game_id
     current_gid = None
@@ -808,7 +685,7 @@ def build_features(incremental: bool = False):
         return
 
     # In incremental mode: append to existing data
-    if existing and start_idx > 0:
+    if appending:
         print(f"📎 Appending {len(groups_new)} new games to existing {len(game_ids_old)} games...")
         X, y, groups, game_ids = append_to_arrays(X_old, y_old, groups_old, game_ids_old, X_new, y_new, np.array(groups_new), game_ids_new)
     else:

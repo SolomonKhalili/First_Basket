@@ -1,16 +1,33 @@
 """
-Pre-game first-basket model: conditional logit (softmax over the 10 starters).
+Pre-game first-basket model, TWO STAGES (adopted 2026-11-17):
+  1. team:   P(home team scores first) = sigmoid(a + b * logit(P(home team wins the opening tip)))
+  2. player: P(player | his team scores first) = softmax over that team's 5 starters (player inputs only)
+  P(player scores first) = stage 1 for his team x stage 2.
+The older one-stage model (softmax over all 10 starters with every input) is still supported for old model files.
 Uses ONLY information known before tip-off, so training and live prediction match.
-Weights live in pregame_model.json (written by train_pregame.py).
+Weights live in pregame_model.json (written by train_pregame.py); the math here is shared by both.
 """
 import json
 import numpy as np
 
-FEATURES = ["is_home", "fb_rate_shrunk", "L10_fb_shrunk", "usage_rate",
+FEATURES = ["is_home", "fb_rate_shrunk", "L10_fb_shrunk", "shot_attempts_per36",
             "true_shooting", "minutes_per_game", "points_per_game", "team_tipoff_win_pct",
-            "tip_win_prob"]
+            "tip_win_prob", "early_shot_shrunk"]
+HOME, TIP = FEATURES.index("is_home"), FEATURES.index("tip_win_prob")
+PLAYER_FEATURES = [f for f in FEATURES if f not in ("is_home", "team_tipoff_win_pct", "tip_win_prob")]
+PLAYER_IDX = [FEATURES.index(f) for f in PLAYER_FEATURES]
 PRIOR = 0.10   # ~1 in 10 starters scores first
+# Shrink strengths (imaginary games at the 10% prior). Tested 2026-11-17: with the L2 held at 0.001, M_SEASON = 100
+# looked better (2026-27 21.7% / 2.2307), but the real training procedure (L2 chosen on 2025-26) then picked L2 = 0.3
+# and scored 19.2% / 2.2378 — worse than 30 (20.7% / 2.2369). Kept at 30. The last-10 strength (10) tested flat.
 M_SEASON, M_L10 = 30, 10
+# Early-shot share (adopted 2026-11-17): his share of his team's first 5 shot attempts over earlier starts, shrunk
+# toward 1 in 5 with 25 imaginary shots. Walk-forward log-loss improved in both periods (2026-27 2.2368 -> 2.2318,
+# Jan-Apr 2026 2.2781 -> 2.2763) with the real training procedure.
+EARLY_PRIOR, M_EARLY = 0.2, 25
+# A first-shot-share input was tested on 2026-11-17 and NOT adopted (walk-forward log-loss 2.2462 vs 2.2453 without
+# it): the team's most frequent first shooter takes only 24% of its first shots, barely above 1 in 5. The data is
+# still recorded (first_shots table; first_shot_share / first_shot_starts columns in X_train.npy) for future models.
 
 def shrunk(rate, n, m, prior=PRIOR):
     """Shrink a rate toward the league prior; small samples count for less."""
@@ -25,12 +42,13 @@ def build_row(p: dict, t: dict, is_home: int, tip_win_prob: float = 0.5) -> list
         float(is_home),
         shrunk(p.get("first_basket_rate", 0.0), gp, M_SEASON),
         shrunk(p.get("L10_first_basket_rate", 0.0), min(gp, 10), M_L10),
-        p.get("usage_rate", 0.0),
+        p.get("shot_attempts_per36", 0.0),
         p.get("true_shooting_pct", 0.0),
         p.get("minutes_per_game", 0.0),
         p.get("points_per_game", 0.0),
         t.get("team_tipoff_win_pct", 0.5),
         float(tip_win_prob),
+        shrunk(p.get("early_shot_share", 0.0), p.get("early_shot_count", 0), M_EARLY, EARLY_PRIOR),
     ]
     return row
 
@@ -40,8 +58,34 @@ def load(path="pregame_model.json"):
         return json.load(f)
 
 
+def logit(p):
+    p = np.clip(np.asarray(p, dtype=float), 1e-6, 1 - 1e-6)
+    return np.log(p / (1 - p))
+
+
+def home_scores_first(team: dict, tip_home) -> np.ndarray:
+    """Stage 1: P(home team scores first) from P(home team wins the tip). team = {'a': .., 'b': ..}."""
+    return 1 / (1 + np.exp(-(team["a"] + team["b"] * logit(tip_home))))
+
+
+def two_stage(team: dict, w, mu, sd, R: np.ndarray) -> np.ndarray:
+    """R = one game's 10 feature rows (FEATURES order) -> P(each starter scores first), sums to 1."""
+    home = R[:, HOME] > 0.5
+    ph = float(home_scores_first(team, R[home, TIP][0] if home.any() else 0.5))
+    s = ((R[:, PLAYER_IDX] - np.asarray(mu)) / np.asarray(sd)) @ np.asarray(w)
+    out = np.zeros(len(R))
+    for side, p_team in ((home, ph), (~home, 1 - ph)):
+        if side.any():
+            e = np.exp(s[side] - s[side].max())
+            out[side] = p_team * e / e.sum()
+    return out
+
+
 def probabilities(model: dict, rows: list) -> np.ndarray:
-    Z = (np.array(rows, dtype=float) - np.array(model["mu"])) / np.array(model["sd"])
+    R = np.array(rows, dtype=float)
+    if model.get("type") == "two_stage":
+        return two_stage(model["team"], model["w"], model["mu"], model["sd"], R)
+    Z = (R - np.array(model["mu"])) / np.array(model["sd"])          # older one-stage model files
     s = Z @ np.array(model["w"])
     e = np.exp(s - s.max())
     return e / e.sum()

@@ -20,6 +20,7 @@ import starters as st
 import pregame_model as pm
 import build_features as bf
 import tip_model as tm
+import picks
 warnings.filterwarnings("ignore")
 
 DB = "nba_first_basket.db"
@@ -37,90 +38,9 @@ def db():
     con.row_factory = sqlite3.Row
     return con
 
-# ──────────────────────────────────────────────
-# SEASON STATS COMPUTATION (for pre-game predictions)
-# ──────────────────────────────────────────────
-def compute_player_season_stats(player_id: str, game_date: str, team_abbrev: str, player_logs: dict) -> dict:
-    """Compute player season stats UP TO (but not including) game_date. No leakage."""
-    game_date_str = str(game_date).replace('-', '')[:8]
-    logs = player_logs.get(player_id, [])
-    if not logs:
-        return {
-            'first_basket_rate': 0.0, 'first_shot_rate': 0.0,
-            'L10_first_basket_rate': 0.0, 'L5_first_basket_rate': 0.0,
-            'games_played': 0, 'usage_rate': 0.0,
-            'true_shooting_pct': 0.0, 'minutes_per_game': 0.0,
-            'points_per_game': 0.0,
-        }
-    prior_logs = [g for g in logs if g['game_date'] < game_date_str]
-    games_played = len(prior_logs)
-    if games_played == 0:
-        return {
-            'first_basket_rate': 0.0, 'first_shot_rate': 0.0,
-            'L10_first_basket_rate': 0.0, 'L5_first_basket_rate': 0.0,
-            'games_played': 0, 'usage_rate': 0.0,
-            'true_shooting_pct': 0.0, 'minutes_per_game': 0.0,
-            'points_per_game': 0.0,
-        }
-    total_min = sum(g['minutes'] for g in prior_logs)
-    total_fgm = sum(g['fgm'] for g in prior_logs)
-    total_fga = sum(g['fga'] for g in prior_logs)
-    total_fg3m = sum(g['fg3m'] for g in prior_logs)
-    total_fg3a = sum(g['fg3a'] for g in prior_logs)
-    total_ftm = sum(g['ftm'] for g in prior_logs)
-    total_fta = sum(g['fta'] for g in prior_logs)
-    total_pts = sum(g['pts'] for g in prior_logs)
-    total_first_baskets = sum(g['first_basket'] for g in prior_logs)
-    minutes_per_game = total_min / games_played
-    points_per_game = total_pts / games_played
-    ts_denom = 2 * (total_fga + 0.44 * total_fta)
-    true_shooting_pct = total_pts / ts_denom if ts_denom > 0 else 0.0
-    usage_rate = (total_fga + 0.44 * total_fta) / (total_min / 36) if total_min > 0 else 0.0
-    usage_rate = min(usage_rate / 100, 1.0)
-    first_basket_rate = total_first_baskets / games_played if games_played > 0 else 0.0
-    first_shot_rate = first_basket_rate * 2.0
-    L10_logs = prior_logs[:10]
-    L5_logs = prior_logs[:5]
-    L10_fb = sum(g['first_basket'] for g in L10_logs)
-    L10_first_basket_rate = L10_fb / len(L10_logs) if L10_logs else 0.0
-    L5_fb = sum(g['first_basket'] for g in L5_logs)
-    L5_first_basket_rate = L5_fb / len(L5_logs) if L5_logs else 0.0
-    return {
-        'first_basket_rate': first_basket_rate,
-        'first_shot_rate': first_shot_rate,
-        'L10_first_basket_rate': L10_first_basket_rate,
-        'L5_first_basket_rate': L5_first_basket_rate,
-        'games_played': float(games_played),
-        'usage_rate': usage_rate,
-        'true_shooting_pct': true_shooting_pct,
-        'minutes_per_game': minutes_per_game,
-        'points_per_game': points_per_game,
-    }
+# Player and team stats come from build_features (bf.compute_*), the same code used for training,
+# so live predictions always see exactly the numbers the model was trained on.
 
-def compute_team_stats_up_to_date(team_abbrev: str, game_date: str, con) -> dict:
-    """Compute team stats up to game_date."""
-    game_date_str = str(game_date).replace('-', '')[:8]
-    team_games = con.execute('''
-        SELECT g.game_date, g.home_team, g.away_team, g.tip_winner_team,
-               fb.scorer_player_id, fb.scorer_name, fb.scorer_team
-        FROM games g
-        JOIN first_baskets fb ON g.game_id = fb.game_id
-        WHERE (g.home_team = ? OR g.away_team = ?)
-        AND g.game_date < ?
-        ORDER BY g.game_date DESC
-    ''', (team_abbrev, team_abbrev, game_date_str)).fetchall()
-    if not team_games:
-        return {'team_tipoff_win_pct': 0.5, 'home_fb_pct': 0.0, 'away_fb_pct': 0.0, 'games_played': 0}
-    games_played = len(team_games)
-    tip_wins = sum(1 for g in team_games if g[3] == team_abbrev)
-    team_tipoff_win_pct = tip_wins / games_played if games_played > 0 else 0.5
-    home_fb_real = sum(1 for g in team_games if g[1] == team_abbrev and g[6] == team_abbrev)
-    away_fb_real = sum(1 for g in team_games if g[2] == team_abbrev and g[6] == team_abbrev)
-    home_games = [g for g in team_games if g[1] == team_abbrev]
-    away_games = [g for g in team_games if g[2] == team_abbrev]
-    home_fb_pct = home_fb_real / len(home_games) if home_games else 0.0
-    away_fb_pct = away_fb_real / len(away_games) if away_games else 0.0
-    return {'team_tipoff_win_pct': team_tipoff_win_pct, 'home_fb_pct': home_fb_pct, 'away_fb_pct': away_fb_pct, 'games_played': float(games_played)}
 
 def init():
     con = db()
@@ -164,6 +84,10 @@ def init():
     """)
     con.commit()
     st.ensure_lineups_table(con)
+    picks.ensure_table(con)
+    st.ensure_official_tables(con)
+    con.execute(FIRST_SHOTS_SCHEMA)
+    con.execute(EARLY_SHOTS_SCHEMA)
     print("✅ Database ready")
 
 # ──────────────────────────────────────────────
@@ -223,10 +147,13 @@ def get_pbp(game_id: str) -> list[dict]:
 
     actions = []
     for p in plays:
-        tid = p.get('team.id', '')
-        home = p.get('homeTeamId', '')
-        away = p.get('awayTeamId', '')
-        team = p.get('homeTeamAbbrev') if str(tid) == str(home) else p.get('awayTeamAbbrev', '')
+        tid = str(p.get('team.id', '') or '')
+        if tid and tid == str(p.get('homeTeamId', '')):
+            team = p.get('homeTeamAbbrev', '')
+        elif tid and tid == str(p.get('awayTeamId', '')):
+            team = p.get('awayTeamAbbrev', '')
+        else:
+            team = ''                     # unknown: never guess the team (see first_basket)
         pid = str(p.get('participants.0.athlete.id', '') or '')
         action = {
             'gameId': game_id,
@@ -238,6 +165,7 @@ def get_pbp(game_id: str) -> list[dict]:
             'period': int(p.get('period.number', 0) or 0),
             'clock': str(p.get('clock.displayValue', '')),
             'scoringPlay': p.get('scoringPlay', False),
+            'shootingPlay': bool(p.get('shootingPlay', False)),
         }
         # For jumpball, also store loser participant
         if p.get('type.text', '').lower() == 'jumpball':
@@ -248,19 +176,54 @@ def get_pbp(game_id: str) -> list[dict]:
     return actions
 
 def first_basket(actions: list[dict]) -> Optional[dict]:
-    """First made FG in Q1-Q4 (not free throw)."""
+    """First points of the game in Q1-Q4 — a made field goal OR a made free throw (sportsbook "first basket"
+    rule, owner's decision 2026-11-17). If that play has no scorer or no team, return None:
+    better no label (the game is retried by the next sync) than a wrong one."""
     for a in actions:
-        if a['scoringPlay'] and 'free_throw' not in a['actionType'] and 1 <= a['period'] <= 4:
-            return a
+        if a['scoringPlay'] and 1 <= a['period'] <= 4:
+            return a if a.get('personId') and a.get('teamTricode') else None
     return None
 
-def tip_winner(actions: list[dict]):
-    """Team, player_id, and player_name that won the opening tip."""
+def first_shots(actions: list[dict]) -> dict:
+    """Each team's first field-goal attempt of the game (made or missed; free throws excluded), Q1 only.
+    -> {team code: action}. Plays without a team or a player are skipped."""
+    out = {}
     for a in actions:
-        if 'jumpball' in a['actionType'] or 'tip' in a['actionType']:
-            pid = a['personId']
-            return (a['teamTricode'], pid, a['playerName'])
-    return None
+        if (a.get('shootingPlay') and 'free_throw' not in a['actionType'] and a['period'] == 1
+                and a.get('teamTricode') and a.get('personId') and a['teamTricode'] not in out):
+            out[a['teamTricode']] = a
+    return out
+
+
+def early_shots(actions: list[dict], n: int = 5) -> dict:
+    """Each team's first `n` field-goal attempts of the game, in order (Q1; free throws excluded).
+    -> {team code: [action, ...]}. Plays without a team or a player are skipped."""
+    out = {}
+    for a in actions:
+        if (a.get('shootingPlay') and 'free_throw' not in a['actionType'] and a['period'] == 1
+                and a.get('teamTricode') and a.get('personId')):
+            lst = out.setdefault(a['teamTricode'], [])
+            if len(lst) < n:
+                lst.append(a)
+    return out
+
+
+EARLY_SHOTS_SCHEMA = """CREATE TABLE IF NOT EXISTS early_shots (
+    game_id TEXT, team TEXT, seq INTEGER, player_id TEXT, player_name TEXT, made INTEGER,
+    PRIMARY KEY (game_id, team, seq))"""
+
+
+def store_early_shots(con, game_id, actions):
+    con.execute(EARLY_SHOTS_SCHEMA)
+    for team, lst in early_shots(actions).items():
+        for seq, a in enumerate(lst, 1):
+            con.execute("INSERT OR REPLACE INTO early_shots VALUES (?,?,?,?,?,?)",
+                        (str(game_id), team, seq, a['personId'], a['playerName'], int(bool(a['scoringPlay']))))
+
+
+FIRST_SHOTS_SCHEMA = """CREATE TABLE IF NOT EXISTS first_shots (
+    game_id TEXT, team TEXT, player_id TEXT, player_name TEXT, made INTEGER, shot_type TEXT,
+    PRIMARY KEY (game_id, team))"""
 
 
 def tip_jumpball(actions: list[dict]) -> Optional[dict]:
@@ -271,7 +234,7 @@ def tip_jumpball(actions: list[dict]) -> Optional[dict]:
             winner_name = a.get('playerName', '')
             loser_id = a.get('tip_loser_player_id', '')
             loser_name = a.get('tip_loser_player_name', '')
-            team = a.get('teamTricode', '')
+            team = a.get('teamTricode') or None      # unknown team -> stored as NULL, never guessed
             return {
                 'tip_winner_team': team,
                 'tip_winner_player_id': winner_id,
@@ -280,22 +243,6 @@ def tip_jumpball(actions: list[dict]) -> Optional[dict]:
                 'tip_loser_player_name': loser_name,
             }
     return None
-
-def get_injured_players() -> set[str]:
-    """Names of players definitely OUT. Day-to-Day players are NOT included
-    (they often start); use starters.fetch_injuries() to see them."""
-    out, _unc = st.split_injuries(st.fetch_injuries())
-    return out
-
-
-def get_recent_starters(team_abbrev: str, con, n_games: int = 5, injured: set = None) -> list[dict]:
-    """Projected starting 5 from stored lineups (last n completed games before today)."""
-    if injured is None:
-        injured = get_injured_players()
-    res = st.recent_starters(con, team_abbrev, date.today().strftime("%Y%m%d"),
-                             n_games=n_games, out_names=injured)
-    return res["players"] if res["complete"] else []
-
 
 # ──────────────────────────────────────────────
 # INGESTION
@@ -308,6 +255,11 @@ def ingest_game(game_id: str, con):
 
     fb = first_basket(actions)
     tip = tip_jumpball(actions)
+    con.execute(FIRST_SHOTS_SCHEMA)
+    for team, a in first_shots(actions).items():
+        con.execute("INSERT OR REPLACE INTO first_shots VALUES (?,?,?,?,?,?)",
+                    (str(game_id), team, a['personId'], a['playerName'], int(bool(a['scoringPlay'])), a['shotType']))
+    store_early_shots(con, game_id, actions)
 
     if fb:
         con.execute("""
@@ -376,8 +328,8 @@ def backfill(season_year: int = 2024, max_days: int = None):
                 for attempt in range(3):
                     try:
                         con.execute("""
-                            INSERT OR IGNORE INTO games (game_id, game_date, home_team, away_team)
-                            VALUES (?, ?, ?, ?)
+                            INSERT OR IGNORE INTO games (game_id, game_date, home_team, away_team, status)
+                            VALUES (?, ?, ?, ?, 3)
                         """, (gid, day[:10], home, away))
                         ingest_game(gid, con)
                         # Write to CSV
@@ -454,7 +406,7 @@ def catchup_missing_games():
                 away = str(r['away_abbreviation'])
                 if home not in NBA_TEAMS or away not in NBA_TEAMS or gid in have:
                     continue
-                con.execute("INSERT OR IGNORE INTO games (game_id, game_date, home_team, away_team) VALUES (?, ?, ?, ?)", (gid, day[:10], home, away))
+                con.execute("INSERT OR IGNORE INTO games (game_id, game_date, home_team, away_team, status) VALUES (?, ?, ?, ?, 3)", (gid, day[:10], home, away))
                 ingest_game(gid, con)
                 st.store_game_lineup(con, gid)
                 total += 1
@@ -616,30 +568,32 @@ _DONE: set = set()  # games already predicted from a CONFIRMED lineup
 
 
 def _retrain_if_needed(con) -> str:
-    """If the DB has labeled games newer than the training matrices, append them
+    """If the DB has labelled games that are not in the training matrices yet, add them
     (build_features --incremental) and warm-start retrain (train_pregame --incremental).
-    The matrices' own last game is the save point, so nothing is rebuilt from scratch.
+    game_ids.json (the games already in the matrices) is the save point, so nothing is rebuilt from scratch.
     Returns a short status for the screen."""
     import subprocess
     try:
         with open("game_ids.json") as f:
-            last_gid = str(json.load(f)[-1])
-    except (OSError, ValueError, IndexError):
+            in_training = {str(g) for g in json.load(f)}
+    except (OSError, ValueError):
         print("⚠️ game_ids.json missing — run build_features.py once to create the training matrices")
         return "model not updated"
-    row = con.execute("SELECT game_date FROM games WHERE game_id = ?", (last_gid,)).fetchone()
-    trained_through = row[0] if row else ""
-    new_games = con.execute("""SELECT COUNT(*) FROM games g JOIN first_baskets f USING(game_id)
-                               WHERE g.game_date > ?""", (trained_through,)).fetchone()[0]
+    # Every labelled game not in the training data yet — including ones labelled late with an older date
+    labelled = {r[0] for r in con.execute("SELECT game_id FROM first_baskets f JOIN games g USING(game_id)")}
+    new_games = len(labelled - in_training)
     if not new_games:
         return "model up to date"
     for script in ("build_features.py", "train_pregame.py"):
         r = subprocess.run([sys.executable, script, "--incremental"], capture_output=True, text=True)
+        if script == "train_pregame.py" and r.returncode == 3:     # new model tested worse: old one kept
+            print(f"⚠️ {r.stdout.strip().splitlines()[-1]}")
+            return f"kept the existing model ({new_games} new game{'s' * (new_games != 1)} added to the data)"
         if r.returncode != 0:
             last = (r.stderr or r.stdout).strip().splitlines()[-1:] or [""]
             print(f"⚠️ {script} failed — predicting with the existing model ({last[0]})")
             return "model update FAILED"
-    return f"model updated with {new_games} new games"
+    return f"model updated with {new_games} new game{'s' * (new_games != 1)}"
 
 
 def sync_data() -> str:
@@ -651,23 +605,38 @@ def sync_data() -> str:
 
     # Retry recent games that are missing a first basket or a lineup (older misses are permanent)
     recent = (date.today() - timedelta(days=14)).strftime("%Y%m%d")
+    con.execute(FIRST_SHOTS_SCHEMA)
+    con.execute(EARLY_SHOTS_SCHEMA)
     for (gid,) in con.execute("""SELECT game_id FROM games WHERE game_date >= ?
-                                 AND game_id NOT IN (SELECT game_id FROM first_baskets)""", (recent,)).fetchall():
+                                 AND (game_id NOT IN (SELECT game_id FROM first_baskets)
+                                      OR game_id NOT IN (SELECT game_id FROM first_shots)
+                                      OR game_id NOT IN (SELECT game_id FROM early_shots))""", (recent,)).fetchall():
         ingest_game(gid, con)
     for (gid,) in con.execute("""SELECT game_id FROM games WHERE game_date >= ?
                                  AND game_id NOT IN (SELECT DISTINCT game_id FROM lineups)""", (recent,)).fetchall():
         st.store_game_lineup(con, gid)
+    # NBA.com's official starters + positions for every day already played (teaches the tip-off model
+    # who usually jumps); each day is fetched once
+    today = date.today().strftime("%Y%m%d")
+    played = {r[0] for r in con.execute("SELECT DISTINCT game_date FROM games WHERE game_date < ?", (today,))}
+    # ...and re-check recent days whose lineup file was empty (a failed download, or NBA.com posting late)
+    empty = {d for (d,) in con.execute("SELECT game_date FROM official_lineup_days WHERE players = 0 AND game_date >= ?",
+                                       (recent,))}
+    for d in sorted((played - st.official_lineup_days(con)) | (empty & played)):
+        st.store_official_lineups(con, d)
+        time.sleep(SLEEP)
     # First baskets with no matching game (preseason / All-Star) are never used
     con.execute("DELETE FROM first_baskets WHERE game_id NOT IN (SELECT game_id FROM games)")
     con.commit()
 
     n = export_csv(con)
+    picks.export_predictions(con)              # fills in yesterday's results in my_predictions.xlsx
     bf.build_player_game_logs()
     model = _retrain_if_needed(con)
     last = con.execute("SELECT MAX(game_date) FROM games g JOIN first_baskets USING(game_id)").fetchone()[0] or ""
     last = f"{int(last[4:6])}/{int(last[6:8])}" if last else "?"
     added = f" (+{new} new)" if new else ""
-    return f"Data up to date: {n:,} games through {last}{added} · CSV saved · {model}"
+    return f"Data up to date: {n:,} games through {last}{added} · files saved · {model}"
 
 
 import contextlib
@@ -686,8 +655,86 @@ def _quiet(warnings_out: list):
                          if any(k in l for k in ("⚠️", "failed", "Error", "error"))]
 
 
-def predict_today(first_pass: bool = True) -> int:
-    """Predict the first basket for today's games that haven't started.
+TEAM_ALIASES = {"NYK": "NY", "GSW": "GS", "SAS": "SA", "UTA": "UTAH", "NOP": "NO", "WAS": "WSH", "BRK": "BKN",
+                "PHO": "PHX", "NOH": "NO"}
+TEAM_NAMES = {   # nickname (lower case) -> ESPN code; several spellings allowed
+    "hawks": "ATL", "celtics": "BOS", "nets": "BKN", "hornets": "CHA", "bulls": "CHI", "cavaliers": "CLE",
+    "cavs": "CLE", "mavericks": "DAL", "mavs": "DAL", "nuggets": "DEN", "pistons": "DET", "warriors": "GS",
+    "rockets": "HOU", "pacers": "IND", "clippers": "LAC", "lakers": "LAL", "grizzlies": "MEM", "heat": "MIA",
+    "bucks": "MIL", "timberwolves": "MIN", "wolves": "MIN", "pelicans": "NO", "knicks": "NY", "thunder": "OKC",
+    "magic": "ORL", "76ers": "PHI", "sixers": "PHI", "suns": "PHX", "trail blazers": "POR", "blazers": "POR",
+    "trailblazers": "POR", "kings": "SAC", "spurs": "SA", "raptors": "TOR", "jazz": "UTAH", "wizards": "WSH",
+}
+
+
+def parse_teams(args) -> set:
+    """Teams named on the command line or typed at the prompt -> ESPN codes. Accepts nicknames ("Knicks",
+    "trail blazers", "sixers"), ESPN codes ("LAL") and NBA.com codes ("NYK"), in any case."""
+    import re
+    args = [a for a in args if not a.startswith("--")]     # flags aren't teams ('--no-odds' is not the Pelicans)
+    text = " " + re.sub(r"[^a-z0-9 ]", " ", " ".join(args).lower()) + " "
+    out = set()
+    for name, code in TEAM_NAMES.items():
+        if f" {name} " in text:
+            out.add(code)
+    for word in text.split():
+        code = TEAM_ALIASES.get(word.upper(), word.upper())
+        if code in NBA_TEAMS:
+            out.add(code)
+    return out
+
+
+TEAM_LABEL = {   # ESPN code -> name shown in the "which game?" list
+    "ATL": "Hawks", "BOS": "Celtics", "BKN": "Nets", "CHA": "Hornets", "CHI": "Bulls", "CLE": "Cavaliers",
+    "DAL": "Mavericks", "DEN": "Nuggets", "DET": "Pistons", "GS": "Warriors", "HOU": "Rockets", "IND": "Pacers",
+    "LAC": "Clippers", "LAL": "Lakers", "MEM": "Grizzlies", "MIA": "Heat", "MIL": "Bucks", "MIN": "Timberwolves",
+    "NO": "Pelicans", "NY": "Knicks", "OKC": "Thunder", "ORL": "Magic", "PHI": "76ers", "PHX": "Suns",
+    "POR": "Trail Blazers", "SAC": "Kings", "SA": "Spurs", "TOR": "Raptors", "UTAH": "Jazz", "WSH": "Wizards",
+}
+
+
+def ask_for_teams(games: list) -> set:
+    """Show today's games as a numbered list and ask which one to predict. The answer can be the game's number,
+    a team name (Knicks) or nothing (Enter = all games). Asks again, with a hint, if the answer doesn't match."""
+    name = lambda code: TEAM_LABEL.get(code, code)
+    print("\nToday's games:\n")
+    for n, g in enumerate(games, 1):
+        print(f"  {n}.  {name(g['away_team'])} @ {name(g['home_team'])}   {g.get('start', '')}")
+    print("\nWhich game do you want? You can type:")
+    g1 = games[0]
+    print(f"  • the number next to the game   (for example: 1 = {name(g1['away_team'])} @ {name(g1['home_team'])})")
+    print(f"  • a team name                   (for example: {name(g1['home_team'])})")
+    print("  • nothing — just press Enter to see ALL games")
+    playing = {g[k] for g in games for k in ("home_team", "away_team")}
+    while True:
+        try:
+            answer = input("\nYour choice: ").strip()
+        except (EOFError, KeyboardInterrupt):          # Ctrl-D / Ctrl-C at the question: all games
+            print()
+            return set()
+        if not answer:
+            return set()
+        if answer.isdigit():
+            if 1 <= int(answer) <= len(games):
+                g = games[int(answer) - 1]
+                return {g["home_team"], g["away_team"]}
+            print(f"  There's no game {answer} — pick a number from 1 to {len(games)}.")
+            continue
+        teams = parse_teams([answer])
+        if teams & playing:
+            return teams & playing
+        print("  " + (f"{', '.join(name(t) for t in sorted(teams))} not playing today — pick a game from the list."
+                      if teams else f"Didn't recognise \"{answer}\" — type a number from 1 to {len(games)}, "
+                                    "or a team name like Lakers."))
+
+
+def filter_games(games: list, teams: set) -> list:
+    """Only the games involving `teams` (all games when `teams` is empty)."""
+    return [g for g in games if not teams or g['home_team'] in teams or g['away_team'] in teams]
+
+
+def predict_today(first_pass: bool = True, teams: set = frozenset()) -> int:
+    """Predict the first basket for today's games that haven't started (only `teams`' games if given).
     Returns the number of games still waiting on a confirmed lineup (used by --watch)."""
     import display as ui
     confirmed_only = '--confirmed-only' in sys.argv
@@ -705,8 +752,10 @@ def predict_today(first_pass: bool = True) -> int:
 
     con = db()
     with _quiet(warn):
-        games = get_todays_games()
+        games = filter_games(get_todays_games(), teams)
     if first_pass:
+        if teams and not games:
+            ui.skipped(", ".join(sorted(teams)), "no game today for this team.")
         ui.schedule(games)
 
     pre_games = [g for g in games if g['status'] == 1 and g['game_id'] not in _DONE]
@@ -717,6 +766,7 @@ def predict_today(first_pass: bool = True) -> int:
         return 0
 
     pg = pm.load() if os.path.exists('pregame_model.json') else None
+    model_version = picks.model_id(pg) if pg else None
     if pg is None:
         ui.notes(warn + ["pregame_model.json is missing — run: python3 train_pregame.py"])
         return 0
@@ -724,7 +774,15 @@ def predict_today(first_pass: bool = True) -> int:
         player_logs = bf.build_player_game_logs()
         # League feed + each game's own summary (the summaries carry Doubtful / Questionable)
         inj_report = st.fetch_injury_report([g['game_id'] for g in pre_games])
+        # Current rosters: a traded player counts for his new team right away
+        roster_pos: dict = {}
+        rosters = st.fetch_rosters({g[k] for g in pre_games for k in ('home_team', 'away_team')}, positions=roster_pos)
+        team_of = {**st.team_by_player(con), **rosters}
+        # Positions (ESPN rosters, else NBA.com lineups): a missing centre is replaced by a centre when possible
+        groups = st.player_groups(con, date.today().strftime("%Y%m%d"), roster_pos)
     pending, any_projected = 0, False
+    early_index = bf.build_early_shot_index(con)        # each player's share of his team's first 5 shots
+    fd_games = _fanduel_prices(pre_games, warn)          # FanDuel "First Basket" prices (None if unreachable)
 
     for g in pre_games:
         game_id, game_date = g['game_id'], g['game_date']
@@ -763,7 +821,8 @@ def predict_today(first_pass: bool = True) -> int:
             # (official CONFIRMED lineups are never changed).
             lineup = dict(lineup)
             for team in (home_team, away_team):
-                sub = st.substitute_injured(con, team, lineup.get(team, []), inj_report, game_date)
+                sub = st.substitute_injured(con, team, lineup.get(team, []), inj_report, game_date, team_of=team_of,
+                                            groups=groups)
                 lineup[team] = sub["players"]
                 notes += [f"{r['in']} replaces {r['out'].title()} ({r['status']}) in NBA.com's expected lineup"
                           for r in sub["replaced"]]
@@ -771,8 +830,8 @@ def predict_today(first_pass: bool = True) -> int:
                           for n in sub["unresolved"]]
 
         if not lineup:                # NBA.com hasn't posted: our projection
-            ph = st.project_usual_starters(con, home_team, game_date, inj_report)
-            pa = st.project_usual_starters(con, away_team, game_date, inj_report)
+            ph = st.project_usual_starters(con, home_team, game_date, inj_report, rosters=rosters, groups=groups)
+            pa = st.project_usual_starters(con, away_team, game_date, inj_report, rosters=rosters, groups=groups)
             if not (ph['complete'] and pa['complete']):
                 why = (f"no replacement found for ruled-out {', '.join(ph['unresolved'] + pa['unresolved'])}"
                        if ph['unresolved'] or pa['unresolved'] else "not enough recent games to project")
@@ -782,8 +841,10 @@ def predict_today(first_pass: bool = True) -> int:
             lineup, source = {home_team: ph['players'], away_team: pa['players']}, "projected_usual_starters"
             notes += [f"{r['in']} starts for {r['out'].title()} ({r['status']}) — {r['evidence']}"
                       for r in ph['replaced'] + pa['replaced']]
+            notes += [f"{n} fills an open spot in the usual five (next in line by recent starts and minutes)"
+                      for n in ph['filled'] + pa['filled']]
             for name, missed in {**ph['returning'], **pa['returning']}.items():
-                notes.append(f"{name.title()} is back from injury (missed {missed} of the last 5 games)")
+                notes.append(f"{name.title()} is back from injury (missed {missed} of the last {st.RECENT_GAMES} games)")
             back = st.returning_by(inj_report, ph['dropped'] + pa['dropped'], date.today().isoformat())
             if back:
                 notes.append(f"Listed Out but expected back today — may actually play: {', '.join(n.title() for n in back)}")
@@ -807,14 +868,23 @@ def predict_today(first_pass: bool = True) -> int:
         any_projected |= label == "PROJECTED"
 
         # Score the 10 starters
-        home_team_stats = compute_team_stats_up_to_date(home_team, game_date, con)
-        away_team_stats = compute_team_stats_up_to_date(away_team, game_date, con)
+        home_team_stats = bf.compute_team_stats_up_to_date(home_team, game_date, con)
+        away_team_stats = bf.compute_team_stats_up_to_date(away_team, game_date, con)
         home_ids, away_ids = [p['player_id'] for p in home_starters], [p['player_id'] for p in away_starters]
-        tip_home, tip_away = tm.team_win_probs(con, home_team, away_team, game_date, home_ids, away_ids)
+        # NBA.com lists positions with its lineups; its starting C usually takes the tip (tip_model.team_jumper)
+        home_c = next((p['player_id'] for p in home_starters if p.get('position') == 'C'), None)
+        away_c = next((p['player_id'] for p in away_starters if p.get('position') == 'C'), None)
+        # Inside the first-basket model: the tip chance from the current tip history (what it was tested with)
+        tip_home, tip_away = tm.team_win_probs(con, home_team, away_team, game_date, home_ids, away_ids,
+                                               home_c, away_c)
+        # Shown to the owner (🏀 Tip-off line + spreadsheet): also counts 2024-25 tips — calls more tips right
+        show_home, show_away = tm.team_win_probs(con, home_team, away_team, game_date, home_ids, away_ids,
+                                                 home_c, away_c, extended=True)
         rows, info = [], []
         for p in home_starters + away_starters:
             is_home = 1 if p['team'] == home_team else 0
-            pstats = compute_player_season_stats(p['player_id'], game_date, p['team'], player_logs)
+            pstats = bf.compute_player_season_stats(p['player_id'], game_date, p['team'], player_logs)
+            pstats['early_shot_share'], pstats['early_shot_count'] = bf.early_shot_share(early_index, p['player_id'], game_date)
             rows.append(pm.build_row(pstats, home_team_stats if is_home else away_team_stats, is_home,
                                      tip_win_prob=tip_home if is_home else tip_away))
             info.append({'id': p['player_id'], 'name': p['name'], 'team': p['team']})
@@ -823,131 +893,79 @@ def predict_today(first_pass: bool = True) -> int:
         probs = pm.probabilities(pg, rows)
         order = [int(i) for i in np.argsort(probs)[::-1]]
 
-        top = info[order[0]]
-        con.execute("""INSERT OR REPLACE INTO predictions
-                       (game_id, predicted_scorer_id, predicted_scorer_name, confidence, model_version)
-                       VALUES (?, ?, ?, ?, ?)""",
-                    (game_id, top['id'], top['name'], float(probs[order[0]]), f'pregame_clogit_{source}'))
-        con.commit()
-
         names = {p['player_id']: p['name'] for p in home_starters + away_starters}
-        jumpers = {home_team: names.get(tm.team_jumper(con, home_team, game_date, home_ids)),
-                   away_team: names.get(tm.team_jumper(con, away_team, game_date, away_ids))}
+        jumpers = {home_team: names.get(tm.team_jumper(con, home_team, game_date, home_ids, home_c, extended=True)),
+                   away_team: names.get(tm.team_jumper(con, away_team, game_date, away_ids, away_c, extended=True))}
+
+        # Keep every pick (never overwritten) so the real track record can be measured: `nba.py eval`
+        # and my_predictions.xlsx
+        picks.log_pick(con, {
+            "game_id": game_id, "game_date": game_date, "matchup": matchup, "lineup_type": label,
+            "lineup_source": source, "lineup_sig": ",".join(map(str, sig[1])), "model_id": model_version,
+            "tip_home": show_home, "home_jumper": jumpers[home_team], "away_jumper": jumpers[away_team],
+            "players": [{**info[i], "prob": float(probs[i])} for i in range(len(info))]})
         injuries = {nm: status for nm, status, _ in
                     st.injury_flags([p['name'] for p in home_starters + away_starters], inj_report)}
+        top5 = [(info[i]['name'], info[i]['team'], float(probs[i]), pm.fair_american(float(probs[i])))
+                for i in order[:5]]
         ui.game_card({
             "matchup": matchup, "start": g.get('start', ''), "label": label, "updated": changed,
-            "picks": [(info[i]['name'], info[i]['team'], float(probs[i]), pm.fair_american(float(probs[i])))
-                      for i in order[:5]],
-            "tip": {home_team: tip_home, away_team: tip_away}, "jumpers": jumpers,
+            "picks": top5, **_fanduel_card(fd_games, home_team, away_team, top5),
+            "tip": {home_team: show_home, away_team: show_away}, "jumpers": jumpers,
+            "first_team": ({home_team: float(probs[:len(home_starters)].sum()),
+                            away_team: float(probs[len(home_starters):].sum())} if pg.get("type") == "two_stage" else None),
             "home": home_team, "away": away_team,
             "home_starters": home_starters, "away_starters": away_starters,
             "injuries": injuries, "notes": notes,
         })
 
+    st.save_seen_lineups(con)                  # keep NBA.com's Expected and Confirmed lists (Lineups tab)
+    picks.export_predictions(con)              # my_predictions.xlsx: today's picks show as "pending"
     ui.notes(warn)
     if first_pass:
         ui.legend(any_projected)
     return pending
 
 
-def render_game_card(home_team: str, away_team: str, lineup_type: str,
-                     home_starters: list[dict], away_starters: list[dict],
-                     injury_report: list[dict], dropped: list[str] = None,
-                     picks: list[tuple] = None, today_iso: str = None) -> str:
-    """
-    Render a single game card for display in reports/predict output.
-    Returns formatted string with lineups, injuries, and top picks.
-    """
-    from datetime import date
-    today = today_iso or date.today().strftime("%Y-%m-%d")
-    dropped = dropped or []
-    picks = picks or []
-    lines = []
+def _fanduel_prices(games: list, warn: list):
+    """FanDuel First Basket prices for these games, or None (with a note) if FanDuel can't be reached.
+    Skipped with --no-odds."""
+    if '--no-odds' in sys.argv or not games:
+        return None
+    import fanduel_odds as fd
+    import display as ui
+    try:
+        with ui.console.status("Getting FanDuel first-basket odds…"):
+            return fd.fetch_first_basket_odds({g[k] for g in games for k in ('home_team', 'away_team')})
+    except Exception as e:                 # odds are extra: never stop the predictions over them
+        warn.append(f"FanDuel odds unavailable ({type(e).__name__}) — predictions shown without them")
+        return None
 
-    # Build name->team map from injury report
-    injury_team = {r.get('name'): r.get('team') for r in injury_report if r.get('name')}
 
-    # Header
-    lines.append(f"{lineup_type} LINEUP: {away_team} @ {home_team}")
-
-    # Home starters (including dropped for home team)
-    lines.append(f"  {home_team} STARTERS")
-    all_home = list(home_starters)
-    for nm in dropped:
-        if injury_team.get(nm) == home_team and nm not in [p.get('name') for p in all_home]:
-            team = injury_team.get(nm)
-            pname = f"{nm} ({team})" if team else nm
-            all_home.append({'name': pname})
-
-    for p in all_home:
-        nm = p.get('name', '')
-        tag = ""
-        base_name = nm.split(' (')[0]
-        emoji_prefix = ""
-        if base_name in dropped:
-            tag = " — REMOVED from lineup"
-            for r in injury_report:
-                if r.get('name') == base_name and r.get('status') == 'Out' and r.get('return') == today:
-                    tag += " (may actually play)"
-                    break
-        for r in injury_report:
-            if r.get('name') == base_name and r.get('status') == 'Day-To-Day':
-                emoji_prefix = "🟡 "
-                break
-        lines.append(f"    {emoji_prefix}{nm}{tag}")
-
-    # Away starters (including dropped for away team)
-    lines.append(f"  {away_team} STARTERS")
-    all_away = list(away_starters)
-    for nm in dropped:
-        if injury_team.get(nm) == away_team and nm not in [p.get('name') for p in all_away]:
-            team = injury_team.get(nm)
-            pname = f"{nm} ({team})" if team else nm
-            all_away.append({'name': pname})
-
-    for p in all_away:
-        nm = p.get('name', '')
-        tag = ""
-        base_name = nm.split(' (')[0]
-        emoji_prefix = ""
-        if base_name in dropped:
-            tag = " — REMOVED from lineup"
-            for r in injury_report:
-                if r.get('name') == base_name and r.get('status') == 'Out' and r.get('return') == today:
-                    tag += " (may actually play)"
-                    break
-        for r in injury_report:
-            if r.get('name') == base_name and r.get('status') == 'Day-To-Day':
-                emoji_prefix = "🟡 "
-                break
-        lines.append(f"    {emoji_prefix}{nm}{tag}")
-
-    # Injury watch
-    lines.append(f"  INJURY WATCH")
-    for r in injury_report:
-        if r.get('team') in (home_team, away_team):
-            lines.append(f"    {r['status']:<14} {r['name']}" + (f" — {r['detail']}" if r.get('detail') else ""))
-
-    # Top picks
-    if picks:
-        lines.append(f"  TOP PICKS")
-        for rank, (pid, team, prob, odds, ev) in enumerate(picks[:5], 1):
-            name = ""
-            for p in home_starters + away_starters:
-                if p.get('id') == pid or p.get('player_id') == pid:
-                    name = p.get('name', '')
-                    break
-            if name:
-                lines.append(f"    {rank}. {name} ({team}) — {prob:.0%}  fair {odds:+d}")
-
-    return "\n".join(lines)
+def _fanduel_card(fd_games, home: str, away: str, top5: list) -> dict:
+    """The game card's FanDuel fields: {"fanduel": {name: american}, "fanduel_note": str}; {} when odds are off."""
+    if fd_games is None:
+        return {}
+    import fanduel_odds as fd
+    game = fd.game_for(fd_games, home, away)
+    if not game or not game["players"]:
+        return {"fanduel": {}, "fanduel_note": "FanDuel hasn't posted first-basket odds for this game yet."}
+    prices = {name: row["american"] for name, row in fd.match_prices(game["players"], top5).items()}
+    note = ""
+    if not fd.is_complete(game["players"]):
+        note = f"FanDuel lists only {len(game['players'])} players so far (lineups not all posted)."
+    elif len(prices) < len(top5):
+        note = "– = FanDuel doesn't offer that player (it prices only the starters it expects)."
+    return {"fanduel": prices, "fanduel_note": note}
 
 
 def report_without_lineups(con, d: str) -> str:
     """When NBA.com hasn't published lineups: today's games, usual starters minus injured, injuries."""
     games = get_todays_games()
     report = st.fetch_injury_report([g['game_id'] for g in games if g['status'] == 1])
+    roster_pos: dict = {}
+    rosters = st.fetch_rosters({g[k] for g in games for k in ('home_team', 'away_team')}, positions=roster_pos)
+    groups = st.player_groups(con, d, roster_pos)
     lines = [f"NBA DAILY REPORT — {d}", "=" * 60,
              "NBA.com lineups not published yet. Showing USUAL starters (last 5 games) minus players",
              "ruled Out/Doubtful. These are PROJECTIONS, not confirmed lineups.", ""]
@@ -958,7 +976,7 @@ def report_without_lineups(con, d: str) -> str:
         tag = {1: "", 2: " [LIVE]", 3: " [FINAL]"}.get(g['status'], "")
         lines.append(f"{a} @ {h}{tag}")
         for team in (a, h):
-            pr = st.project_usual_starters(con, team, g['game_date'], report)
+            pr = st.project_usual_starters(con, team, g['game_date'], report, rosters=rosters, groups=groups)
             if pr['complete']:
                 names = ', '.join(p['name'] + (' (?)' if p['uncertain'] else '') for p in pr['players'])
                 lines.append(f"  {team} projected: {names}")
@@ -978,32 +996,22 @@ def report_without_lineups(con, d: str) -> str:
 
 
 def evaluate():
-    """Check prediction accuracy."""
-    con = db()
-    q = """
-    SELECT p.predicted_scorer_name, p.confidence, fb.scorer_name,
-           (p.predicted_scorer_id = fb.scorer_player_id) AS correct
-    FROM predictions p
-    JOIN first_baskets fb ON p.game_id = fb.game_id
-    """
-    rows = con.execute(q).fetchall()
-    if not rows:
-        print("No predictions to evaluate yet.")
-        return
-
-    total = len(rows)
-    correct = sum(r['correct'] for r in rows)
-    print(f"\n📊 Accuracy: {correct}/{total} = {correct/total:.1%}")
-    for r in rows:
-        mark = "✅" if r['correct'] else "❌"
-        print(f"  {mark} Pred: {r['predicted_scorer_name']} | Actual: {r['scorer_name']} ({r['confidence']:.0%})")
+    """Real track record of every logged pick on finished games (see picks.py)."""
+    import display as ui
+    warn: list = []
+    with ui.console.status("Updating data…"), _quiet(warn):
+        summary = sync_data()
+    ui.track_record(picks.summary(db()), summary)
+    ui.notes(warn)
 
 # ──────────────────────────────────────────────
 # CLI
 # ──────────────────────────────────────────────
 if __name__ == "__main__":
     import sys
-    cmd = sys.argv[1] if len(sys.argv) > 1 else "help"
+    # Plain `python3 nba.py`, options only (`--watch`) or team codes (`python3 nba.py LAL`) = today's picks
+    cmd = (sys.argv[1] if len(sys.argv) > 1 and not sys.argv[1].startswith("--") and not parse_teams(sys.argv[1:2])
+           else "predict")
 
     if cmd == "init":
         init()
@@ -1012,12 +1020,18 @@ if __name__ == "__main__":
         days = int(sys.argv[3]) if len(sys.argv) > 3 else None
         backfill(year, days)
     elif cmd == "report":
-        sync_data()
+        import display as ui
         d = sys.argv[2] if len(sys.argv) > 2 else date.today().strftime("%Y%m%d")
-        if st._daily_feed(d):
-            print(st.daily_report(db(), d))
-        else:
-            print(report_without_lineups(db(), d))
+        warn: list = []
+        with ui.console.status("Updating data and fetching lineups/injuries…"), _quiet(warn):
+            summary = sync_data()
+            if st._daily_feed(d):
+                ids = [g['game_id'] for g in get_todays_games() if g['status'] == 1] if d == date.today().strftime("%Y%m%d") else None
+                body = st.daily_report(db(), d, ids)
+            else:
+                body = report_without_lineups(db(), d)
+        ui.report(body, summary)
+        ui.notes(warn)
     elif cmd == "lineups":
         st.backfill_lineups(db())
     elif cmd == "predict":
@@ -1028,7 +1042,7 @@ if __name__ == "__main__":
             first = True
             try:
                 while True:
-                    left = predict_today(first_pass=first)
+                    left = predict_today(first_pass=first, teams=parse_teams(sys.argv[1:]))
                     first = False
                     if not left:
                         print("\n✅ Every game is confirmed or has tipped. Done.")
@@ -1040,12 +1054,17 @@ if __name__ == "__main__":
             except KeyboardInterrupt:
                 print("\nStopped.")
         else:
-            predict_today()
+            teams = parse_teams(sys.argv[1:])
+            if not teams and sys.stdin.isatty() and '--all' not in sys.argv:   # plain run in a terminal: ask
+                with _quiet([]):
+                    todays = [g for g in get_todays_games() if g['status'] == 1]
+                if todays:
+                    teams = ask_for_teams(todays)
+            predict_today(teams=teams)
     elif cmd == "backfill_tip_players":
         backfill_tip_players()
     elif cmd == "eval":
-        sync_data()
-        evaluate()
+        evaluate()          # syncs data itself, quietly
     elif cmd == "test":
         # Quick test on one game
         gid = sys.argv[2] if len(sys.argv) > 2 else "401909881"
@@ -1068,9 +1087,13 @@ Usage:
   python nba.py backfill_tip_players         # Backfill tip winner player id + name
   python nba.py report [YYYYMMDD]            # Today's lineups (expected/confirmed) + injury report
   python nba.py lineups                      # Backfill starting lineups (run once)
+  python nba.py                              # Numbered list of today's games; pick one by number or team name (Enter = all)
+  python nba.py knicks                       # Just one team's game (team name or code, any case)
+  python nba.py --all                        # Every game, without asking
   python nba.py predict                      # Today's pre-game predictions
   python nba.py predict --watch              # Keep rechecking; print each game as its lineup updates/confirms
   python nba.py predict --confirmed-only     # Skip any game without a CONFIRMED lineup
   python nba.py eval                         # Check accuracy
+  python nba.py help                         # This list
   python nba.py test [game_id]               # Test one game
         """)
