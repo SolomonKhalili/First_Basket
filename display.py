@@ -71,7 +71,10 @@ def game_card(c: dict):
     picks.add_column("Team", style="dim")
     picks.add_column("Chance", justify="right")
     picks.add_column("", no_wrap=True)
-    picks.add_column("Fair odds", justify="right")
+    season = c.get("season")                       # {name: (first baskets, games played)} this season
+    if season is not None:
+        picks.add_column("Season", justify="right", no_wrap=True)
+    picks.add_column("Fair", justify="right")
     fanduel = c.get("fanduel")                     # {name: American odds}; None = odds not fetched
     evs = c.get("ev") or {}                        # {name: EV per $1}
     if fanduel is not None:
@@ -80,8 +83,10 @@ def game_card(c: dict):
     top = c["picks"][0][2] if c["picks"] else 0
     for i, (name, team, p, fair) in enumerate(c["picks"], 1):
         bold = "bold" if i == 1 else ""
-        cells = [str(i), Text(name, style=bold), team, Text(f"{p:.1%}", style=bold),
-                 _bar(p, top), Text(f"{fair:+d}", style=bold)]
+        cells = [str(i), Text(name, style=bold), team, Text(f"{p:.1%}", style=bold), _bar(p, top, width=6)]
+        if season is not None:
+            cells.append(season_cell(season.get(name)))
+        cells.append(Text(f"{fair:+d}", style=bold))
         if fanduel is not None:
             cells += [_fanduel_cell(fanduel.get(name), fair), ev_cell(evs.get(name))]
         picks.add_row(*cells)
@@ -134,17 +139,31 @@ def tip_line(c: dict) -> Text:
     j = c.get("jumpers") or {}
     away, home = c["away"], c["home"]
     fav = away if c["tip"][away] > c["tip"][home] else home
+    records = c.get("tip_record") or {}
+    # with this season's tip records the line gets long: one jumper per line so a record never splits
+    two_lines = any(r and r[1] for r in records.values())
     line = Text()
     for i, team in enumerate((away, home)):
         if i:
-            line.append("  vs  ", style="dim")
+            line.append("\nvs  " if two_lines else "  vs  ", style="dim")
         is_fav = team == fav
         if j.get(team):
             line.append(f"{j[team]} ({team})", style="bold" if is_fav else "")
         else:
             line.append(f"{team} jumper not known yet", style="dim italic")
         line.append(f" {c['tip'][team]:.0%}", style="bold green" if is_fav else "dim")
+        rec = (c.get("tip_record") or {}).get(team)
+        if rec and rec[1]:                          # his real tips this season: won / taken
+            line.append(f" (won {rec[0]}/{rec[1]})", style="dim")
     return line
+
+
+def season_cell(rec) -> Text:
+    """(first baskets, games played) this season -> '4/14'; '–' when he hasn't played yet this season."""
+    if not rec or not rec[1]:
+        return Text("–", style="dim")
+    fb, gp = rec
+    return Text(f"{fb}/{gp}", style="bold" if fb else "dim")
 
 
 def money(x: float) -> str:
@@ -312,7 +331,8 @@ def legend(any_projected: bool):
     t.add_column(style="bold", no_wrap=True)
     t.add_column()
     t.add_row("Chance", "The model's chance this player scores the game's first basket (random pick = 10%).")
-    t.add_row("Fair odds", "The break-even price. A bet only makes sense if the sportsbook pays MORE "
+    t.add_row("Season", "His real record this season: scored the game's first basket in 4 of his 14 games = 4/14.")
+    t.add_row("Fair", "Fair odds: the break-even price. A bet only makes sense if the sportsbook pays MORE "
                            "(e.g. +700 when fair is +500).")
     t.add_row("FanDuel", "FanDuel's current First Basket price. Green = it pays more than the fair odds "
                          "(the model thinks the bet has value); grey = it pays less. Skip it with --no-odds.")
@@ -323,7 +343,7 @@ def legend(any_projected: bool):
     t.add_row("Top 2", "The two players most likely to score the game's first basket.")
     t.add_row("Scores first", "Each team's chance to score the game's first points (from the tip-off and home court).")
     t.add_row("Tip-off", "Who jumps for each team (away first) and each one's chance to win the opening jump ball; "
-                         "the favourite is in bold. The jumper is the player who usually jumps for that team, "
+                         "the favourite is in bold; (won 9/12) = tips he won this season. The jumper is the player who usually jumps for that team, "
                          "from past tips. The team that wins the tip scores first about 66% of the time.")
     t.add_row("Lineups", "✅ official   🟡 expected, can change   🟠 our guess")
     if any_projected:

@@ -45,7 +45,7 @@ python3 gui.py                      # the same picks in your web browser (cards,
 
 If you already have the database and `pregame_model.json`, you only need the last two commands.
 
-Run the tests any time: `python3 -m pytest test_starters.py test_tip_model.py test_display.py test_picks.py test_pipeline.py test_pregame_model.py` (115 tests).
+Run the tests any time: `python3 -m pytest` (156 tests, all in the `tests/` folder).
 
 ---
 
@@ -69,7 +69,6 @@ Run the tests any time: `python3 -m pytest test_starters.py test_tip_model.py te
 | `python3 build_features.py [--incremental]` | Build training matrices (`--incremental` adds only new games) |
 | `python3 train_pregame.py [--incremental]` | Retrain the model and run the week-by-week test |
 | `python3 tip_model.py` | Accuracy check of the tip-off model |
-| `python3 view_data.py` | Browse games / export CSV |
 
 Before predicting, `predict` (and `report`, `eval`) continues from the saved data: it adds finished games since the last stored date with their first basket, tip-off players and lineups, retries recent gaps, **rewrites `first_basket_data.csv` from the database**, adds new games to the player stats, and — when there are new games — updates the training data and retrains the model. Nothing is re-downloaded from scratch.
 
@@ -176,9 +175,8 @@ NBA/
 ├── pregame_model.json      # trained weights + test results       (active model)
 ├── train_pregame.py        # retrains pregame_model.json and runs the week-by-week test
 ├── build_features.py       # builds training matrices and player game logs
-├── view_data.py            # DB viewer / CSV export
 ├── picks.py                # pick log + track record (`eval`)
-├── test_*.py               # 115 tests
+├── tests/                  # 156 tests (python3 -m pytest)
 ├── first_basket_data.csv   # every past game: who scored first (auto-regenerated; don't edit by hand)
 ├── my_predictions.xlsx     # open this: Scorecard, Games (our picks vs results), Lineups (expected vs confirmed vs actual)
 ├── nba_first_basket.db     # SQLite database

@@ -164,7 +164,7 @@ game_start,game_id,home_team,away_team,tip_winner,tip_winner_player,tip_winner_p
 11/12/25,401810068,CHA,MIL,CHA,4576060,Ryan Kalkbrenner,3133628,Myles Turner,Ryan Kalkbrenner,CHA,Cutting Dunk Shot,11:46
 11/12/25,401810069,DET,CHI,CHI,6478,Nikola Vucevic,4278562,Paul Reed,Duncan Robinson,DET,Pullup Jump Shot,11:25
 11/12/25,401810070,NY,ORL,ORL,4277847,Wendell Carter Jr.,4351852,Mitchell Robinson,Jalen Brunson,NY,Driving Finger Roll Layup,11:18
-11/12/25,401810071,BOS,MEM,BOS,4277951,Luka Garza,,,Jaylen Brown,BOS,Turnaround Jump Shot,11:33
+11/12/25,401810071,BOS,MEM,MEM,4277961,Jaren Jackson Jr.,4397424,Neemias Queta,Jaylen Brown,BOS,Turnaround Jump Shot,11:33
 11/12/25,401810072,MIA,CLE,CLE,4066328,Jarrett Allen,5105623,Kel'el Ware,Norman Powell,MIA,Running Jump Shot,10:58
 11/12/25,401810073,HOU,WSH,WSH,5160992,Alex Sarr,4871144,Alperen Sengun,Jabari Smith Jr.,HOU,Driving Dunk Shot,10:50
 11/12/25,401810074,NO,POR,POR,5105565,Donovan Clingan,3155535,Kevon Looney,Trey Murphy III,NO,Jump Shot,11:20
@@ -204,7 +204,7 @@ game_start,game_id,home_team,away_team,tip_winner,tip_winner_player,tip_winner_p
 11/17/25,401810099,MIA,NY,MIA,5105623,Kel'el Ware,4351852,Mitchell Robinson,Miles McBride,NY,Jump Shot,10:48
 11/17/25,401810100,TOR,CHA,TOR,3134908,Jakob Poeltl,4576060,Ryan Kalkbrenner,Brandon Ingram,TOR,Driving Dunk Shot,11:46
 11/17/25,401810101,MIN,DAL,DAL,4701208,Moussa Cisse,3032976,Rudy Gobert,Moussa Cisse,DAL,Turnaround Hook Shot,11:29
-11/17/25,401810102,NO,OKC,OKC,4900671,Ajay Mitchell,4277869,Jose Alvarado,Jeremiah Fears,NO,Driving Floating Jump Shot,10:49
+11/17/25,401810102,NO,OKC,OKC,4433255,Chet Holmgren,5061589,Yves Missi,Jeremiah Fears,NO,Driving Floating Jump Shot,10:49
 11/17/25,401810103,DEN,CHI,DEN,3112335,Nikola Jokic,6478,Nikola Vucevic,Peyton Watson,DEN,Jump Shot,11:44
 11/18/25,401810104,ORL,GS,ORL,4277847,Wendell Carter Jr.,6589,Draymond Green,Franz Wagner,ORL,Pullup Jump Shot,11:38
 11/18/25,401810105,BKN,BOS,BKN,4278067,Nic Claxton,4397424,Neemias Queta,Michael Porter Jr.,BKN,Jump Shot,11:41
@@ -321,7 +321,7 @@ game_start,game_id,home_team,away_team,tip_winner,tip_winner_player,tip_winner_p
 12/03/25,401810184,CHI,BKN,CHI,6478,Nikola Vucevic,4278067,Nic Claxton,Michael Porter Jr.,BKN,Tip Shot,11:07
 12/03/25,401810185,HOU,SAC,HOU,4871144,Alperen Sengun,3914285,Drew Eubanks,Amen Thompson,HOU,Driving Floating Jump Shot,11:40
 12/03/25,401810186,MIL,DET,MIL,3133628,Myles Turner,4433621,Jalen Duren,Tobias Harris,DET,Jump Shot,11:24
-12/03/25,401810187,DAL,MIA,MIA,,,,,Bam Adebayo,MIA,Jump Shot,11:43
+12/03/25,401810187,DAL,MIA,MIA,4066261,Bam Adebayo,6583,Anthony Davis,Bam Adebayo,MIA,Jump Shot,11:43
 12/04/25,401810188,PHI,GS,PHI,4870562,Dominick Barlow,3213,Al Horford,Joel Embiid,PHI,Fade Away Jump Shot,11:43
 12/04/25,401810189,WSH,BOS,BOS,4397424,Neemias Queta,4277848,Marvin Bagley III,Neemias Queta,BOS,Reverse Layup Shot,11:41
 12/04/25,401810190,BKN,UTAH,BKN,4278067,Nic Claxton,4684793,Kyle Filipowski,Lauri Markkanen,UTAH,Running Layup Shot,10:59

@@ -233,9 +233,11 @@ FIRST_SHOTS_SCHEMA = """CREATE TABLE IF NOT EXISTS first_shots (
 
 
 def tip_jumpball(actions: list[dict]) -> Optional[dict]:
-    """Extract both jumpball participants: winner + loser from transformed PBP."""
+    """Extract both jumpball participants: winner + loser from transformed PBP.
+    ESPN sometimes lists an empty jump-ball entry first (no player, no team; e.g. MIA @ DAL 12/03/25) followed by the
+    real one: entries without a player are skipped."""
     for a in actions:
-        if a.get('actionType') == 'jumpball':
+        if a.get('actionType') == 'jumpball' and (a.get('personId') or a.get('playerName')):
             winner_id = a.get('personId', '')
             winner_name = a.get('playerName', '')
             loser_id = a.get('tip_loser_player_id', '')
@@ -427,8 +429,14 @@ def catchup_missing_games():
 
 CSV_PATH = "first_basket_data.csv"
 
-def export_csv(con):
-    """Rewrite the CSV from the database with all current data including tip winner player name."""
+CSV_HEADER = ["game_start", "game_id", "home_team", "away_team", "tip_winner", "tip_winner_player",
+              "tip_winner_player_name", "tip_loser_player", "tip_loser_player_name", "first_basket_scorer",
+              "scorer_team", "shot_type", "clock"]
+
+
+def csv_rows(con) -> list:
+    """Every finished game with its tip-off and first basket (oldest first), as the rows of first_basket_data.csv
+    (columns: CSV_HEADER). Also shown in the GUI's Data view ("All games" tab)."""
     rows = con.execute("""
         SELECT g.game_date, g.game_id, g.home_team, g.away_team,
                g.tip_winner_team, g.tip_winner_player_id, g.tip_winner_player_name,
@@ -438,30 +446,22 @@ def export_csv(con):
         JOIN first_baskets fb ON g.game_id = fb.game_id
         ORDER BY g.game_date
     """).fetchall()
+    out = []
+    for (game_date, game_id, home_team, away_team, tip_team, tip_wid, tip_wname, tip_lid, tip_lname,
+         scorer_name, scorer_team, shot_type, clock) in rows:
+        d = game_date.replace('-', '')
+        out.append([f"{d[4:6]}/{d[6:8]}/{d[2:4]}", game_id, home_team, away_team, tip_team or '', tip_wid or '',
+                    tip_wname or '', tip_lid or '', tip_lname or '', scorer_name, scorer_team, shot_type, clock])
+    return out
 
+
+def export_csv(con):
+    """Rewrite the CSV from the database with all current data including tip winner player name."""
+    rows = csv_rows(con)
     with open(CSV_PATH, "w", newline="") as f:
         writer = csv.writer(f)
-        writer.writerow(["game_start", "game_id", "home_team", "away_team", "tip_winner", "tip_winner_player", "tip_winner_player_name", "tip_loser_player", "tip_loser_player_name", "first_basket_scorer",
-                         "scorer_team", "shot_type", "clock"])
-        for row in rows:
-            game_date, game_id, home_team, away_team, tip_winner_team, tip_winner_player_id, tip_winner_player_name, tip_loser_player_id, tip_loser_player_name, scorer_name, scorer_team, shot_type, clock = row
-            d = game_date.replace('-', '')
-            game_start = f"{d[4:6]}/{d[6:8]}/{d[2:4]}"
-            writer.writerow([
-                game_start,
-                game_id,
-                home_team,
-                away_team,
-                tip_winner_team or '',
-                tip_winner_player_id or '',
-                tip_winner_player_name or '',
-                tip_loser_player_id or '',
-                tip_loser_player_name or '',
-                scorer_name,
-                scorer_team,
-                shot_type,
-                clock,
-            ])
+        writer.writerow(CSV_HEADER)
+        writer.writerows(rows)
     return len(rows)
 
 
@@ -625,9 +625,11 @@ def sync_data() -> str:
     # who usually jumps); each day is fetched once
     today = date.today().strftime("%Y%m%d")
     played = {r[0] for r in con.execute("SELECT DISTINCT game_date FROM games WHERE game_date < ?", (today,))}
-    # ...and re-check recent days whose lineup file was empty (a failed download, or NBA.com posting late)
+    # ...and re-check days in the last 30 whose lineup file was empty (a failed download, or NBA.com posting late).
+    # Not older: a day NBA.com never filled in (11/02/26 has no starters at all) would be re-asked forever.
+    retry_from = (date.today() - timedelta(days=30)).strftime("%Y%m%d")
     empty = {d for (d,) in con.execute("SELECT game_date FROM official_lineup_days WHERE players = 0 AND game_date >= ?",
-                                       (recent,))}
+                                       (retry_from,))}
     for d in sorted((played - st.official_lineup_days(con)) | (empty & played)):
         st.store_official_lineups(con, d)
         time.sleep(SLEEP)
@@ -903,8 +905,11 @@ def predict_today(first_pass: bool = True, teams: set = frozenset(), ui=None) ->
         order = [int(i) for i in np.argsort(probs)[::-1]]
 
         names = {p['player_id']: p['name'] for p in home_starters + away_starters}
-        jumpers = {home_team: names.get(tm.team_jumper(con, home_team, game_date, home_ids, home_c, extended=True)),
-                   away_team: names.get(tm.team_jumper(con, away_team, game_date, away_ids, away_c, extended=True))}
+        jumper_ids = {home_team: tm.team_jumper(con, home_team, game_date, home_ids, home_c, extended=True),
+                      away_team: tm.team_jumper(con, away_team, game_date, away_ids, away_c, extended=True)}
+        jumpers = {team: names.get(pid) for team, pid in jumper_ids.items()}
+        tips = season_tip_records(con, [pid for pid in jumper_ids.values() if pid], game_date)
+        tip_record = {team: tips.get(str(pid), (0, 0)) for team, pid in jumper_ids.items() if pid}
 
         # Keep every pick (never overwritten) so the real track record can be measured: `nba.py eval`
         # and my_predictions.xlsx
@@ -918,6 +923,7 @@ def predict_today(first_pass: bool = True, teams: set = frozenset(), ui=None) ->
         top5 = [(info[i]['name'], info[i]['team'], float(probs[i]), pm.fair_american(float(probs[i])))
                 for i in order[:5]]
         everyone = [{**info[i], "prob": float(probs[i])} for i in order]       # all 10 starters, for EV
+        season_counts = season_first_baskets(con, [p['id'] for p in info], game_date)
         fd_card = _fanduel_card(fd_games, home_team, away_team, top5, everyone)
         priced = fd_card.pop("_priced", [])
         if priced:                             # save the prices, so EV can be checked later (ev.paper_results)
@@ -925,7 +931,10 @@ def predict_today(first_pass: bool = True, teams: set = frozenset(), ui=None) ->
         ui.game_card({
             "matchup": matchup, "start": g.get('start', ''), "label": label, "updated": changed,
             "picks": top5, **fd_card,
+            # each starter's real record this season: first baskets / games played (games before today)
+            "season": {info[i]['name']: season_counts.get(str(info[i]['id']), (0, 0)) for i in order},
             "tip": {home_team: show_home, away_team: show_away}, "jumpers": jumpers,
+            "tip_record": tip_record,             # each jumper's tips won / tips taken this season
             "first_team": ({home_team: float(probs[:len(home_starters)].sum()),
                             away_team: float(probs[len(home_starters):].sum())} if pg.get("type") == "two_stage" else None),
             "home": home_team, "away": away_team,
@@ -939,6 +948,56 @@ def predict_today(first_pass: bool = True, teams: set = frozenset(), ui=None) ->
     if first_pass:
         ui.legend(any_projected)
     return pending
+
+
+def season_first_baskets(con, player_ids, before_date: str, season_start: str = picks.SEASON_START) -> dict:
+    """player_id -> (first baskets, games played) this season, counting games from `season_start` up to (not
+    including) `before_date`. 'Played' = had minutes in the box score; a player with no games gives (0, 0)."""
+    ids = [str(i) for i in player_ids]
+    if not ids:
+        return {}
+    rows = con.execute(
+        f"""SELECT l.player_id,
+                   SUM(l.minutes > 0),
+                   SUM(l.minutes > 0 AND f.scorer_player_id = l.player_id)
+            FROM lineups l
+            JOIN games g ON g.game_id = l.game_id
+            LEFT JOIN first_baskets f ON f.game_id = l.game_id
+            WHERE g.game_date >= ? AND g.game_date < ? AND l.player_id IN ({",".join("?" * len(ids))})
+            GROUP BY l.player_id""", (season_start, before_date, *ids)).fetchall()
+    return {str(pid): (int(fb or 0), int(gp or 0)) for pid, gp, fb in rows}
+
+
+def season_tip_records(con, player_ids, before_date: str, season_start: str = picks.SEASON_START) -> dict:
+    """player_id -> (tips won, tips taken) this season, from the opening jump ball of each game from
+    `season_start` up to (not including) `before_date`."""
+    ids = [str(i) for i in player_ids]
+    if not ids:
+        return {}
+    rows = con.execute(
+        f"""SELECT pid, SUM(won), COUNT(*) FROM (
+                SELECT tip_winner_player_id AS pid, 1 AS won FROM games WHERE game_date >= ? AND game_date < ?
+                UNION ALL
+                SELECT tip_loser_player_id, 0 FROM games WHERE game_date >= ? AND game_date < ?)
+            WHERE pid IN ({",".join("?" * len(ids))}) GROUP BY pid""",
+        (season_start, before_date, season_start, before_date, *ids)).fetchall()
+    return {str(pid): (int(won), int(taken)) for pid, won, taken in rows}
+
+
+def season_records_by_name(con, names, before_date: str, season_start: str = picks.SEASON_START) -> dict:
+    """name -> {"fb": (first baskets, games played), "tips": (won, taken)} this season, for names as stored in the
+    pick log (the GUI scoreboard has names, not ids). Names are matched to ids through this season's box scores."""
+    names = [n for n in dict.fromkeys(names) if n]
+    if not names:
+        return {}
+    # Box scores sometimes drop accents ('Luka Doncic' vs 'Luka Dončić'): match on st.norm_name, not exact text
+    by_norm = {st.norm_name(name): str(pid) for pid, name in con.execute(
+        """SELECT DISTINCT l.player_id, l.player_name FROM lineups l JOIN games g ON g.game_id = l.game_id
+           WHERE g.game_date >= ?""", (season_start,))}
+    ids = {n: by_norm[st.norm_name(n)] for n in names if st.norm_name(n) in by_norm}
+    fb = season_first_baskets(con, ids.values(), before_date, season_start)
+    tips = season_tip_records(con, ids.values(), before_date, season_start)
+    return {n: {"fb": fb.get(ids[n], (0, 0)), "tips": tips.get(ids[n], (0, 0))} for n in names if n in ids}
 
 
 def _fanduel_prices(games: list, warn: list, ui=None):

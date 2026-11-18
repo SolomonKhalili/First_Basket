@@ -33,7 +33,7 @@ def test_game_card_shows_picks_tip_lineup_and_notes():
 
 def test_card_headline_shows_top_two_and_the_tip_winner_by_name():
     out = render(ui.game_card, card())
-    head = out[:out.index("Fair odds")]                                 # the headline sits above the table
+    head = out[:out.index("   #   Player")]                                 # the headline sits above the table
     assert "Top 2" in head and "1. Jalen Brunson (NY) 16.2%" in head and "2. RJ Barrett (TOR) 11.9%" in head
     assert "Karl-Anthony Towns (NY) 55%  vs  TOR jumper not known yet 45%" in head   # away first; TOR unknown
 
@@ -102,7 +102,7 @@ def test_card_shows_which_team_is_expected_to_score_first():
     c = card()
     c["first_team"] = {"NY": 0.53, "TOR": 0.47}
     out = render(ui.game_card, c)
-    head = out[:out.index("Fair odds")]
+    head = out[:out.index("   #   Player")]
     assert "Scores first" in head and "NY 53%  vs  TOR 47%" in head
     c["first_team"] = {"NY": 0.40, "TOR": 0.60}                        # home favoured: still away first
     assert "NY 40%  vs  TOR 60%" in render(ui.game_card, c)
@@ -189,3 +189,22 @@ def test_fanduel_card_best_value_needs_at_least_a_cent():
     assert at_fair["best_value"] is None and at_fair["ev"]["Jalen Brunson"] == pytest.approx(0)
     better = nba._fanduel_card(game(450), "TOR", "NY", top, everyone)         # EV +0.10
     assert better["best_value"]["name"] == "Jalen Brunson" and better["_priced"][0]["id"] == "1"
+
+
+def test_game_card_season_column():
+    c = card()
+    c["season"] = {"Jalen Brunson": (4, 14), "RJ Barrett": (0, 0)}
+    out = render(ui.game_card, c)
+    assert "Season" in out and "4/14" in out
+    row = next(line for line in out.splitlines() if "RJ Barrett" in line and "+739" in line)
+    assert "–" in row                                                   # no games yet -> a dash, not 0/0
+    assert "Season" not in render(ui.game_card, card()).split("Starters")[0]   # older cards without it
+
+
+def test_tip_line_shows_tips_won_this_season():
+    c = card()
+    c["jumpers"] = {"NY": "Karl-Anthony Towns", "TOR": "Jakob Poeltl"}
+    c["tip"] = {"TOR": 0.62, "NY": 0.38}
+    c["tip_record"] = {"TOR": (9, 12), "NY": (0, 0)}                    # NY: no tips yet -> nothing shown
+    plain = ui.tip_line(c).plain
+    assert "Jakob Poeltl (TOR) 62% (won 9/12)" in plain and "(won 0/0)" not in plain

@@ -276,29 +276,32 @@ def lineup_rows(con) -> list:
             if exp:
                 early = ", ".join(p[1] for p in exp)
             elif d < SNAPSHOTS_SINCE:
-                early = "Not recorded (we started saving early lineups on 11/17/26)"
+                early = ("Not available: NBA.com overwrites its early lineup with the final one, and we only started saving "
+                         "copies on 11/17/26")
             else:
-                early = "Not posted by NBA.com when the program ran"
+                early = "Not available: NBA.com hadn't posted an early lineup when the program ran"
             if conf:
                 final = ", ".join(p[1] for p in conf)
             elif not finished:
                 final = "Not confirmed yet (NBA.com confirms ~30 min before tip-off)"
             elif d in empty_days:
-                final = "NBA.com posted no pre-game lineup this day (who actually started is in the next column)"
+                final = ("Not available: NBA.com never posted starting lineups this day (who actually started is in the next "
+                         "column)")
             else:
-                final = "Not recorded"
+                final = "Missing: the final lineup wasn't saved"
             started = ", ".join(p[1] for p in act) if played else (
                 "Game not played yet" if not finished else "Box score not available")
-            no_early = ("Can't check: early lineups not saved before 11/17/26" if d < SNAPSHOTS_SINCE
-                        else "Can't check: no early lineup was posted")
+            no_early = ("Not available: no early lineup saved before 11/17/26" if d < SNAPSHOTS_SINCE
+                        else "Not available: NBA.com posted no early lineup")
             if not played:
-                early_ok = "Waiting for the game" if exp and not finished else no_early if not exp else "Can't check: box score not available"
+                early_ok = "Waiting for the game" if exp and not finished else no_early if not exp else "Missing: box score not available"
                 final_ok = "Waiting for the game" if conf else ("Waiting for the final lineup" if not finished
-                                                                else "Can't check: final lineup not recorded")
+                                                                else "Missing: the final lineup wasn't saved")
             else:
                 early_ok = _same_five([(p[0], p[1]) for p in exp], act) if exp else no_early
                 final_ok = _same_five([(p[0], p[1]) for p in conf], act) if conf else (
-                    "Can't check: NBA.com posted no lineup" if d in empty_days else "Can't check: final lineup not recorded")
+                    "Not available: NBA.com posted no lineup this day" if d in empty_days
+                    else "Missing: the final lineup wasn't saved")
             out.append([f"{d[4:6]}/{d[6:8]}/{d[2:4]}", f"{a} @ {h}", team, early, final, started, early_ok, final_ok])
     return out
 

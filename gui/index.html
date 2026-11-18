@@ -4,29 +4,37 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>First Basket Picks</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@600;700;800&family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
 <style>
 :root {
-  --bg: #f6f4ef; --surface: #ffffff; --surface-2: #f3f1ec; --text: #1c1917; --muted: #78716c;
-  --line: #e7e3dc; --accent: #ea580c; --accent-soft: #fff1e6; --good: #15803d; --good-soft: #e7f6ec;
+  --display: "Barlow Condensed", "Arial Narrow", -apple-system, sans-serif;   /* sporty headline font */
+  --bg: #f3f0e9; --surface: #ffffff; --surface-2: #f5f2ec; --text: #17151a; --muted: #736d68;
+  --line: #e6e1d8; --accent: #ea580c; --accent-soft: #fff0e3; --good: #15803d; --good-soft: #e5f5ea;
   --warn: #b45309; --warn-soft: #fef3c7; --bad: #b91c1c; --bad-soft: #fde8e8; --live: #dc2626;
   --shadow: 0 1px 2px rgba(28,25,23,.05), 0 4px 16px rgba(28,25,23,.06);
   --shadow-up: 0 2px 4px rgba(28,25,23,.06), 0 12px 28px rgba(28,25,23,.10);
-  --glow: radial-gradient(1200px 400px at 10% -10%, rgba(234,88,12,.10), transparent 60%);
+  --glow: radial-gradient(900px 420px at 0% -10%, rgba(234,88,12,.12), transparent 60%),
+          radial-gradient(800px 380px at 100% -10%, rgba(37,99,235,.08), transparent 60%);
+  --gold: #d97706;
 }
 @media (prefers-color-scheme: dark) {
   :root {
-    --bg: #0f1115; --surface: #171a20; --surface-2: #1e222a; --text: #e8eaee; --muted: #9aa1ad;
-    --line: #2a2f38; --accent: #fb8c3c; --accent-soft: #2a1d13; --good: #4ade80; --good-soft: #13261b;
+    --bg: #0a0c11; --surface: #12151c; --surface-2: #1a1e27; --text: #eef0f4; --muted: #949cab;
+    --line: #242a35; --accent: #ff7a1a; --accent-soft: #2b1a0c; --good: #4ade80; --good-soft: #10261a;
     --warn: #fbbf24; --warn-soft: #2a2412; --bad: #f87171; --bad-soft: #2b1617; --live: #f87171;
     --shadow: 0 1px 2px rgba(0,0,0,.3), 0 4px 16px rgba(0,0,0,.25);
     --shadow-up: 0 2px 6px rgba(0,0,0,.35), 0 14px 32px rgba(0,0,0,.4);
-    --glow: radial-gradient(1200px 420px at 10% -10%, rgba(251,140,60,.13), transparent 60%);
+    --glow: radial-gradient(900px 460px at 0% -10%, rgba(255,122,26,.16), transparent 60%),
+            radial-gradient(800px 420px at 100% -10%, rgba(59,130,246,.12), transparent 60%);
+    --gold: #fbbf24;
   }
 }
 * { box-sizing: border-box; }
 [hidden] { display: none !important; }
 body { margin: 0; background: var(--glow), var(--bg); background-attachment: fixed; color: var(--text);
-  font: 15px/1.45 -apple-system, BlinkMacSystemFont, "SF Pro Text", "Segoe UI", system-ui, sans-serif;
+  font: 15px/1.45 Inter, -apple-system, BlinkMacSystemFont, "SF Pro Text", "Segoe UI", system-ui, sans-serif;
   -webkit-font-smoothing: antialiased; }
 .num { font-variant-numeric: tabular-nums; }
 .wrap { max-width: 1240px; margin: 0 auto; padding: 24px 20px 64px; }
@@ -44,6 +52,31 @@ body { margin: 0; background: var(--glow), var(--bg); background-attachment: fix
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after { animation: none !important; transition: none !important; }
 }
+
+/* ── Header banner (always dark, like a TV scorebug) ── */
+.banner { position: relative; overflow: hidden; border-radius: 22px; padding: 22px 24px 18px; color: #fff;
+  background: radial-gradient(620px 300px at 0% 0%, rgba(255,122,26,.38), transparent 62%),
+              radial-gradient(520px 280px at 100% 0%, rgba(59,130,246,.28), transparent 62%),
+              linear-gradient(135deg, #161b28, #0b0e15 70%);
+  border: 1px solid rgba(255,255,255,.07); box-shadow: 0 18px 50px rgba(8,10,16,.35); }
+.banner::after { content: ""; position: absolute; right: -60px; top: -40px; width: 620px; height: 330px; pointer-events: none;
+  background: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 600 320' fill='none' stroke='white' stroke-width='3'><rect x='10' y='10' width='580' height='300' rx='6'/><line x1='300' y1='10' x2='300' y2='310'/><circle cx='300' cy='160' r='52'/><circle cx='300' cy='160' r='16'/><rect x='10' y='100' width='120' height='120'/><circle cx='130' cy='160' r='42'/><path d='M10 38 H60 A150 150 0 0 1 60 282 H10'/><rect x='470' y='100' width='120' height='120'/><circle cx='470' cy='160' r='42'/><path d='M590 38 H540 A150 150 0 0 0 540 282 H590'/><circle cx='40' cy='160' r='8'/><circle cx='560' cy='160' r='8'/></svg>") no-repeat center / contain; opacity: .09; transform: rotate(-4deg); }
+.banner > * { position: relative; z-index: 1; }
+.banner h1 { font-family: var(--display); font-weight: 800; font-size: 40px; line-height: .95; text-transform: uppercase;
+  letter-spacing: .01em; }
+.banner h1 span { color: #ff8a2b; }
+.banner .date { color: rgba(255,255,255,.65); font-size: 14px; margin-top: 4px; }
+.banner .ball { width: 58px; height: 58px; font-size: 32px; background: radial-gradient(circle at 35% 30%, #ffb26b, #ea580c 70%);
+  box-shadow: 0 6px 22px rgba(234,88,12,.45), inset 0 -4px 10px rgba(0,0,0,.2); }
+.banner .btn.secondary { background: rgba(255,255,255,.08); color: #fff; border-color: rgba(255,255,255,.16); }
+.banner .btn.secondary:hover { background: rgba(255,255,255,.14); }
+.banner .btn:not(.secondary) { background: linear-gradient(135deg, #ff8a2b, #ea580c); box-shadow: 0 6px 20px rgba(234,88,12,.4); }
+.banner .pill { background: rgba(255,255,255,.07); border-color: rgba(255,255,255,.12); color: rgba(255,255,255,.72); }
+.banner .pill b { color: #fff; }
+@media (max-width: 520px) { .banner { padding: 18px 16px 14px; border-radius: 18px; } .banner h1 { font-size: 30px; } }
+
+/* ── Team logos and headshots ─────────────── */
+.logo { object-fit: contain; flex: none; filter: drop-shadow(0 1px 1px rgba(0,0,0,.25)); }
 
 /* ── Top bar ──────────────────────────────── */
 .top { display: flex; align-items: center; gap: 14px; flex-wrap: wrap; }
@@ -74,17 +107,23 @@ button { font: inherit; cursor: pointer; border: 0; color: inherit; }
   animation: pulse 1.6s ease-out infinite; }
 
 /* ── Scoreboard ───────────────────────────── */
-.section-title { font-size: 12.5px; text-transform: uppercase; letter-spacing: .07em; color: var(--muted);
-  margin: 0 0 10px; font-weight: 650; display: flex; align-items: center; gap: 10px; }
+.section-title { font-family: var(--display); font-size: 17px; text-transform: uppercase; letter-spacing: .06em;
+  color: var(--text); margin: 0 0 10px; font-weight: 700; display: flex; align-items: center; gap: 10px; }
+.section-title::before { content: ""; width: 4px; height: 16px; border-radius: 2px; background: var(--accent); }
 .board-wrap { margin: 24px 0 4px; }
 .board { display: grid; grid-template-columns: repeat(auto-fill, minmax(232px, 1fr)); gap: 10px; }
-.tile { text-align: left; background: var(--surface); border: 1px solid var(--line); border-radius: 13px;
-  padding: 11px 13px; display: grid; gap: 6px; transition: transform .12s ease, box-shadow .2s, border-color .2s; }
+.tile { text-align: left; border: 1px solid var(--line); border-radius: 14px; position: relative; overflow: hidden;
+  padding: 13px 14px 11px; display: grid; gap: 7px; transition: transform .12s ease, box-shadow .2s, border-color .2s;
+  background: linear-gradient(105deg, color-mix(in srgb, var(--away-c) 13%, transparent), transparent 40%,
+              transparent 60%, color-mix(in srgb, var(--home-c) 13%, transparent)), var(--surface); }
+.tile::before { content: ""; position: absolute; left: 0; right: 0; top: 0; height: 3px;
+  background: linear-gradient(90deg, var(--away-c) 0 50%, var(--home-c) 50% 100%); }
 .tile.pickable:hover { transform: translateY(-2px); box-shadow: var(--shadow-up); }
 .tile[aria-pressed="true"] { border-color: var(--accent); background: var(--accent-soft); box-shadow: 0 0 0 1px var(--accent) inset; }
 .tile.live { border-color: color-mix(in srgb, var(--live) 45%, var(--line)); }
-.tile .teams { display: flex; align-items: center; gap: 7px; font-weight: 650; }
-.tile .score { margin-left: auto; font-weight: 750; font-size: 16px; }
+.tile .teams { display: flex; align-items: center; gap: 7px; font-family: var(--display); font-weight: 700;
+  font-size: 21px; letter-spacing: .02em; line-height: 1; }
+.tile .score { margin-left: auto; font-weight: 800; font-size: 24px; }
 .tile .meta { display: flex; align-items: center; gap: 6px; font-size: 12.5px; color: var(--muted); }
 .tile .meta .live-txt { color: var(--live); font-weight: 650; }
 .tile .res { font-size: 12.5px; border-top: 1px dashed var(--line); padding-top: 6px; color: var(--muted); }
@@ -119,14 +158,22 @@ button { font: inherit; cursor: pointer; border: 0; color: inherit; }
   animation: shimmer 1.4s linear infinite; }
 
 /* ── Card ─────────────────────────────────── */
-.card { background: var(--surface); border: 1px solid var(--line); border-radius: 16px; box-shadow: var(--shadow);
+.card { background: linear-gradient(180deg, rgba(255,255,255,.025), transparent 30%), var(--surface);
+  border: 1px solid var(--line); border-radius: 20px; box-shadow: var(--shadow);
   overflow: hidden; transition: transform .18s ease, box-shadow .25s ease; }
 .card:hover { transform: translateY(-3px); box-shadow: var(--shadow-up); }
-.card-head { display: flex; align-items: center; flex-wrap: wrap; gap: 6px 10px; padding: 14px 18px;
-  border-bottom: 1px solid var(--line); position: relative; }
-.card-head::before { content: ""; position: absolute; left: 0; right: 0; top: 0; height: 3px;
-  background: linear-gradient(90deg, var(--away-c) 0 50%, var(--home-c) 50% 100%); opacity: .9; }
-.matchup { font-weight: 750; font-size: 17px; display: flex; align-items: center; gap: 8px; }
+.card-head { display: grid; gap: 8px; padding: 16px 18px 12px; border-bottom: 1px solid var(--line); position: relative;
+  background: linear-gradient(100deg, color-mix(in srgb, var(--away-c) 30%, transparent), transparent 42%,
+              transparent 58%, color-mix(in srgb, var(--home-c) 30%, transparent)); }
+.card-head::before { content: ""; position: absolute; left: 0; right: 0; top: 0; height: 4px;
+  background: linear-gradient(90deg, var(--away-c) 0 50%, var(--home-c) 50% 100%); }
+.mu { display: grid; grid-template-columns: 1fr auto 1fr; align-items: center; gap: 10px; }
+.mu .tm { display: flex; align-items: center; gap: 10px; font-family: var(--display); font-weight: 800; font-size: 30px;
+  letter-spacing: .02em; line-height: 1; }
+.mu .tm.home { justify-content: flex-end; }
+.mu .at { font-family: var(--display); font-size: 18px; font-weight: 600; color: var(--muted); }
+.head-meta { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+.head-meta .status { margin-left: auto; }
 .at { color: var(--muted); font-weight: 400; }
 .status { color: var(--muted); font-size: 13px; margin-left: auto; display: inline-flex; align-items: center; gap: 6px; white-space: nowrap; }
 .status.is-live { color: var(--live); font-weight: 650; }
@@ -143,13 +190,27 @@ button { font: inherit; cursor: pointer; border: 0; color: inherit; }
 .verdict.miss { background: var(--surface-2); color: var(--muted); }
 .verdict.wait { background: var(--surface-2); color: var(--muted); font-weight: 500; }
 
-.hero { display: flex; align-items: center; gap: 14px; padding: 14px; border-radius: 13px;
-  background: linear-gradient(135deg, var(--surface-2), color-mix(in srgb, var(--top-c) 12%, var(--surface-2))); }
-.hero .label { font-size: 12px; color: var(--muted); text-transform: uppercase; letter-spacing: .05em; }
-.hero .name { font-size: 20px; font-weight: 750; letter-spacing: -.01em; }
-.hero .team { color: var(--muted); font-size: 13px; display: flex; align-items: center; gap: 6px; }
-.hero .big { margin-left: auto; text-align: right; }
-.hero .pct { font-size: 30px; font-weight: 800; color: var(--accent); line-height: 1; }
+.hero { display: flex; align-items: flex-end; gap: 14px; padding: 12px 16px 0 10px; border-radius: 16px; min-height: 104px;
+  position: relative; overflow: hidden;
+  background: radial-gradient(260px 160px at 0% 100%, color-mix(in srgb, var(--top-c) 45%, transparent), transparent 70%),
+              linear-gradient(120deg, color-mix(in srgb, var(--top-c) 18%, var(--surface-2)), var(--surface-2) 70%); }
+.hero .shot { width: 108px; height: 92px; flex: none; display: grid; place-items: end center; position: relative; }
+.hero .shot img { width: 124px; height: 90px; object-fit: cover; object-position: top; display: block;
+  filter: drop-shadow(0 6px 10px rgba(0,0,0,.3)); }
+.hero .shot .initials { position: absolute; inset: 10px 14px 8px; border-radius: 50%; display: grid; place-items: center;
+  background: color-mix(in srgb, var(--top-c) 55%, var(--surface)); color: #fff; font-family: var(--display);
+  font-weight: 800; font-size: 30px; }
+.hero .shot img + .initials { display: none; }
+.hero .who { padding-bottom: 14px; min-width: 0; }
+.hero .label { font-size: 11px; color: var(--accent); text-transform: uppercase; letter-spacing: .1em; font-weight: 700; }
+.hero .name { font-family: var(--display); font-size: 27px; font-weight: 800; line-height: 1; text-transform: uppercase;
+  letter-spacing: .01em; margin-top: 3px; }
+.hero .team { color: var(--muted); font-size: 13px; display: flex; align-items: center; gap: 6px; margin-top: 4px; }
+.hero .big { margin-left: auto; text-align: right; padding-bottom: 14px; }
+.hero .pct { font-family: var(--display); font-size: 48px; font-weight: 800; color: var(--accent); line-height: .9;
+  text-shadow: 0 2px 18px color-mix(in srgb, var(--accent) 35%, transparent); }
+@media (max-width: 520px) { .hero .shot { width: 78px; } .hero .shot img { width: 92px; height: 68px; } .hero .name { font-size: 22px; }
+  .hero .pct { font-size: 38px; } .mu .tm { font-size: 24px; } }
 .hero .sub { font-size: 12px; color: var(--muted); margin-top: 5px; }
 
 .facts { display: grid; gap: 10px; margin: 14px 0 6px; }
@@ -185,7 +246,13 @@ tr.scored td { background: var(--good-soft); }
 th.r, td.r { text-align: right; }
 .rank { color: var(--muted); width: 18px; }
 .player { display: flex; align-items: center; gap: 8px; }
-.player small { color: var(--muted); }
+.player .pn { display: grid; line-height: 1.25; }
+.rec { font-size: 12px; color: var(--muted); font-weight: 500; }
+.rec b { color: var(--accent); font-weight: 800; }
+.tile .rec { white-space: nowrap; }                 /* keep "1st basket 4/12" together */
+.hero .rec-hero { font-size: 12.5px; color: var(--muted); margin-top: 6px; }
+.hero .rec-hero b { color: var(--text); }
+.player small { display: none; }               /* the team logo already says which team */
 .bar { height: 6px; border-radius: 99px; background: var(--line); width: 44px; display: inline-block; vertical-align: middle;
   margin-right: 8px; overflow: hidden; }
 .bar i { display: block; height: 100%; background: var(--accent); border-radius: 99px;
@@ -226,7 +293,8 @@ details[open] summary::before { content: "▾ "; }
 
 /* ── Side panel ───────────────────────────── */
 .side { display: grid; gap: 20px; }
-.panel { background: var(--surface); border: 1px solid var(--line); border-radius: 16px; box-shadow: var(--shadow); padding: 16px 18px; }
+.panel { background: linear-gradient(180deg, rgba(255,255,255,.025), transparent 40%), var(--surface);
+  border: 1px solid var(--line); border-radius: 20px; box-shadow: var(--shadow); padding: 18px 18px; }
 .ring-row { display: flex; align-items: center; gap: 14px; margin-bottom: 12px; }
 .ring { --p: 0; width: 76px; height: 76px; border-radius: 50%; flex: none; display: grid; place-items: center;
   background: conic-gradient(var(--accent) calc(var(--p) * 1%), var(--line) 0); transition: --p 1s; }
@@ -254,20 +322,25 @@ details[open] summary::before { content: "▾ "; }
 .toast small { display: block; color: var(--muted); margin-top: 2px; }
 
 /* ── Learn EV tutorial ────────────────────── */
-.learn { border: 0; padding: 0; border-radius: 20px; width: min(640px, calc(100vw - 24px)); max-height: calc(100vh - 40px);
+.learn { border: 0; padding: 0; border-radius: 20px; width: min(640px, calc(100vw - 16px)); max-height: calc(100vh - 16px);
   background: var(--surface); color: var(--text); box-shadow: 0 30px 80px rgba(0,0,0,.35); }
-.learn::backdrop { background: rgba(10,10,14,.55); backdrop-filter: blur(3px); }
-.learn[open] { animation: fadeUp .3s cubic-bezier(.2,.7,.2,1) both; display: flex; flex-direction: column; }
+.learn::backdrop { background: rgba(6,8,12,.75); }
+/* Entrance = a small slide only. No fade: if a browser skips the animation, the text must still be visible. */
+@keyframes learnIn { from { transform: translateY(10px); } to { transform: none; } }
+/* A fixed height (not just max-height): Safari otherwise gives the flexible slide area zero height. */
+.learn[open] { animation: learnIn .25s cubic-bezier(.2,.7,.2,1); display: flex; flex-direction: column;
+  height: min(620px, calc(100vh - 16px)); }
+.learn-head, .learn-foot { flex: none; }
 .learn-head { display: flex; align-items: center; gap: 10px; padding: 16px 20px; border-bottom: 1px solid var(--line); }
-.learn-head h2 { margin: 0; font-size: 17px; }
+.learn-head h2 { margin: 0; font-size: 17px; flex: 1; min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .learn-head .step-of { color: var(--muted); font-size: 13px; margin-left: auto; }
 .x { background: var(--surface-2); width: 32px; height: 32px; border-radius: 50%; font-size: 15px; color: var(--muted); }
-.learn-body { padding: 20px 22px 8px; overflow-y: auto; }
+.learn-body { padding: 20px 22px 8px; overflow-y: auto; overflow-x: hidden; flex: 1 1 auto; min-height: 0; }
 .learn-body h3 { margin: 0 0 4px; font-size: 22px; letter-spacing: -.01em; }
 .learn-body .kicker { color: var(--accent); font-size: 12px; font-weight: 700; text-transform: uppercase; letter-spacing: .08em; }
 .learn-body p { margin: 10px 0; line-height: 1.55; }
 .learn-body .muted { color: var(--muted); }
-.learn-step { animation: fadeUp .35s ease both; }
+.learn-step { animation: learnIn .3s ease; }
 .callout { background: var(--surface-2); border-radius: 13px; padding: 14px 16px; margin: 14px 0; }
 .callout.good { background: var(--good-soft); }
 .callout.warn { background: var(--warn-soft); }
@@ -275,21 +348,23 @@ details[open] summary::before { content: "▾ "; }
 .bigline { font-size: 18px; font-weight: 700; line-height: 1.4; }
 .formula { font-size: 15px; line-height: 1.9; font-variant-numeric: tabular-nums; }
 .formula .eq { font-size: 20px; font-weight: 800; color: var(--good); }
-.ticket { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin: 14px 0; }
+.ticket { display: grid; grid-template-columns: repeat(auto-fit, minmax(110px, 1fr)); gap: 10px; margin: 14px 0; }
 .ticket div { background: var(--surface-2); border-radius: 12px; padding: 12px 14px; }
 .ticket small { display: block; color: var(--muted); font-size: 12px; text-transform: uppercase; letter-spacing: .05em; }
 .ticket b { font-size: 20px; }
 .ticket .win b { color: var(--good); } .ticket .lose b { color: var(--bad); }
 .dots100 { display: grid; grid-template-columns: repeat(20, 1fr); gap: 4px; margin: 12px 0 6px; max-width: 420px; }
-.dots100 i { aspect-ratio: 1; border-radius: 3px; background: var(--line); animation: pop .35s ease both; }
+.dots100 i { aspect-ratio: 1; border-radius: 3px; background: var(--line); animation: dotIn .35s ease backwards; }
+@keyframes dotIn { from { transform: scale(.3); } }        /* grow in only: never invisible if animation is skipped */
 .dots100 i.w { background: var(--good); }
 .legend-dots { display: flex; gap: 14px; font-size: 12.5px; color: var(--muted); }
 .legend-dots span::before { content: ""; display: inline-block; width: 10px; height: 10px; border-radius: 3px; margin-right: 6px;
   vertical-align: -1px; background: var(--line); }
 .legend-dots span.w::before { background: var(--good); }
 .calc { display: grid; gap: 14px; margin: 12px 0; }
-.calc label { font-size: 13px; color: var(--muted); display: flex; justify-content: space-between; align-items: baseline; }
-.calc label b { color: var(--text); font-size: 16px; }
+.calc label { font-size: 13px; color: var(--muted); display: flex; flex-wrap: wrap; justify-content: space-between;
+  align-items: baseline; gap: 2px 10px; }
+.calc label b { color: var(--text); font-size: 16px; white-space: nowrap; }
 .calc input[type=range] { width: 100%; accent-color: var(--accent); }
 .chips-row { display: flex; gap: 6px; flex-wrap: wrap; margin-top: 6px; }
 .chips-row button { background: var(--surface-2); border-radius: 8px; padding: 4px 10px; font-size: 13px; font-weight: 600; }
@@ -307,7 +382,7 @@ details[open] summary::before { content: "▾ "; }
 .whats { background: none; color: var(--accent); font-size: 12px; font-weight: 600; padding: 0 0 0 6px; text-decoration: underline; }
 
 /* slide navigation */
-.learn-stage { position: relative; display: flex; flex-direction: column; min-height: 0; flex: 1; }
+.learn-stage { position: relative; display: flex; flex-direction: column; min-height: 0; flex: 1 1 auto; }
 .learn-stage .learn-body { padding-left: 54px; padding-right: 54px; touch-action: pan-y; }
 .side-arrow { position: absolute; top: 50%; transform: translateY(-50%); width: 38px; height: 38px; border-radius: 50%;
   background: var(--surface-2); color: var(--text); font-size: 22px; line-height: 1; display: grid; place-items: center;
@@ -328,28 +403,117 @@ details[open] summary::before { content: "▾ "; }
   .learn-stage .learn-body { padding-left: 20px; padding-right: 20px; }
   .learn-foot { flex-wrap: wrap; }
   .learn-foot .progress-dots { width: 100%; justify-content: center; margin: 0 0 4px; }   /* dots on their own row */
-  .learn-foot .btn { flex: 1; justify-content: center; padding-left: 10px; padding-right: 10px; }
+  .learn-foot { gap: 6px; padding: 10px 12px; }
+  .learn-foot .btn { flex: 1; min-width: 0; justify-content: center; padding: 9px 6px; font-size: 14px; }
+  .play { min-width: 0; }
+  .learn-head { padding: 12px 14px; gap: 8px; }
+  .learn-stage .learn-body { padding: 14px 16px 6px; }
+  .learn-body h3 { font-size: 19px; }
+  .bigline { font-size: 16px; }
+  .result .ev-big { font-size: 22px; }
 }
+@media (max-width: 380px) { .learn-head > span:first-child { display: none; } }   /* drop the 🎓 when very narrow */
 .learn-head .step-of { white-space: nowrap; }
+
+/* ── Data view: the CSV and the spreadsheet as tabs ── */
+body.data-mode .board-wrap, body.data-mode #progress, body.data-mode #error, body.data-mode .layout { display: none !important; }
+.data-view { margin-top: 22px; }
+.data-top { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; margin-bottom: 14px; }
+.data-top h2 { margin: 0; font-family: var(--display); font-size: 28px; font-weight: 800; text-transform: uppercase; letter-spacing: .02em; }
+.back { background: var(--surface); border: 1px solid var(--line); border-radius: 10px; padding: 8px 14px; font-weight: 600; }
+.back:hover { border-color: var(--accent); }
+.dtabs { display: flex; gap: 6px; flex-wrap: wrap; background: var(--surface); border: 1px solid var(--line); border-radius: 14px;
+  padding: 5px; width: fit-content; max-width: 100%; }
+.dtab { padding: 9px 16px; border-radius: 10px; font-weight: 650; color: var(--muted); background: none; white-space: nowrap; }
+.dtab:hover { color: var(--text); background: var(--surface-2); }
+.dtab.on { background: var(--accent); color: #fff; box-shadow: 0 4px 14px color-mix(in srgb, var(--accent) 35%, transparent); }
+.dtab small { opacity: .75; font-weight: 600; margin-left: 4px; }
+.dtools { display: flex; gap: 10px; flex-wrap: wrap; align-items: center; margin: 14px 0 10px; }
+.dtools input, .dtools select { font: inherit; font-size: 14px; color: var(--text); background: var(--surface); border: 1px solid var(--line);
+  border-radius: 10px; padding: 9px 12px; }
+.dtools input { flex: 1 1 240px; min-width: 0; }
+.dtools input:focus, .dtools select:focus { outline: 2px solid color-mix(in srgb, var(--accent) 45%, transparent); border-color: var(--accent); }
+.dcount { color: var(--muted); font-size: 13px; margin-left: auto; white-space: nowrap; }
+.dtable-wrap { background: var(--surface); border: 1px solid var(--line); border-radius: 16px; box-shadow: var(--shadow);
+  overflow: auto; max-height: calc(100vh - 290px); min-height: 240px; }
+.dtable { border-collapse: separate; border-spacing: 0; width: 100%; font-size: 13.5px; margin: 0; }
+.dtable th { position: sticky; top: 0; z-index: 1; background: var(--surface-2); text-align: left; padding: 11px 12px;
+  font-size: 12px; text-transform: none; letter-spacing: 0; color: var(--text); font-weight: 700; cursor: pointer; user-select: none;
+  white-space: normal; min-width: 80px; vertical-align: bottom; border-bottom: 1px solid var(--line); }
+.dtable th:hover { color: var(--accent); }
+.dtable th .arr { color: var(--accent); margin-left: 4px; }
+.dtable td { padding: 9px 12px; border-bottom: 1px solid var(--line); vertical-align: top; }
+.dtable tbody tr:nth-child(even) td { background: color-mix(in srgb, var(--surface-2) 45%, transparent); }
+.dtable tbody tr:hover td { background: color-mix(in srgb, var(--accent) 8%, var(--surface)); }
+.dtable td.wide { min-width: 260px; }
+.yn { display: inline-block; border-radius: 7px; padding: 2px 8px; font-weight: 700; font-size: 12px; white-space: nowrap; }
+.yn.yes { background: var(--good-soft); color: var(--good); }
+.yn.no { background: var(--bad-soft); color: var(--bad); }
+.yn.wait { color: var(--muted); font-weight: 500; padding: 0; }
+.dempty { padding: 40px; text-align: center; color: var(--muted); }
+/* Scorecard tab */
+.sc { display: grid; gap: 16px; }
+.sc-head { background: var(--surface); border: 1px solid var(--line); border-radius: 16px; padding: 18px 20px; box-shadow: var(--shadow); }
+.sc-head h3 { margin: 0 0 6px; font-family: var(--display); font-size: 24px; text-transform: uppercase; }
+.sc-head p { margin: 2px 0; color: var(--muted); }
+.sc-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(240px, 1fr)); gap: 14px; }
+.sc-card { background: var(--surface); border: 1px solid var(--line); border-radius: 16px; padding: 16px 18px; box-shadow: var(--shadow); }
+.sc-card.total { border-color: color-mix(in srgb, var(--accent) 55%, var(--line)); }
+.sc-card .k { color: var(--muted); font-size: 13px; font-weight: 600; min-height: 34px; }
+.sc-card .v { font-family: var(--display); font-size: 44px; font-weight: 800; line-height: 1; color: var(--accent); margin: 6px 0 4px; }
+.sc-card .n { color: var(--muted); font-size: 13px; }
+.sc-bar { height: 7px; border-radius: 99px; background: var(--line); margin-top: 10px; overflow: hidden; }
+.sc-bar i { display: block; height: 100%; background: var(--accent); border-radius: 99px; }
+.sc-notes { color: var(--muted); font-size: 13px; line-height: 1.6; }
+@media (max-width: 520px) { .dtable-wrap { max-height: calc(100vh - 340px); } .dcount { margin-left: 0; } }
+
+/* ── Accounts: viewer mode (friends) ── */
+body.viewer #runAll, body.viewer #runSelected, body.viewer #clearSel, body.viewer #ddown, body.viewer #boardHint { display: none !important; }
+.acct { display: inline-flex; align-items: center; gap: 8px; font-size: 13px; color: rgba(255,255,255,.75);
+  background: rgba(255,255,255,.07); border: 1px solid rgba(255,255,255,.12); border-radius: 999px; padding: 6px 12px; }
+.acct b { color: #fff; }
+.acct .role { font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: .06em; color: #ff8a2b; }
+.acct a { color: rgba(255,255,255,.7); text-decoration: underline; }
 </style>
 </head>
 <body>
 <div class="wrap">
+ <header class="banner">
   <div class="top">
     <div class="brand">
       <div class="ball"><span>🏀</span></div>
       <div>
-        <h1>First Basket Picks</h1>
+        <h1>First Basket <span>Picks</span></h1>
         <div class="date" id="date">Today</div>
       </div>
     </div>
     <div class="actions">
+      <button class="btn secondary" id="dataBtn" title="Your spreadsheet and CSV as tabs: scorecard, picks, lineups, all games">📊 Data</button>
       <button class="btn secondary" id="learnBtn" title="A 1-minute beginner's guide to EV (good deal or bad deal?)">🎓 What's EV?</button>
       <button class="btn secondary" id="runSelected" hidden>Selected games</button>
       <button class="btn" id="runAll">🏀 All games</button>
+      <span class="acct" id="acct" hidden></span>
     </div>
   </div>
   <div class="ticker" id="ticker"></div>
+ </header>
+
+  <section class="data-view" id="dataView" hidden>
+    <div class="data-top">
+      <button class="back" id="dataBack">← Back to picks</button>
+      <h2>📊 Data</h2>
+    </div>
+    <div class="dtabs" id="dtabs" role="tablist"></div>
+    <div class="dtools" id="dtools">
+      <input id="dq" type="search" placeholder="Search — a player, a team, a date like 11/17…" aria-label="Search the table">
+      <select id="dseason" aria-label="Season"></select>
+      <select id="dteam" aria-label="Team"><option value="">All teams</option></select>
+      <select id="dresult" aria-label="Result"></select>
+      <span class="dcount" id="dcount"></span>
+      <button class="btn secondary" id="ddown" title="Save what you see as a spreadsheet file (.csv)">⬇ Download</button>
+    </div>
+    <div id="dbody"><div class="dempty">Loading…</div></div>
+  </section>
 
   <div class="board-wrap">
     <div class="section-title"><span>Tonight</span><span id="boardUpdated" style="font-weight:400;text-transform:none;letter-spacing:0"></span></div>
@@ -425,6 +589,12 @@ const $ = (id) => document.getElementById(id);
 const esc = (s) => String(s ?? "").replace(/[&<>"']/g, (c) => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
 const color = (t) => TEAM_COLOR[t] || "var(--muted)";
 const dot = (team) => `<span class="dot" style="background:${color(team)}"></span>`;
+// ESPN's image server (resized copies, ~6 KB each). If an image fails, fall back to the team-colour dot / initials.
+const logoUrl = (t) => `https://a.espncdn.com/combiner/i?img=/i/teamlogos/nba/500/${String(t).toLowerCase()}.png&w=96&h=96`;
+const logo = (t, size = 22) => `<img class="logo" src="${logoUrl(t)}" width="${size}" height="${size}" alt="${esc(t)}"
+  loading="lazy" onerror="this.outerHTML='<span class=&quot;dot&quot; style=&quot;background:${color(t)}&quot;></span>'">`;
+const headshot = (id) => `https://a.espncdn.com/combiner/i?img=/i/headshots/nba/players/full/${encodeURIComponent(id)}.png&w=248&h=180`;
+const initials = (n) => esc(String(n).split(" ").filter((w) => !/^(jr|sr|ii|iii|iv)\.?$/i.test(w)).map((w) => w[0]).slice(0, 2).join(""));
 const pct = (p, d = 1) => `${(p * 100).toFixed(d)}%`;
 const american = (a) => (a > 0 ? `+${a}` : `${a}`);
 const payout = (a) => (a > 0 ? a / 100 : 100 / -a);    // profit per $1
@@ -439,7 +609,11 @@ let lastResult = null;          // latest predict output
 let polling = null, runStarted = 0;
 const announced = new Set();    // games whose first-basket toast was shown
 
-async function getJSON(url, opts) { const r = await fetch(url, opts); return r.json(); }
+async function getJSON(url, opts) {
+  const r = await fetch(url, opts);
+  if (r.status === 401) { location.href = "/login"; throw new Error("logged out"); }
+  return r.json();
+}
 
 /* ── Time helpers ─────────────────────────── */
 function countdown(iso) {
@@ -463,7 +637,9 @@ function tile(g) {
     res = `<div class="res">🏀 First: <b>${esc(g.first_basket.name)}</b>${r ? `<span class="tag ${r}">${RESULT[r]}</span>` : ""}
       ${r && r !== "hit" && g.our_pick ? `<br>we had ${esc(g.our_pick.name)}` : ""}</div>`;
   } else if (g.our_pick) {
-    res = `<div class="res">${live ? "Waiting for the first basket · " : ""}Our pick: <b>${esc(g.our_pick.name)}</b> <span class="num">${pct(g.our_pick.prob, 0)}</span></div>`;
+    const fb = g.records?.name?.fb;                  // his first baskets / games this season
+    const fbTxt = fb && fb[1] ? `<span class="rec" title="Scored the game's first basket in ${fb[0]} of his ${fb[1]} games this season"> · 1st basket <b>${fb[0]}</b>/${fb[1]}</span>` : "";
+    res = `<div class="res">${live ? "Waiting for the first basket · " : ""}Our pick: <b>${esc(g.our_pick.name)}</b> <span class="num">${pct(g.our_pick.prob, 0)}</span>${fbTxt}</div>`;
   }
   const op = g.our_pick;
   if (op && pre && (op.away_jumper || op.home_jumper)) {      // who jumps for each team (from our latest pick)
@@ -473,12 +649,14 @@ function tile(g) {
       return esc(w[w.length - 1] || n);
     };
     const favHome = (op.tip_home ?? 0.5) >= 0.5;
-    res += `<div class="res tipline" title="${esc(op.away_jumper || "not known")} vs ${esc(op.home_jumper || "not known")}">Tip: ${
-      favHome ? last(op.away_jumper) : `<b>${last(op.away_jumper)}</b>`} vs ${favHome ? `<b>${last(op.home_jumper)}</b>` : last(op.home_jumper)}</div>`;
+    const won = (k) => { const t = g.records?.[k]?.tips; return t && t[1] ? ` <span class="rec">(<b>${t[0]}</b>/${t[1]})</span>` : ""; };
+    res += `<div class="res tipline" title="Tip: ${esc(op.away_jumper || "not known")} vs ${esc(op.home_jumper || "not known")}; (won/taken) = opening tips this season">Tip: ${
+      favHome ? last(op.away_jumper) : `<b>${last(op.away_jumper)}</b>`}${won("away_jumper")} vs ${favHome ? `<b>${last(op.home_jumper)}</b>` : last(op.home_jumper)}${won("home_jumper")}</div>`;
   }
-  return `<button class="tile ${pre ? "pickable" : ""} ${live ? "live" : ""}" data-id="${esc(g.game_id)}"
+  return `<button class="tile ${pre && ROLE !== "viewer" ? "pickable" : ""} ${live ? "live" : ""}" data-id="${esc(g.game_id)}"
+      style="--away-c:${color(g.away_team)};--home-c:${color(g.home_team)}"
       aria-pressed="${selected.has(g.game_id)}" ${pre ? "" : "aria-disabled='true' title='Already started — the model is pre-game only'"}>
-    <div class="teams">${dot(g.away_team)}${esc(g.away_team)} <span class="at">@</span> ${dot(g.home_team)}${esc(g.home_team)}${score}</div>
+    <div class="teams">${logo(g.away_team, 26)}${esc(g.away_team)} <span class="at">@</span> ${logo(g.home_team, 26)}${esc(g.home_team)}${score}</div>
     <div class="meta">${meta}</div>${res}</button>`;
 }
 
@@ -547,6 +725,16 @@ async function refreshBoard(first = false) {
 /* ── Game card ────────────────────────────── */
 function card(c, i) {
   const top = c.picks[0];
+  // His real record this season: first baskets / games played
+  const season = c.season || {};
+  const rec = (name) => { const r = season[name]; return r && r[1] ? r : null; };
+  function recLine(name) {
+    const r = rec(name);
+    return r ? `<span class="rec" title="Scored the game's first basket in ${r[0]} of his ${r[1]} games this season">1st basket <b>${r[0]}</b>/${r[1]} games</span>`
+             : (c.season ? `<span class="rec">no games yet this season</span>` : "");
+  }
+  const topRec = rec(top[0]);
+  const heroRec = topRec ? `<div class="rec-hero">🏀 First basket in <b>${topRec[0]} of ${topRec[1]}</b> games this season</div>` : "";
   const fd = c.fanduel;
   const fdOn = fd !== undefined && fd !== null;
   const fdCell = (name, fair) => {
@@ -576,9 +764,11 @@ function card(c, i) {
     const name = j[team] ? `<span class="jname ${fav ? "fav" : ""}" title="${esc(j[team])}">${esc(j[team])}</span>`
                          : `<span class="jname unknown">not known yet</span>`;
     // name on its own line (never cut off), then team + chance underneath
-    const team_ = `<small>${dot(team)} ${esc(team)}</small>`;
+    const team_ = `<small style="display:inline-flex;align-items:center;gap:5px">${logo(team, 16)} ${esc(team)}</small>`;
     const num = `<span class="jp num ${fav ? "fav" : ""}">${pct(p, 0)}</span>`;
-    return `<div class="side ${side}">${name}<div class="meta">${side === "away" ? team_ + num : num + team_}</div></div>`;
+    const tr = (c.tip_record || {})[team];          // his real tips this season: won / taken
+    const trLine = tr && tr[1] ? `<span class="rec" title="Won ${tr[0]} of the ${tr[1]} opening tips he took this season">won <b>${tr[0]}</b>/${tr[1]} tips this season</span>` : "";
+    return `<div class="side ${side}">${name}${trLine}<div class="meta">${side === "away" ? team_ + num : num + team_}</div></div>`;
   };
   const tipBlock = `<div class="fact">
       <div class="fact-title">Tip-off <span>who jumps for each team</span></div>
@@ -596,27 +786,35 @@ function card(c, i) {
   const max = top[2];
   const rows = c.picks.map(([name, team, p, fair], r) => `<tr data-name="${esc(name)}">
       <td class="rank num">${r + 1}</td>
-      <td><div class="player">${dot(team)}<span>${esc(name)}</span> <small>${esc(team)}</small></div></td>
+      <td><div class="player">${logo(team, 18)}<span class="pn"><span>${esc(name)}</span>${recLine(name)}</span> <small>${esc(team)}</small></div></td>
       <td class="r num"><span class="bar"><i style="width:${(p / max) * 100}%;--r:${r}"></i></span>${pct(p)}</td>
       <td class="r num odds">${american(fair)}</td>${fdCell(name, fair)}${evCell(name)}</tr>`).join("");
-  const starterLine = (team, players) => `<div class="line"><span class="tm">${dot(team)}${esc(team)}</span>
+  const starterLine = (team, players) => `<div class="line"><span class="tm">${logo(team, 18)}${esc(team)}</span>
     ${players.map((p) => { const s = (c.injuries || {})[p.name];
       return `<span>${esc(p.name)}${s ? `<span class="inj ${esc(s)}">${esc(s)}</span>` : ""}</span>`; })
       .join('<span style="color:var(--muted)">·</span>')}</div>`;
   const topFd = fdOn && fd[top[0]] !== undefined
     ? ` · FanDuel <b style="color:${payout(fd[top[0]]) > payout(top[3]) ? "var(--good)" : "inherit"}">${american(fd[top[0]])}</b>` : "";
 
+  const topId = [...(c.home_starters || []), ...(c.away_starters || [])].find((p) => p.name === top[0])?.player_id;
   return `<article class="card enter" style="--i:${i};--away-c:${color(c.away)};--home-c:${color(c.home)};--top-c:${color(top[1])}"
       data-home="${esc(c.home)}" data-away="${esc(c.away)}">
     <div class="card-head">
-      <div class="matchup">${dot(c.away)}${esc(c.away)} <span class="at">@</span> ${dot(c.home)}${esc(c.home)}</div>
-      <span class="badge ${esc(c.label)}">${LINEUP[c.label] || esc(c.label)}</span>
-      <span class="status">${esc(c.start)}</span>
+      <div class="mu">
+        <div class="tm away">${logo(c.away, 44)}<span>${esc(c.away)}</span></div>
+        <span class="at">@</span>
+        <div class="tm home"><span>${esc(c.home)}</span>${logo(c.home, 44)}</div>
+      </div>
+      <div class="head-meta">
+        <span class="badge ${esc(c.label)}">${LINEUP[c.label] || esc(c.label)}</span>
+        <span class="status">${esc(c.start)}</span>
+      </div>
     </div>
     <div class="card-body" style="--i:${i}">
       <div class="verdict"></div>
       <div class="hero">
-        <div><div class="label">Top pick</div><div class="name">${esc(top[0])}</div><div class="team">${dot(top[1])}${esc(top[1])}</div></div>
+        <div class="shot">${topId ? `<img src="${headshot(topId)}" alt="" loading="lazy" onerror="this.remove()">` : ""}<span class="initials">${initials(top[0])}</span></div>
+        <div class="who"><div class="label">Top pick</div><div class="name">${esc(top[0])}</div><div class="team">${logo(top[1], 16)}${esc(top[1])}</div>${heroRec}</div>
         <div class="big"><div class="pct num" data-v="${top[2]}">${pct(top[2])}</div><div class="sub num">fair ${american(top[3])}${topFd}</div></div>
       </div>
       <div class="facts" style="--i:${i}">
@@ -744,6 +942,7 @@ async function poll() {
   $("error").textContent = s.error ? `Something went wrong: ${s.error}` : "";
   if (!s.running) {
     clearInterval(polling); polling = null; runStarted = 0;
+    if (typeof lastFinished !== "undefined") lastFinished = s.finished_at || lastFinished;
     if (s.result) renderResult(s.result);
     renderRecord(); refreshBoard();
   }
@@ -919,6 +1118,207 @@ $("learnBody").addEventListener("pointerup", (e) => {
   if (Math.abs(dx) > 50) go(learnStep + (dx < 0 ? 1 : -1));
 });
 
+
+/* ── Data view: spreadsheet tabs (Scorecard, Our picks, Lineups, All games) ── */
+const DTABS = [
+  { id: "scorecard", label: "🏆 Scorecard" },
+  { id: "picks", label: "🎯 Our picks" },
+  { id: "lineups", label: "📋 Lineups" },
+  { id: "games", label: "🏀 All games" },
+];
+// the "right/wrong" filter: which column it looks at, per tab
+const DRESULT = {
+  picks: { col: "pick_1_right", options: [["", "All results"], ["YES", "✓ #1 pick right"], ["NO", "✗ #1 pick wrong"], ["pending", "Still to play"]] },
+  lineups: { col: "c7", options: [["", "All lineups"], ["YES", "✓ Final lineup right"], ["NO", "✗ Final lineup wrong"]] },
+};
+const dstate = { tab: "picks", data: {}, sortCol: null, sortDir: 1 };
+
+function dateKey(v) {                                       // "11/17/26" -> "261117" so dates sort properly
+  const m = /^(\d{2})\/(\d{2})\/(\d{2})$/.exec(v);
+  return m ? m[3] + m[1] + m[2] : null;
+}
+function sortKey(v) {
+  if (v === null || v === undefined || v === "") return [2, ""];
+  const s = String(v), d = dateKey(s);
+  if (d) return [0, d];
+  const n = /^-?\d+(\.\d+)?%?$/.test(s) ? parseFloat(s) : NaN;
+  if (!isNaN(n)) return [0, n];
+  const r = /^(\d+) of (\d+)/.exec(s);                        // "4 of 14 (29%)" -> 4/14
+  if (r) return [0, +r[1] / Math.max(1, +r[2])];
+  return [1, s.toLowerCase()];
+}
+function cmp(a, b) {
+  const x = sortKey(a), y = sortKey(b);
+  if (x[0] !== y[0]) return x[0] - y[0];
+  return x[1] < y[1] ? -1 : x[1] > y[1] ? 1 : 0;
+}
+function seasonOf(v) {                                    // "11/17/26" -> "2026-27" (a season runs ~Oct to Jun)
+  const m = /^(\d{2})\/(\d{2})\/(\d{2})$/.exec(String(v ?? ""));
+  if (!m) return null;
+  const y = 2000 + +m[3], start = +m[1] >= 8 ? y : y - 1;
+  return `${start}-${String(start + 1).slice(2)}`;
+}
+function ynCell(v) {
+  if (v === "YES") return '<span class="yn yes">✓ Yes</span>';
+  if (v === "NO") return '<span class="yn no">✗ No</span>';
+  return `<span class="yn wait">${esc(v || "")}</span>`;
+}
+
+async function loadTab(tab, fresh = false) {
+  if (!dstate.data[tab] || fresh) {
+    $("dbody").innerHTML = '<div class="dempty">Loading…</div>';
+    try { dstate.data[tab] = await getJSON(`/api/data?tab=${tab}`); }
+    catch (e) { $("dbody").innerHTML = '<div class="dempty">Couldn\'t load this tab.</div>'; return; }
+  }
+  renderData();
+}
+
+function openData(tab = dstate.tab) {
+  dstate.tab = tab;
+  document.body.classList.add("data-mode");
+  $("dataView").hidden = false;
+  if (location.hash !== `#data/${tab}`) history.replaceState(null, "", `#data/${tab}`);
+  $("dtabs").innerHTML = DTABS.map((t) => `<button class="dtab ${t.id === tab ? "on" : ""}" data-tab="${t.id}" role="tab"
+    aria-selected="${t.id === tab}">${t.label}</button>`).join("");
+  const res = DRESULT[tab];
+  $("dresult").hidden = !res;
+  if (res) $("dresult").innerHTML = res.options.map(([v, l]) => `<option value="${v}">${l}</option>`).join("");
+  $("dtools").hidden = tab === "scorecard";
+  dstate.sortCol = null; dstate.sortDir = 1;
+  window.scrollTo(0, 0);
+  loadTab(tab, true);                                        // always fresh: the data changes as games finish
+}
+function closeData() {
+  document.body.classList.remove("data-mode");
+  $("dataView").hidden = true;
+  history.replaceState(null, "", location.pathname);
+}
+
+function renderScorecard(lines) {
+  const head = [], cards = [], notes = [];
+  let inTable = false;
+  for (const line of lines) {
+    if (!line.length) continue;
+    if (line.length === 4 && line[0] === "") { inTable = true; continue; }
+    if (line.length === 4 && inTable) {
+      const [label, right, total, pctTxt] = line;
+      const p = total ? right / total : 0;
+      cards.push(`<div class="sc-card ${label.startsWith("ALL") ? "total" : ""}">
+        <div class="k">${esc(label.startsWith("ALL") ? "All our predictions combined" : label)}</div>
+        <div class="v num">${esc(pctTxt)}</div><div class="n num">${right} of ${total} right</div>
+        <div class="sc-bar"><i style="width:${(p * 100).toFixed(1)}%"></i></div></div>`);
+    } else if (inTable) notes.push(esc(line[0]));
+    else head.push(esc(line[0]));
+  }
+  return `<div class="sc">
+    <div class="sc-head"><h3>${head[0] || "Scorecard"}</h3>${head.slice(1).map((h) => `<p>${h}</p>`).join("")}</div>
+    <div class="sc-grid">${cards.join("")}</div>
+    ${notes.length ? `<div class="sc-notes">${notes.join("<br>")}</div>` : ""}</div>`;
+}
+
+function filteredRows() {
+  const d = dstate.data[dstate.tab];
+  const q = $("dq").value.trim().toLowerCase(), team = $("dteam").value, result = $("dresult").value;
+  const season = $("dseason").value;
+  const res = DRESULT[dstate.tab], ri = res ? d.columns.findIndex((c) => c.key === res.col) : -1;
+  const teamRe = team ? new RegExp(`\\b${team}\\b`) : null;
+  let rows = d.rows.filter((r) => {
+    if (season && seasonOf(r[0]) !== season) return false;           // the first column is the date
+    if (q && !r.some((v) => String(v ?? "").toLowerCase().includes(q))) return false;
+    if (teamRe && !r.some((v) => teamRe.test(String(v ?? "")))) return false;
+    if (result && ri >= 0) {
+      const v = r[ri];
+      if (result === "pending" ? (v === "YES" || v === "NO") : v !== result) return false;
+    }
+    return true;
+  });
+  if (dstate.sortCol !== null) {
+    const i = dstate.sortCol, dir = dstate.sortDir;
+    rows = [...rows].sort((a, b) => cmp(a[i], b[i]) * dir);
+  }
+  return rows;
+}
+
+function renderData() {
+  const d = dstate.data[dstate.tab];
+  if (!d) return;
+  if (dstate.tab === "scorecard") { $("dbody").innerHTML = renderScorecard(d.lines); return; }
+  // team list from the rows
+  const seen = new Set();
+  for (const r of d.rows) for (const v of r) for (const m of String(v ?? "").matchAll(/\b[A-Z]{2,4}\b/g)) if (TEAM_COLOR[m[0]]) seen.add(m[0]);
+  // seasons in this tab, newest first; the filter only shows when there is more than one
+  const seasons = [...new Set(d.rows.map((r) => seasonOf(r[0])).filter(Boolean))].sort().reverse();
+  const keepSeason = $("dseason").value;
+  $("dseason").innerHTML = `<option value="">All seasons</option>` +
+    seasons.map((x) => `<option ${x === keepSeason ? "selected" : ""}>${x}</option>`).join("");
+  $("dseason").hidden = seasons.length < 2;
+  const keep = $("dteam").value;
+  $("dteam").innerHTML = `<option value="">All teams</option>` + [...seen].sort().map((t) => `<option ${t === keep ? "selected" : ""}>${t}</option>`).join("");
+  const rows = filteredRows();
+  $("dcount").textContent = `Showing ${rows.length.toLocaleString()} of ${d.rows.length.toLocaleString()}`;
+  const head = d.columns.map((c, i) => `<th data-col="${i}" title="Sort by this column">${esc(c.label)}${
+    dstate.sortCol === i ? `<span class="arr">${dstate.sortDir > 0 ? "▲" : "▼"}</span>` : ""}</th>`).join("");
+  const body = rows.length ? rows.map((r) => `<tr>${r.map((v, i) => {
+    const c = d.columns[i];
+    if (c.yesno) return `<td>${ynCell(v)}</td>`;
+    const s = String(v ?? "");
+    return `<td class="${s.length > 40 ? "wide" : ""}">${esc(s)}</td>`;
+  }).join("")}</tr>`).join("")
+    : `<tr><td colspan="${d.columns.length}"><div class="dempty">Nothing matches — try a different search or filter.</div></td></tr>`;
+  $("dbody").innerHTML = `<div class="dtable-wrap"><table class="dtable"><thead><tr>${head}</tr></thead><tbody>${body}</tbody></table></div>`;
+}
+
+function downloadData() {
+  const d = dstate.data[dstate.tab];
+  if (!d || !d.columns) return;
+  const q = (v) => `"${String(v ?? "").replace(/"/g, '""')}"`;
+  const lines = [d.columns.map((c) => q(c.label)).join(","), ...filteredRows().map((r) => r.map(q).join(","))];
+  const blob = new Blob(["﻿" + lines.join("\n")], { type: "text/csv;charset=utf-8" });   // BOM: Excel reads accents
+  const a = Object.assign(document.createElement("a"), { href: URL.createObjectURL(blob),
+    download: `first-basket-${dstate.tab}-${new Date().toISOString().slice(0, 10)}.csv` });
+  document.body.appendChild(a); a.click(); a.remove();
+  setTimeout(() => URL.revokeObjectURL(a.href), 2000);
+}
+
+$("dataBtn").addEventListener("click", () => openData(dstate.tab));
+$("dataBack").addEventListener("click", closeData);
+$("dtabs").addEventListener("click", (e) => { const b = e.target.closest("[data-tab]"); if (b) { $("dq").value = ""; $("dteam").value = ""; $("dseason").value = ""; openData(b.dataset.tab); } });
+$("dbody").addEventListener("click", (e) => {
+  const th = e.target.closest("th[data-col]");
+  if (!th) return;
+  const i = +th.dataset.col;
+  dstate.sortDir = dstate.sortCol === i ? -dstate.sortDir : 1;
+  dstate.sortCol = i;
+  renderData();
+});
+let dqTimer = null;
+$("dq").addEventListener("input", () => { clearTimeout(dqTimer); dqTimer = setTimeout(renderData, 120); });
+$("dteam").addEventListener("change", renderData);
+$("dseason").addEventListener("change", renderData);
+$("dresult").addEventListener("change", renderData);
+$("ddown").addEventListener("click", downloadData);
+// Live updates: the tabs read the database that first_basket_data.csv and my_predictions.xlsx are written from.
+// While the Data view is open, check every 15 s whether the database or either file changed; if so, reload the
+// tab in place (search, filters and sort are kept) and say so.
+setInterval(async () => {
+  if ($("dataView").hidden) return;
+  const cur = dstate.data[dstate.tab];
+  if (!cur) return;
+  try {
+    const { version } = await getJSON("/api/data_version");
+    if (version === cur.version) return;
+    dstate.data[dstate.tab] = await getJSON(`/api/data?tab=${dstate.tab}`);
+    renderData();
+    const t = new Date().toLocaleTimeString([], { hour: "numeric", minute: "2-digit" });
+    $("dcount").textContent += ` · updated ${t}`;
+    toast(`📊 New data: the ${DTABS.find((x) => x.id === dstate.tab).label.slice(2).trim()} tab just updated`);
+  } catch (e) { /* server busy or restarting: try again next time */ }
+}, 15000);
+if (location.hash.startsWith("#data")) openData(location.hash.split("/")[1] || "picks");   // reload keeps the Data view
+window.addEventListener("hashchange", () => {                  // a #data/... link opened on an already-loaded page
+  if (location.hash.startsWith("#data")) openData(location.hash.split("/")[1] || "picks");
+});
+
 $("runAll").addEventListener("click", () => run([]));
 $("runSelected").addEventListener("click", () =>
   run(board.filter((g) => selected.has(g.game_id)).flatMap((g) => [g.home_team, g.away_team])));
@@ -928,12 +1328,42 @@ setInterval(() => refreshBoard(), 30000);                                       
 setInterval(() => { renderTicker(); updateCardsLive();                         // countdowns tick
   document.querySelectorAll(".cd").forEach((e) => (e.textContent = countdown(e.dataset.iso))); }, 20000);
 
+
+/* ── Who is logged in (owner / viewer) ── */
+let ROLE = "owner", lastFinished = null;
+async function loadMe() {
+  try {
+    const me = await getJSON("/api/me");
+    ROLE = me.role;
+    document.body.classList.toggle("viewer", ROLE === "viewer");
+    if (me.logins) {
+      $("acct").hidden = false;
+      $("acct").innerHTML = `👤 <b>${esc(me.user)}</b> <span class="role">${ROLE === "viewer" ? "viewer" : "owner"}</span> · <a href="/logout">Log out</a>`;
+    }
+  } catch (e) { /* older server without accounts: owner on this Mac */ }
+}
+// The server also updates the picks by itself (every 30 min on game days): pick up any newer result.
+setInterval(async () => {
+  if (polling) return;
+  try {
+    const s = await getJSON("/api/status");
+    if (s.running) { setRunning(true, s.step || "Updating"); polling = setInterval(poll, 1000); }
+    else if (s.result && s.finished_at && s.finished_at !== lastFinished) {
+      lastFinished = s.finished_at; renderResult(s.result); renderRecord();
+      $("updated").textContent = `Updated ${s.finished_at}`;
+    }
+  } catch (e) { /* try again next time */ }
+}, 30000);
+
 (async function start() {
+  await loadMe();
   renderRecord();
   refreshBoard(true);
   const s = await poll();                    // a run already going, or an earlier result
+  lastFinished = s.finished_at || null;
   if (s.running) polling = polling || setInterval(poll, 1000);
-  else if (!s.result) run([]);               // first visit: get every game's picks straight away
+  else if (!s.result && ROLE !== "viewer") run([]);   // owner's first visit: get every game's picks straight away
+  else if (!s.result) $("cards").innerHTML = `<div class="empty">Tonight's picks are being prepared — they appear here by themselves.</div>`;
 })();
 </script>
 </body>

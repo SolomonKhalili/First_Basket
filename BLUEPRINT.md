@@ -300,7 +300,7 @@ fallback 0.6354 / 0.6323 → NBA.com's listed C in training too 0.6299 / 0.6309.
 | Team choice | `python3 nba.py` / `python3 nba.py knicks` | ✅ Plain run shows a numbered list of today's games (full team names) with instructions on what to type; answer with the game number, a team name, or Enter/Ctrl-D for all (wrong answers get a hint and the question again; `--all` skips the question); team names and nicknames (Knicks, Trail Blazers, Sixers, Cavs…) or codes, any case |
 | Daily report | `nba.py report` | ✅ One box per game, injury warnings highlighted |
 | Pick log + track record | `picks.py`, `nba.py eval` | ✅ Every pick kept; `eval` by lineup type and model version. First results after the 2026-11-17 games |
-| CSV export | `nba.py export_csv` (also `view_data.py`) | ✅ 13 columns, one writer |
+| CSV export | `nba.py export_csv` (rows from `nba.csv_rows`, also shown in the GUI's Data view) | ✅ 13 columns, one writer |
 | Predictions spreadsheet | `picks.export_predictions` → `my_predictions.xlsx` (Scorecard + Games tabs) | ✅ Our pick vs what happened, per game; written after every `predict` and every sync |
 | FanDuel odds + EV | `fanduel_odds.py`, `ev.py`; `predict`, `gui.py`, `eval` | ✅ 2026-11-18: prices, EV per $1, best value, `odds_log`, paper betting on +EV (≥ +$0.01 per $1) |
 | Bankroll / stakes / real bet log / CLV | — | 🔲 Not started (deliberately) |
@@ -468,13 +468,7 @@ NBA/
 ├── pregame_model.json      # active model weights + walk-forward results
 ├── train_pregame.py        # training, walk-forward test, keep-previous check
 ├── build_features.py       # training matrices (incremental) + player game logs
-├── view_data.py            # browse games in the terminal; CSV export
-├── test_starters.py        # 45 tests
-├── test_pipeline.py        # 29 tests (sync, retrain, incremental build, label guards, first/early shots, team choice)
-├── test_tip_model.py       # 8 tests
-├── test_display.py         # 10 tests
-├── test_picks.py           # 19 tests
-├── test_pregame_model.py   # 4 tests (two-stage math)
+├── tests/                  # 156 tests in 9 files (python3 -m pytest)
 ├── nba_first_basket.db     # SQLite: games, first_baskets, lineups, official_lineups, first_shots, early_shots, pick_log (+ legacy predictions)
 ├── player_game_logs.pkl    # per-player game logs
 ├── X_train.npy, y_train.npy, groups.npy, game_ids.json, feature_names.json, meta.json   # training matrices

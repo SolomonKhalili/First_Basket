@@ -4,3 +4,8 @@
 __pycache__/
 *.pyc
 .DS_Store
+
+# logins for sharing the GUI (hashed passwords)
+users.json
+users.tmp
+launcher/ngrok.log

@@ -20,6 +20,8 @@ from datetime import date
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 
+import accounts
+
 HOST, PORT = "127.0.0.1", 8765
 PAGE = Path(__file__).parent / "gui" / "index.html"
 
@@ -102,6 +104,53 @@ class Job:
             self.state.update(running=False, step="", finished_at=time.strftime("%-I:%M %p"))
 
 
+# ──────────────────────────────────────────────
+# DATA VIEW: the CSV and my_predictions.xlsx as tabs in the app
+# ──────────────────────────────────────────────
+DATA_TABS = ("scorecard", "picks", "lineups", "games")
+LINEUP_LABELS = ["Date", "Game", "Team", "NBA.com early lineup (Expected)", "NBA.com final lineup (Confirmed)",
+                 "Who actually started", "Early lineup right?", "Final lineup right?"]
+GAME_LABELS = {"game_start": "Date", "away_team": "Away", "home_team": "Home", "tip_winner": "Tip won by",
+               "tip_winner_player_name": "Tip winner", "tip_loser_player_name": "Tip loser",
+               "first_basket_scorer": "First basket", "scorer_team": "Team", "shot_type": "How", "clock": "Clock"}
+
+
+DATA_FILES = ("nba_first_basket.db", "first_basket_data.csv", "my_predictions.xlsx")
+
+
+def data_version() -> str:
+    """Changes whenever the database, first_basket_data.csv or my_predictions.xlsx is updated (latest file time), so
+    the Data view can reload by itself. The tabs read the database the two files are written from."""
+    base = Path(__file__).parent
+    times = [(base / f).stat().st_mtime_ns for f in DATA_FILES if (base / f).exists()]
+    return str(max(times)) if times else "0"
+
+
+def data_tab(tab: str) -> dict:
+    """One tab of the Data view: {"tab", "columns": [{"key", "label", "yesno"}], "rows": [[...]]}.
+    scorecard / picks / lineups are the my_predictions.xlsx tabs (same functions as the file);
+    games is first_basket_data.csv (newest first, without the id columns)."""
+    import nba
+    import picks
+    con = nba.db()
+    if tab == "scorecard":
+        return {"tab": tab, "version": data_version(), "lines": picks.scorecard(picks.prediction_rows(con),
+                                                       today=time.strftime("%m/%d/%y"))}
+    if tab == "picks":
+        rows = picks.prediction_rows(con)
+        cols = [{"key": k, "label": picks.LABELS[k], "yesno": k in picks.YES_NO} for k in picks.COLUMNS]
+        return {"tab": tab, "version": data_version(), "columns": cols, "rows": [[r[k] for k in picks.COLUMNS] for r in rows]}
+    if tab == "lineups":
+        cols = [{"key": f"c{i}", "label": label, "yesno": i >= 6} for i, label in enumerate(LINEUP_LABELS)]
+        return {"tab": tab, "version": data_version(), "columns": cols, "rows": picks.lineup_rows(con)}
+    if tab == "games":
+        keep = [nba.CSV_HEADER.index(k) for k in GAME_LABELS]
+        cols = [{"key": k, "label": GAME_LABELS[k], "yesno": False} for k in GAME_LABELS]
+        rows = [[r[i] for i in keep] for r in reversed(nba.csv_rows(con))]
+        return {"tab": tab, "version": data_version(), "columns": cols, "rows": rows}
+    raise ValueError(f"unknown tab {tab!r} (use one of {', '.join(DATA_TABS)})")
+
+
 def track_record() -> dict:
     import ev
     import nba
@@ -167,9 +216,16 @@ class LiveBoard:
         with self._lock:
             with nba._quiet([]):
                 games = [{k: g.get(k) for k in GAME_KEYS} for g in nba.get_todays_games()]
-            mine = latest_picks(nba.db(), [g["game_id"] for g in games])
+            con = nba.db()
+            mine = latest_picks(con, [g["game_id"] for g in games])
+            # real records this season for each pick and jumper: first baskets / games, tips won / taken
+            names = [n for p in mine.values() for n in (p["name"], p.get("away_jumper"), p.get("home_jumper"))]
+            recs = nba.season_records_by_name(con, names, date.today().strftime("%Y%m%d"))
             for g in games:
                 g["our_pick"] = mine.get(g["game_id"])
+                if g["our_pick"]:
+                    op = g["our_pick"]
+                    g["records"] = {k: recs.get(op.get(k) or "") for k in ("name", "away_jumper", "home_jumper")}
                 g["first_basket"] = self.first_basket(g["game_id"]) if g["status"] != 1 else None
                 g["result"] = result_of(g["first_basket"], g["our_pick"])
             self.data = {"date": date.today().strftime("%A, %B %-d"), "games": games,
@@ -194,38 +250,181 @@ class LiveBoard:
 # ──────────────────────────────────────────────
 JOB = Job()
 BOARD = LiveBoard()
+LOGIN_PAGE = Path(__file__).parent / "gui" / "login.html"
+COOKIE = "fb_session"
+# Requests that came in through a sharing link (Cloudflare / ngrok / a proxy) carry one of these headers
+FORWARDED = ("X-Forwarded-For", "Cf-Connecting-Ip", "X-Real-Ip", "Forwarded", "Ngrok-Agent-Ips")
+
+
+class AutoUpdater:
+    """Keeps everything current with nobody clicking anything (viewers can't press "Get picks"):
+      • once at start-up;
+      • every `minutes` on game days, from 10 AM ET until the last game has started (lineups, injuries, odds);
+      • every night at 4 AM ET, game day or not: files last night's results, refreshes the spreadsheet and CSV,
+        retrains the model when there is new data.
+    Each run is the same update as the "Get picks" button (sync_data, then today's picks if any)."""
+
+    NIGHTLY_HOUR = 4
+
+    def __init__(self, minutes: int = 30):
+        self.every = minutes * 60
+        self.last = 0.0
+        self.last_nightly = None             # the ET date the nightly update last ran
+
+    @staticmethod
+    def window_open(now_et, games) -> bool:
+        upcoming = [g for g in games if g.get("status") == 1]
+        return bool(upcoming) and now_et.hour >= 10
+
+    def due(self, now_et, games, now: float) -> bool:
+        return self.window_open(now_et, games) and (self.last == 0 or now - self.last >= self.every)
+
+    def nightly_due(self, now_et) -> bool:
+        return now_et.hour == self.NIGHTLY_HOUR and self.last_nightly != now_et.date()
+
+    def run_forever(self):
+        from datetime import datetime
+        from zoneinfo import ZoneInfo
+        time.sleep(5)
+        first = True
+        while True:
+            try:
+                games = BOARD.snapshot()["games"]
+                now, now_et = time.time(), datetime.now(ZoneInfo("America/New_York"))
+                nightly = self.nightly_due(now_et)
+                if not JOB.state["running"] and (first or nightly or self.due(now_et, games, now)):
+                    if JOB.start(set()):
+                        self.last = now
+                        if nightly:
+                            self.last_nightly = now_et.date()
+                    first = False
+            except Exception:  # noqa: BLE001 — try again next minute
+                traceback.print_exc()
+            time.sleep(60)
+
+
+def _esc(s: str) -> str:
+    import html
+    return html.escape(s or "", quote=True)
 
 
 class Handler(BaseHTTPRequestHandler):
-    def _send(self, code: int, body: bytes, kind: str = "application/json"):
+    # ── responses ──
+    def _send(self, code: int, body: bytes, kind: str = "application/json", headers: dict | None = None):
         self.send_response(code)
         self.send_header("Content-Type", kind)
         self.send_header("Cache-Control", "no-store")
+        self.send_header("X-Content-Type-Options", "nosniff")
+        self.send_header("X-Frame-Options", "DENY")
+        self.send_header("Referrer-Policy", "no-referrer")
+        for k, v in (headers or {}).items():
+            self.send_header(k, v)
         self.end_headers()
         self.wfile.write(body)
 
+    def _redirect(self, where: str, headers: dict | None = None):
+        self._send(303, b"", "text/plain", {"Location": where, **(headers or {})})
+
+    def _login_page(self, error: str = "", user: str = "", code: int = 200):
+        page = LOGIN_PAGE.read_text().replace("{{ERROR}}", _esc(error)).replace("{{USER}}", _esc(user))
+        self._send(code, page.encode(), "text/html; charset=utf-8")
+
+    # ── who is asking ──
+    def _from_outside(self) -> bool:
+        return any(self.headers.get(h) for h in FORWARDED)
+
+    def _client_ip(self) -> str:
+        for h in ("Cf-Connecting-Ip", "X-Real-Ip"):
+            if self.headers.get(h):
+                return self.headers[h].strip()
+        xff = self.headers.get("X-Forwarded-For")
+        return xff.split(",")[0].strip() if xff else self.client_address[0]
+
+    def _token(self) -> str:
+        from http.cookies import SimpleCookie
+        c = SimpleCookie()
+        try:
+            c.load(self.headers.get("Cookie") or "")
+        except Exception:  # noqa: BLE001 — a malformed cookie is just "not logged in"
+            return ""
+        return c[COOKIE].value if COOKIE in c else ""
+
+    def _who(self):
+        """{"user", "role"} for this request; None = must log in. Without accounts: owner, but only on this Mac."""
+        if not accounts.enabled():
+            return None if self._from_outside() else {"user": "", "role": "owner"}
+        return accounts.session(self._token())
+
+    def _gate(self, path: str):
+        """None if allowed; otherwise sends the right refusal and returns True."""
+        if not accounts.enabled() and self._from_outside():
+            self._send(403, b"Sharing is off: create an account first (python3 gui.py add-user NAME --owner).",
+                       "text/plain; charset=utf-8")
+            return True
+        if self._who() is None:
+            if path.startswith("/api/"):
+                self._send(401, b'{"error": "log in first"}')
+            else:
+                self._redirect("/login")
+            return True
+        return None
+
+    # ── GET ──
     def do_GET(self):
         try:
-            if self.path in ("/", "/index.html"):
+            from urllib.parse import parse_qs, urlparse
+            path = urlparse(self.path).path
+            if path == "/login":
+                if not accounts.enabled():
+                    return self._redirect("/")
+                return self._redirect("/") if self._who() else self._login_page()
+            if path == "/logout":
+                accounts.end_session(self._token())
+                return self._redirect("/login" if accounts.enabled() else "/",
+                                      {"Set-Cookie": f"{COOKIE}=; Max-Age=0; Path=/; HttpOnly; SameSite=Lax"})
+            if self._gate(path):
+                return
+            who = self._who()
+            if path in ("/", "/index.html"):
                 self._send(200, PAGE.read_bytes(), "text/html; charset=utf-8")
-            elif self.path == "/api/status":
+            elif path == "/api/me":
+                self._send(200, to_json({"user": who["user"], "role": who["role"], "logins": accounts.enabled()}))
+            elif path == "/api/status":
                 self._send(200, to_json(JOB.state))
-            elif self.path == "/api/games":
+            elif path == "/api/games":
                 self._send(200, to_json(BOARD.snapshot()))
-            elif self.path == "/api/record":
+            elif path == "/api/data_version":
+                self._send(200, to_json({"version": data_version()}))
+            elif path == "/api/data":
+                tab = (parse_qs(urlparse(self.path).query).get("tab") or ["picks"])[0]
+                if tab not in DATA_TABS:
+                    self._send(400, to_json({"error": f"unknown tab {tab!r}"}))
+                else:
+                    self._send(200, to_json(data_tab(tab)))
+            elif path == "/api/record":
                 self._send(200, to_json(track_record()))
-            else:
+            else:                                    # nothing else is ever served: no model files, no code
                 self._send(404, b'{"error": "not found"}')
         except Exception as e:  # noqa: BLE001 — report any failure to the page as a 500
             traceback.print_exc()
             self._send(500, to_json({"error": f"{type(e).__name__}: {e}"}))
 
+    # ── POST ──
     def do_POST(self):
-        if self.path != "/api/predict":
+        from urllib.parse import urlparse
+        path = urlparse(self.path).path
+        length = min(int(self.headers.get("Content-Length") or 0), 10_000)
+        raw = self.rfile.read(length) if length else b""
+        if path == "/login":
+            return self._login(raw)
+        if self._gate(path):
+            return
+        if path != "/api/predict":
             return self._send(404, b'{"error": "not found"}')
-        length = int(self.headers.get("Content-Length") or 0)
+        if self._who()["role"] != "owner":          # viewers never run the model
+            return self._send(403, b'{"error": "view-only account"}')
         try:
-            body = json.loads(self.rfile.read(length) or b"{}")
+            body = json.loads(raw or b"{}")
         except ValueError:
             return self._send(400, b'{"error": "bad JSON"}')
         import nba
@@ -233,11 +432,69 @@ class Handler(BaseHTTPRequestHandler):
         started = JOB.start(teams)
         self._send(202 if started else 409, to_json({"started": started}))
 
+    def _login(self, raw: bytes):
+        from urllib.parse import parse_qs
+        if not accounts.enabled():
+            return self._redirect("/")
+        form = parse_qs(raw.decode("utf-8", "replace"))
+        user = (form.get("username") or [""])[0].strip().lower()[:64]
+        password = (form.get("password") or [""])[0][:256]
+        keys = (f"user:{user}", f"ip:{self._client_ip()}")
+        wait = accounts.locked_for(*keys)
+        if wait:
+            return self._login_page(f"Too many wrong tries — wait {wait // 60 + 1} min and try again.", user, 429)
+        role = accounts.verify(user, password)
+        if not role:
+            accounts.record_failure(*keys)
+            return self._login_page("Wrong username or password.", user, 401)
+        accounts.clear_failures(*keys)
+        token = accounts.new_session(user, role)
+        https = (self.headers.get("X-Forwarded-Proto") or "").lower() == "https"
+        cookie = (f"{COOKIE}={token}; Path=/; HttpOnly; SameSite=Lax; Max-Age={accounts.SESSION_SECONDS}"
+                  + ("; Secure" if https else ""))
+        self._redirect("/", {"Set-Cookie": cookie})
+
     def log_message(self, fmt, *args):          # keep the terminal quiet
         pass
 
 
+def manage_accounts(argv) -> int:
+    """python3 gui.py add-user NAME [--owner] | remove-user NAME | users"""
+    import getpass
+    cmd = argv[0]
+    if cmd == "users":
+        users = accounts.load_users()
+        if not users:
+            print("No accounts: logins are off and the app only opens on this Mac.")
+        for name, u in sorted(users.items()):
+            print(f"  {name:20s} {u['role']:7s} created {u.get('created', '?')}")
+        return 0
+    if len(argv) < 2:
+        print(f"usage: python3 gui.py {cmd} NAME" + (" [--owner]" if cmd == "add-user" else ""))
+        return 1
+    name = argv[1]
+    if cmd == "remove-user":
+        print(f"Removed {name}." if accounts.remove_user(name) else f"No account called {name}.")
+        return 0
+    role = "owner" if "--owner" in argv else "viewer"
+    if not accounts.enabled() and role != "owner":
+        print("Tip: make your own account first with --owner, or you'll be locked out of 'Get picks'.")
+    pw = getpass.getpass(f"Password for {name} (at least {accounts.MIN_PASSWORD} characters): ")
+    if pw != getpass.getpass("Type it again: "):
+        print("The two passwords don't match. Nothing saved.")
+        return 1
+    try:
+        name = accounts.add_user(name, pw, role)
+    except ValueError as e:
+        print(f"Not saved: {e}")
+        return 1
+    print(f"Saved: {name} ({role}). Logins are now ON.")
+    return 0
+
+
 def main(argv) -> int:
+    if argv and argv[0] in ("add-user", "remove-user", "users"):
+        return manage_accounts(argv)
     port = int(argv[argv.index("--port") + 1]) if "--port" in argv else PORT
     try:
         server = ThreadingHTTPServer((HOST, port), Handler)
@@ -247,7 +504,13 @@ def main(argv) -> int:
         return 1
     url = f"http://{HOST}:{port}"
     print(f"🏀 First Basket picks: {url}   (Ctrl-C to stop)")
+    n = len(accounts.load_users())
+    print(f"   Logins: ON ({n} account{'s' if n != 1 else ''})" if n else
+          "   Logins: OFF — only this Mac can open it (add accounts to share: python3 gui.py add-user NAME --owner)")
     threading.Thread(target=BOARD.run_forever, daemon=True).start()
+    if "--no-auto" not in argv:
+        print("   Updates by itself: every 30 min on game days + every night at 4 AM ET (turn off with --no-auto)")
+        threading.Thread(target=AutoUpdater().run_forever, daemon=True).start()
     if "--no-open" not in argv:
         threading.Timer(0.5, webbrowser.open, args=(url,)).start()
     try:

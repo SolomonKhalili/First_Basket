@@ -372,3 +372,72 @@ def test_question_lists_numbered_games_with_names_and_accepts_a_number(monkeypat
     assert "1.  Knicks @ Raptors" in out and "2.  Hornets @ Lakers" in out
     assert "1 = Knicks @ Raptors" in out and "press Enter" in out and "pick a number from 1 to 2" in out and "Didn't recognise" in out
     assert set(nba.TEAM_LABEL) == set(nba.TEAM_NAMES.values())          # every team has a display name
+
+
+def test_season_first_baskets_counts_games_played_before_today():
+    import sqlite3
+    con = sqlite3.connect(":memory:")
+    con.execute("CREATE TABLE games (game_id TEXT, game_date TEXT)")
+    con.execute("CREATE TABLE lineups (game_id TEXT, team TEXT, player_id TEXT, player_name TEXT, is_starter INTEGER,"
+                " minutes REAL)")
+    con.execute("CREATE TABLE first_baskets (game_id TEXT, scorer_player_id TEXT)")
+    games = [("old", "20260415"), ("g1", "20261101"), ("g2", "20261105"), ("g3", "20261110"), ("today", "20261118")]
+    con.executemany("INSERT INTO games VALUES (?,?)", games)
+    for gid, _ in games:
+        con.execute("INSERT INTO lineups VALUES (?, 'MIA', 'bam', 'Bam', 1, 30)", (gid,))
+    con.execute("UPDATE lineups SET minutes = 0 WHERE game_id = 'g3'")             # DNP: not a game played
+    con.executemany("INSERT INTO first_baskets VALUES (?,?)",
+                    [("old", "bam"), ("g1", "bam"), ("g2", "other"), ("g3", "bam"), ("today", "bam")])
+    out = nba.season_first_baskets(con, ["bam", "nobody"], "20261118", season_start="20260801")
+    # counts g1 and g2 only: 'old' is last season, g3 he didn't play, 'today' hasn't happened yet
+    assert out == {"bam": (1, 2)}
+    assert nba.season_first_baskets(con, [], "20261118") == {}
+
+
+def test_season_tip_records_and_lookup_by_name():
+    import sqlite3
+    con = sqlite3.connect(":memory:")
+    con.execute("CREATE TABLE games (game_id TEXT, game_date TEXT, tip_winner_player_id TEXT, tip_loser_player_id TEXT)")
+    con.execute("CREATE TABLE lineups (game_id TEXT, team TEXT, player_id TEXT, player_name TEXT, is_starter INTEGER,"
+                " minutes REAL)")
+    con.execute("CREATE TABLE first_baskets (game_id TEXT, scorer_player_id TEXT)")
+    con.executemany("INSERT INTO games VALUES (?,?,?,?)", [
+        ("old", "20260410", "allen", "edey"),          # last season: ignored
+        ("g1", "20261101", "allen", "edey"),
+        ("g2", "20261103", "edey", "allen"),
+        ("g3", "20261105", "allen", "zubac"),
+        ("today", "20261118", "edey", "allen")])        # not played yet: ignored
+    con.executemany("INSERT INTO lineups VALUES (?, 'CLE', 'allen', 'Jarrett Allen', 1, 30)",
+                    [("g1",), ("g2",), ("g3",)])
+    con.execute("INSERT INTO first_baskets VALUES ('g3', 'allen')")
+    tips = nba.season_tip_records(con, ["allen", "edey", "nobody"], "20261118", season_start="20260801")
+    assert tips == {"allen": (2, 3), "edey": (1, 2)}
+    by_name = nba.season_records_by_name(con, ["Jarrett Allen", "Unknown Guy", None], "20261118",
+                                         season_start="20260801")
+    assert by_name == {"Jarrett Allen": {"fb": (1, 3), "tips": (2, 3)}}
+    assert nba.season_records_by_name(con, [], "20261118") == {}
+
+
+def test_season_records_by_name_ignores_accents():
+    import sqlite3
+    con = sqlite3.connect(":memory:")
+    con.execute("CREATE TABLE games (game_id TEXT, game_date TEXT, tip_winner_player_id TEXT, tip_loser_player_id TEXT)")
+    con.execute("CREATE TABLE lineups (game_id TEXT, team TEXT, player_id TEXT, player_name TEXT, is_starter INTEGER,"
+                " minutes REAL)")
+    con.execute("CREATE TABLE first_baskets (game_id TEXT, scorer_player_id TEXT)")
+    con.execute("INSERT INTO games VALUES ('g1', '20261101', 'luka', 'x')")
+    con.execute("INSERT INTO lineups VALUES ('g1', 'LAL', 'luka', 'Luka Doncic', 1, 35)")   # box score: no accents
+    con.execute("INSERT INTO first_baskets VALUES ('g1', 'luka')")
+    out = nba.season_records_by_name(con, ["Luka Dončić"], "20261118", season_start="20260801")
+    assert out == {"Luka Dončić": {"fb": (1, 1), "tips": (1, 1)}}
+
+
+def test_tip_jumpball_skips_an_empty_entry_before_the_real_one():
+    # ESPN, MIA @ DAL 12/03/25: an empty jump ball (no player, no team) listed before the real one
+    empty = play("jumpball", team="", pid="", scoring=False)
+    real = play("jumpball", team="MIA", pid="bam", scoring=False)
+    real.update({"playerName": "Bam Adebayo", "tip_loser_player_id": "ad", "tip_loser_player_name": "Anthony Davis"})
+    tip = nba.tip_jumpball([empty, real])
+    assert (tip["tip_winner_team"], tip["tip_winner_player_name"], tip["tip_loser_player_name"]) == \
+        ("MIA", "Bam Adebayo", "Anthony Davis")
+    assert nba.tip_jumpball([empty]) is None                       # only an empty one: no tip recorded

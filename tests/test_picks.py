@@ -271,9 +271,9 @@ def test_lineups_tab_explains_missing_lineups_in_words(monkeypatch):
     con.execute("INSERT INTO first_baskets VALUES ('old','a','A','NY','Jump Shot')")
     picks.log_pick(con, {**pick(game="today"), "game_date": "20261117"})                    # today, nothing posted
     rows = {r[0]: r for r in picks.lineup_rows(con)}
-    assert rows["11/01/26"][3].startswith("Not recorded (we started saving early lineups")
-    assert rows["11/01/26"][6] == "Can't check: early lineups not saved before 11/17/26"
-    assert rows["11/01/26"][7] == "Can't check: final lineup not recorded"
+    assert rows["11/01/26"][3].startswith("Not available: NBA.com overwrites its early lineup")
+    assert rows["11/01/26"][6] == "Not available: no early lineup saved before 11/17/26"
+    assert rows["11/01/26"][7] == "Missing: the final lineup wasn't saved"
     assert rows["11/17/26"][4].startswith("Not confirmed yet") and rows["11/17/26"][5] == "Game not played yet"
     assert rows["11/17/26"][7] == "Waiting for the final lineup"
 
@@ -286,4 +286,4 @@ def test_lineups_tab_says_when_nba_com_published_no_lineups():
     con.execute("INSERT INTO first_baskets VALUES ('g','a','A','LAL','Jump Shot')")
     con.execute("INSERT INTO official_lineup_days VALUES ('20261102', 0)")          # NBA.com's file had no players
     row = picks.lineup_rows(con)[0]
-    assert row[4].startswith("NBA.com posted no pre-game lineup this day")
+    assert row[4].startswith("Not available: NBA.com never posted starting lineups this day")
