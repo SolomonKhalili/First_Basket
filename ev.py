@@ -210,13 +210,14 @@ def opening_prices(con, game_date: str, matchup: str) -> dict:
 
 
 def _clock(at) -> str:
-    """A log time -> '9:03 AM' (New York). FanDuel's log stores local ISO times; DraftKings' log stores epoch ms."""
-    from datetime import datetime
+    """A log time -> "{2026-11-19T14:03:00Z}" (UTC): the page turns it into the viewer's own local time.
+    FanDuel's log stores New York ISO times; DraftKings' log stores New York "YYYY-MM-DD HH:MM:SS" (or epoch ms)."""
+    from datetime import datetime, timezone
     from zoneinfo import ZoneInfo
     try:
-        t = datetime.fromtimestamp(int(at) / 1000, ZoneInfo("America/New_York")) if str(at).isdigit() \
-            else datetime.fromisoformat(str(at))
-        return t.strftime("%-I:%M %p")
+        t = datetime.fromtimestamp(int(at) / 1000, timezone.utc) if str(at).isdigit() \
+            else datetime.fromisoformat(str(at)).replace(tzinfo=ZoneInfo("America/New_York"))
+        return "{" + t.astimezone(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ") + "}"
     except (ValueError, OSError):
         return str(at)
 

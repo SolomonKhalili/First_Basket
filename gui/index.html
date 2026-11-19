@@ -691,6 +691,15 @@ body.bets-mode .dayswitch, body.bets-mode #yestSum, body.bets-mode #dataView { d
 .tf-verdict { margin-top: 6px; font-size: 13px; color: var(--muted); padding: 7px 10px; border-radius: 10px; background: var(--surface-2); } .tf-verdict.pos { background: var(--good-soft); color: var(--text); }
 .mv { display: block; font-size: 11px; font-weight: 800; line-height: 1; margin-top: 2px; cursor: help; } .mv.dn { color: var(--warn); } .mv.up { color: var(--muted); }
 .bb-soon { display: inline-block; margin-left: 6px; font-size: 11px; font-weight: 800; color: var(--warn); }
+
+/* our #1 pick (gold) and #2 pick (blue) stand out in every game's table */
+.tscroll tbody tr.pick1 td { background: color-mix(in srgb, var(--gold) 16%, var(--surface)) !important; }
+.tscroll tbody tr.pick1 td:nth-child(2) { box-shadow: inset 3px 0 0 var(--gold); }
+.tscroll tbody tr.pick1 .nm { color: var(--gold); font-weight: 800; }
+.tscroll tbody tr.pick2 td { background: color-mix(in srgb, #60a5fa 12%, var(--surface)) !important; }
+.tscroll tbody tr.pick2 td:nth-child(2) { box-shadow: inset 3px 0 0 #60a5fa; }
+.tscroll tbody tr.pick2 .nm { color: #93c5fd; font-weight: 700; }
+.tscroll tbody tr.scored td { background: var(--good-soft) !important; }
 </style>
 </head>
 <body>
@@ -907,12 +916,17 @@ function countdown(iso) {
   return h ? `in ${h}h ${String(m % 60).padStart(2, "0")}m` : `in ${m}m`;
 }
 const gameOf = (home, away) => board.find((g) => g.home_team === home && g.away_team === away);
+/* Times in the VIEWER's own time zone (their phone/computer decides), e.g. "7:00 PM CT" */
+const localTime = (iso) => { const d = new Date(iso); return isNaN(d) ? "" :
+  d.toLocaleTimeString([], { hour: "numeric", minute: "2-digit", timeZoneName: "short" }); };
+const tipTime = (g) => (g && g.start_utc ? localTime(g.start_utc) : "") || (g && g.start) || "";
+const cardStart = (c) => { const g = gameOf(c.home, c.away); return g && g.status === 1 && g.start_utc ? localTime(g.start_utc) : c.start; };
 
 /* ── Scoreboard ───────────────────────────── */
 function tile(g) {
   const pre = g.status === 1, live = g.status === 2, fin = g.status === 3;
   const score = pre ? "" : `<span class="score num">${g.away_score}–${g.home_score}</span>`;
-  const meta = pre ? `<span>${esc(g.start)}</span><span>·</span><span class="cd" data-iso="${esc(g.start_utc)}">${countdown(g.start_utc)}</span>`
+  const meta = pre ? `<span>${esc(tipTime(g))}</span><span>·</span><span class="cd" data-iso="${esc(g.start_utc)}">${countdown(g.start_utc)}</span>`
     : live ? `<span class="livedot"></span><span class="live-txt">LIVE</span><span>${esc(g.detail)}</span>`
     : `<span>Final</span>`;
   let res = "";
@@ -1117,7 +1131,7 @@ function card(c, i) {
   const max = top[2];
   // "Luka Dončić" -> "L. Dončić", "Jaren Jackson Jr." -> "J. Jackson Jr." (phones)
   const shortName = (n) => { const w = String(n).split(" "); return w.length > 1 ? `${w[0][0]}. ${w.slice(1).join(" ")}` : n; };
-  const rows = c.picks.map(([name, team, p, fair], r) => `<tr data-name="${esc(name)}">
+  const rows = c.picks.map(([name, team, p, fair], r) => `<tr data-name="${esc(name)}" class="${r === 0 ? "pick1" : r === 1 ? "pick2" : ""}">
       <td class="rank num">${r + 1}</td>
       <td><div class="player">${logo(team, 18)}<span class="pn"><span class="nm"><span class="nfull">${esc(name)}</span><span class="nshort">${esc(shortName(name))}</span></span><span class="sub2"><span class="tc">${esc(team)} · </span>${recLine(name)}</span></span> <small class="tcode">${esc(team)}</small></div></td>
       <td class="r num"><span class="bar"><i style="width:${(p / max) * 100}%;--r:${r}"></i></span>${pct(p)}</td>
@@ -1143,7 +1157,7 @@ function card(c, i) {
       <div class="head-meta">
         <span class="badge ${esc(c.label)}">${LINEUP[c.label] || esc(c.label)}</span>
         ${c.earlier ? `<span class="badge" title="This game has started; these are the picks we made before tip-off">Picked before tip-off</span>` : ""}
-        <span class="status">${esc(c.start)}</span>
+        <span class="status">${esc(cardStart(c))}</span>
       </div>
     </div>
     <div class="card-body" style="--i:${i}">
@@ -1201,7 +1215,7 @@ function updateCardsLive() {
     const g = gameOf(el.dataset.home, el.dataset.away);
     if (!g) return;
     const st = el.querySelector(".status");
-    if (g.status === 1) { st.className = "status"; st.innerHTML = `${esc(g.start)} · <span class="num">${countdown(g.start_utc)}</span>`; }
+    if (g.status === 1) { st.className = "status"; st.innerHTML = `${esc(tipTime(g))} · <span class="num">${countdown(g.start_utc)}</span>`; }
     else if (g.status === 2) { st.className = "status is-live"; st.innerHTML = `<span class="livedot"></span><span class="num">${g.away_score}–${g.home_score}</span> · ${esc(g.detail)}`; }
     else { st.className = "status"; st.innerHTML = `Final <span class="num">${g.away_score}–${g.home_score}</span>`; }
 
@@ -1865,7 +1879,9 @@ function ynCell(v) {
 async function loadTab(tab, fresh = false) {
   if (!dstate.data[tab] || fresh) {
     $("dbody").innerHTML = '<div class="dempty">Loading…</div>';
-    try { dstate.data[tab] = await getJSON(`/api/data?tab=${tab}`); }
+    try { dstate.data[tab] = await getJSON(`/api/data?tab=${tab}`);
+          if (tab === "odds") for (const r of dstate.data[tab].rows || [])          // {UTC time} -> viewer's own time
+            r[8] = String(r[8] || "").replace(/\{([^}]+)\}/g, (m, iso) => localTime(iso) || iso); }
     catch (e) { $("dbody").innerHTML = '<div class="dempty">Couldn\'t load this tab.</div>'; return; }
   }
   renderData();
@@ -2154,7 +2170,7 @@ function renderBestBets() {
     <div class="bb-why">Where the sportsbook <b>pays more than the player's real chance is worth</b>. Most still lose on any one night — the profit comes over many bets. <button class="whats" data-learn="0">How does this work?</button></div>
     ${list.length ? `<div class="bb-list">${shown.map((r, i) => `<button type="button" class="bb-row" data-bb="${i}" title="Tap to log this bet">
         <span class="bb-rank">${i + 1}</span>
-        <span class="bb-who"><b>${esc(r.name)}${!r.teamBet && priceMove(r.c, r.book, r.name, r.american) < 0 ? `<span class="bb-soon" title="${esc(r.book)} opened at ${american(((r.c.opening || {})[r.book] || {})[r.name])} — the payout keeps dropping, so this deal is shrinking">⏰ bet soon</span>` : ""}</b><small>${esc(r.team)} · ${esc(r.c.away)} @ ${esc(r.c.home)} · ${esc(r.c.start)} · ${pct(r.prob, 0)} chance</small></span>
+        <span class="bb-who"><b>${esc(r.name)}${!r.teamBet && priceMove(r.c, r.book, r.name, r.american) < 0 ? `<span class="bb-soon" title="${esc(r.book)} opened at ${american(((r.c.opening || {})[r.book] || {})[r.name])} — the payout keeps dropping, so this deal is shrinking">⏰ bet soon</span>` : ""}</b><small>${esc(r.team)} · ${esc(r.c.away)} @ ${esc(r.c.home)} · ${esc(cardStart(r.c))} · ${pct(r.prob, 0)} chance</small></span>
         <span class="bb-odds">${esc(r.book)}<b>${american(r.american)}</b></span>
         <span class="bb-ev"><b>${cents(r.ev)}</b><small>per $1</small></span></button>`).join("")}</div>
       ${list.length > 5 ? `<button class="bb-more" id="bbMore">${bbAll ? "Show top 5" : `Show all ${list.length}`}</button>` : ""}`

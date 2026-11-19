@@ -109,14 +109,6 @@ async function myBets(request, env) {
   return json({ saved: true });
 }
 
-// ── DraftKings from here (no browser needed): the first-points markets for every NBA game ──
-const DK_FEED = "https://sportsbook-nash.draftkings.com/sites/US-NY-SB/api/sportscontent/controldata/league/leagueSubcategory/v1/markets?isBatchable=false&templateVars=42648&eventsQuery=%24filter%3DleagueId%20eq%20%2742648%27%20AND%20clientMetadata/Subcategories/any%28s%3A%20s/Id%20eq%20%2716305%27%29&marketsQuery=%24filter%3DclientMetadata/subCategoryId%20eq%20%2716305%27%20AND%20tags/all%28t%3A%20t%20ne%20%27SportcastBetBuilder%27%29&include=Events&entity=events";
-async function fetchDK() {
-  const r = await fetch(DK_FEED, { headers: { "User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36",
-    Accept: "application/json", Referer: "https://sportsbook.draftkings.com/", Origin: "https://sportsbook.draftkings.com" } });
-  return r;
-}
-
 export default {
   async scheduled(event, env, ctx) {
     ctx.waitUntil(keepJobRunning(env).then((m) => console.log("timer:", m)));
@@ -126,12 +118,6 @@ export default {
     const cors = { "Access-Control-Allow-Origin": SITE, "Vary": "Origin" };
     if (new URL(request.url).pathname === "/dk-log") return dkLog(request, env);
     if (new URL(request.url).pathname === "/bets") return myBets(request, env);
-    if (new URL(request.url).pathname === "/dk-check") {              // can this relay read DraftKings? (no browser)
-      try { const r = await fetchDK(); const txt = await r.text(); let n = 0;
-        try { n = (JSON.parse(txt).selections || []).length; } catch (e) { /* not JSON */ }
-        return new Response(`DraftKings ${r.status} · ${n} prices`, { headers: { "Content-Type": "text/plain" } });
-      } catch (e) { return new Response(`DraftKings error ${e}`, { headers: { "Content-Type": "text/plain" } }); }
-    }
     if (new URL(request.url).pathname === "/timer-check") {           // what the timer would do now (starts nothing)
       return new Response(await keepJobRunning(env, true), { headers: { "Content-Type": "text/plain" } });
     }
