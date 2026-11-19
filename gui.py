@@ -65,6 +65,48 @@ class Collector:
 CARDS_FILE = Path(__file__).parent / "todays_cards.json"
 
 
+def add_logged_cards(result: dict) -> dict:
+    """A game that already tipped off gets no new card (the model is pre-game only). Rebuild its card from the
+    picks we logged BEFORE tip-off (pick_log), so tapping a live or finished game still shows our predictions."""
+    import nba
+    import pregame_model as pm
+    have = {c.get("matchup") for c in result.get("cards", [])}
+    todo = [g for g in result.get("schedule", [])
+            if g.get("game_id") and f"{g.get('away_team')} @ {g.get('home_team')}" not in have]
+    if not todo:
+        return result
+    con = nba.db()
+    try:
+        made = []
+        for g in todo:
+            row = con.execute("""SELECT * FROM pick_log WHERE game_id = ? ORDER BY id DESC LIMIT 1""",
+                              (g["game_id"],)).fetchone()
+            if not row:
+                continue
+            players = sorted(json.loads(row["players_json"]), key=lambda x: -x["prob"])
+            home, away = g.get("home_team"), g.get("away_team")
+            day = str(row["game_date"]).replace("-", "")
+            recs = nba.season_records_by_name(con, [x["name"] for x in players], day)
+            starters = lambda team: [{"player_id": x["id"], "name": x["name"], "team": x["team"]}  # noqa: E731
+                                     for x in players if x["team"] == team]
+            jumpers = {home: row["home_jumper"], away: row["away_jumper"]}
+            tip_home = row["tip_home"]
+            made.append({
+                "game_id": g["game_id"], "matchup": row["matchup"], "start": g.get("start", ""),
+                "label": row["lineup_type"], "updated": False, "from_log": True,
+                "picks": [(x["name"], x["team"], x["prob"], pm.fair_american(x["prob"])) for x in players[:5]],
+                "season": {x["name"]: (recs.get(x["name"]) or {}).get("fb", (0, 0)) for x in players},
+                "tip": {home: tip_home, away: None if tip_home is None else 1 - tip_home} if tip_home is not None else {},
+                "jumpers": jumpers,
+                "tip_record": {t: (recs.get(n) or {}).get("tips", (0, 0)) for t, n in jumpers.items() if n},
+                "first_team": None, "home": home, "away": away,
+                "home_starters": starters(home), "away_starters": starters(away), "injuries": {}, "notes": [],
+            })
+    finally:
+        con.close()
+    return dict(result, cards=result.get("cards", []) + made)
+
+
 def keep_todays_cards(result: dict, path: Path = CARDS_FILE) -> dict:
     """Games that already tipped off are skipped by later runs (the model is pre-game only), so their picks card
     would vanish. Keep every card made today: a new run's card replaces that game's old one; the others stay."""
@@ -73,11 +115,21 @@ def keep_todays_cards(result: dict, path: Path = CARDS_FILE) -> dict:
     except (OSError, ValueError):
         saved = {}
     old = saved.get("cards", []) if saved.get("date") == result.get("date") else []
-    new_ids = {c.get("game_id") for c in result.get("cards", [])}
-    kept = [dict(c, earlier=True) for c in old if c.get("game_id") not in new_ids]
-    cards = [dict(c, earlier=False) for c in result.get("cards", [])] + kept
-    order = {g.get("game_id"): i for i, g in enumerate(result.get("schedule", []))}
-    cards.sort(key=lambda c: order.get(c.get("game_id"), len(order)))
+    best = {}                                     # one saved card per game (a full card beats one rebuilt from the log)
+    for c in old:
+        k = c.get("matchup")
+        if k not in best or (best[k].get("from_log") and not c.get("from_log")):
+            best[k] = c
+    old = list(best.values())
+    # cards are matched by matchup ("DET @ NO"): the model's own cards carry no game id
+    old_keys = {c.get("matchup") for c in old}
+    # a fresh card replaces that game's saved one; a card rebuilt from the log never replaces a saved (fuller) one
+    fresh = [c for c in result.get("cards", []) if not (c.get("from_log") and c.get("matchup") in old_keys)]
+    new_keys = {c.get("matchup") for c in fresh}
+    kept = [dict(c, earlier=True) for c in old if c.get("matchup") not in new_keys]
+    cards = [dict(c, earlier=bool(c.get("from_log"))) for c in fresh] + kept
+    order = {f"{g.get('away_team')} @ {g.get('home_team')}": i for i, g in enumerate(result.get("schedule", []))}
+    cards.sort(key=lambda c: order.get(c.get("matchup"), len(order)))
     have = {c.get("matchup") for c in cards}
     result = dict(result, cards=cards,
                   skipped=[x for x in result.get("skipped", []) if x.get("matchup") not in have])
@@ -124,7 +176,7 @@ class Job:
             st._FEED_CACHE.clear(); st._SB_CACHE.clear()
             out = Collector(self._step)
             nba.predict_today(first_pass=True, teams=teams, ui=out)
-            self.state["result"] = keep_todays_cards(out.result)
+            self.state["result"] = keep_todays_cards(add_logged_cards(out.result))
             threading.Thread(target=BOARD.refresh, daemon=True).start()   # new picks -> board knows them
         except Exception as e:  # noqa: BLE001 — any failure is shown on the page instead of lost
             traceback.print_exc()
