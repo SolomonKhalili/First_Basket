@@ -904,7 +904,7 @@ details.oc[open] { grid-column: 1 / -1; }
     </div>
     <div class="dtabs" id="dtabs" role="tablist"></div>
     <div class="dtools" id="dtools">
-      <input id="dq" type="search" placeholder="Search — a player, a team, a date like 11/17…" aria-label="Search the table">
+      <input id="dq" type="search" list="dpnames" placeholder="Search — a player, a team, a date like 11/17…" aria-label="Search the table" autocomplete="off">
       <select id="dseason" aria-label="Season"></select>
       <select id="dteam" aria-label="Team"><option value="">All teams</option></select>
       <select id="dresult" aria-label="Result"></select>
@@ -913,10 +913,9 @@ details.oc[open] { grid-column: 1 / -1; }
     </div>
 
     <div class="dplayer" id="dplayer" hidden>
-      <span class="dp-label">🔎 Player</span>
-      <input id="dpname" type="search" list="dpnames" placeholder="Type a player's name…" aria-label="Player name" autocomplete="off">
+      <input id="dpname" type="hidden">
       <datalist id="dpnames"></datalist>
-      <span class="dp-as">as</span>
+      <span class="dp-label">🔎 Show games where <b id="dpwho"></b> was</span>
       <select id="dprole" aria-label="What to look for"></select>
       <button class="link" id="dpclear" hidden>Clear</button>
     </div>
@@ -2436,7 +2435,11 @@ const pclean = (v) => String(v ?? "").replace(/\s*\([A-Z]{2,4}\)\s*$/, "").trim(
 const colIdx = (d, key) => d.columns.findIndex((c) => c.key === key);
 
 function playerRoles() { return DROLES[dstate.tab] || null; }
-function playerQuery() { return pnorm($("dpname").value); }
+let knownPlayers = [];
+function playerQuery() {                       // the main search, when what's typed is (part of) a player's name
+  const q = pnorm($("dq").value);
+  return q.length >= 3 && knownPlayers.some((n) => n.includes(q)) ? q : "";
+}
 
 /* rows that match the player in the chosen role (or in any role column for "Anywhere") */
 function playerFilter(d, r) {
@@ -2449,14 +2452,17 @@ function playerFilter(d, r) {
 
 function setupPlayerSearch(d) {
   const roles = playerRoles();
-  $("dplayer").hidden = !roles;
-  if (!roles) { $("dpsum").hidden = true; return; }
+  if (!roles) { $("dplayer").hidden = true; $("dpsum").hidden = true; return; }
   const keepRole = $("dprole").value;
   $("dprole").innerHTML = roles.map(([k, l]) => `<option value="${k}" ${k === keepRole ? "selected" : ""}>${l}</option>`).join("");
   const names = new Set();                                   // suggestions: every player in the role columns
   for (const [k] of roles.slice(1)) { const i = colIdx(d, k); if (i >= 0) for (const r of d.rows) if (r[i]) names.add(pclean(r[i])); }
   $("dpnames").innerHTML = [...names].sort().map((n) => `<option value="${esc(n)}"></option>`).join("");
-  $("dpclear").hidden = !$("dpname").value;
+  knownPlayers = [...names].map(pnorm);
+  const pq = playerQuery();
+  $("dplayer").hidden = !pq;                                   // the role choice shows only for a player's name
+  $("dpwho").textContent = pq ? (([...names].find((n) => pnorm(n) === pq)) || $("dq").value.trim()) : "";
+  $("dpclear").hidden = !pq;
 }
 
 /* the summary card: how often this player shows up in each role (this season / filters applied) */
@@ -2493,14 +2499,14 @@ function renderPlayerSummary(d) {
     card("tip_winner_player_name", won, "tips won", won + lost ? `${Math.round((won / (won + lost)) * 100)}% of ${won + lost} jump balls` : "");
     card("tip_loser_player_name", lost, "tips lost");
   }
-  $("dpsum").innerHTML = `<span class="who">${esc(shown || $("dpname").value)}</span>` + cards.join("");
+  $("dpsum").innerHTML = `<span class="who">${esc(shown || $("dq").value)}</span>` + cards.join("");
   $("dpsum").hidden = false;
 }
 
 let dpTimer = null;
 $("dpname").addEventListener("input", () => { clearTimeout(dpTimer); dpTimer = setTimeout(renderData, 150); });
 $("dprole").addEventListener("change", renderData);
-$("dpclear").addEventListener("click", () => { $("dpname").value = ""; $("dprole").value = ""; renderData(); });
+$("dpclear").addEventListener("click", () => { $("dq").value = ""; $("dprole").value = ""; renderData(); });
 $("dpsum").addEventListener("click", (e) => {                 // click a number: show just those games
   const b = e.target.closest("[data-role]");
   if (!b) return;
