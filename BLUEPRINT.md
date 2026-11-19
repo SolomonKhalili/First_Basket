@@ -570,6 +570,9 @@ NBA/
   Jan–Apr 2026 2.2727 → 2.2649 (both better); top pick 21.7% → 21.2%, 14.9% → 15.1%. 40% hurt 2026-27. Applied in
   `probabilities()` (live picks); the training script's own walk-forward numbers stay unmixed. Re-check 2026-12-08.
 - **Rejected — weighting recent games more** (half-life 90/180/365 days): log-loss changes < 0.002, top pick worse.
+- **Started saving the injury report** (`injury_log`, `starters.save_injury_report`, every predict run in the cloud):
+  one row per player per status per day. Enables a later test (~mid-January, 6–8 weeks of data): do starters who were
+  Questionable / just returned from injury score first less often?
 
 ### 2026-11-18 (later) — where accuracy is lost, and what didn't help
 
