@@ -242,6 +242,11 @@ def live(out: Path, once: bool = False) -> int:
                 _git("checkout", "FETCH_HEAD", "--", "website_live/relay_url.txt", cwd=HERE)
             except Exception:  # noqa: BLE001 — not set up yet
                 pass
+            try:                                         # DraftKings prices from the Mac (DraftKings refuses clouds)
+                _git("fetch", "-q", "--depth", "1", os.environ["STATE_REMOTE"], "dk-prices", cwd=HERE)
+                _git("checkout", "FETCH_HEAD", "--", "dk_prices.json", cwd=HERE)
+            except Exception:  # noqa: BLE001 — the Mac hasn't sent any (it's off): FanDuel only
+                pass
         users_now = settings()
         if users_now != users_seen:
             users_seen, published_fp = users_now, None    # publish straight away with the new account list

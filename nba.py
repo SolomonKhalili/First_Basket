@@ -1057,6 +1057,9 @@ def _draftkings_prices(games: list, warn: list, ui=None):
         with ui.console.status("Getting DraftKings first-basket odds…"):
             return dk.fetch_first_basket_odds()
     except Exception as e:                 # odds are extra: never stop the predictions over them
+        games, age = dk.load_snapshot()   # the cloud: DraftKings refuses it, so use the Mac's latest prices
+        if games is not None:
+            return games
         warn.append(f"DraftKings odds unavailable ({type(e).__name__}) — FanDuel only")
         return None
 

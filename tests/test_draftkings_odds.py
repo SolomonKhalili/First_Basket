@@ -43,3 +43,15 @@ def test_card_uses_better_book_for_value():
     assert card["best_book"]["Devin Booker"] == "DraftKings"
     assert abs(card["ev"]["Devin Booker"] - (0.2 * 6 - 0.8)) < 1e-9      # EV at the better (DraftKings) price
     assert card["best_value"]["book"] == "DraftKings"
+
+
+def test_snapshot_used_only_when_fresh(tmp_path):
+    import json
+    import time
+    f = tmp_path / "dk.json"
+    f.write_text(json.dumps({"at": time.time() - 120, "games": [{"home_code": "SAC"}]}))
+    games, age = dk.load_snapshot(f)
+    assert games == [{"home_code": "SAC"}] and 1.9 < age < 2.1          # 2 minutes old: used
+    f.write_text(json.dumps({"at": time.time() - 15 * 60, "games": [{"home_code": "SAC"}]}))
+    assert dk.load_snapshot(f) == (None, None)                          # 15 minutes old: ignored
+    assert dk.load_snapshot(tmp_path / "missing.json") == (None, None)

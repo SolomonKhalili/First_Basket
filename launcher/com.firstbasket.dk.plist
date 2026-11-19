@@ -1,0 +1,35 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<!-- Sends DraftKings first-basket prices to the website every 3 minutes while this Mac is on (DraftKings refuses
+     cloud servers, so the website's cloud job can't read them itself). Installed as
+     ~/Library/LaunchAgents/com.firstbasket.dk.plist. To turn it off:
+       launchctl bootout gui/$(id -u) ~/Library/LaunchAgents/com.firstbasket.dk.plist -->
+<plist version="1.0">
+<dict>
+  <key>Label</key>
+  <string>com.firstbasket.dk</string>
+  <key>ProgramArguments</key>
+  <array>
+    <string>/opt/homebrew/bin/python3</string>
+    <string>/Users/solomonkhalili/Desktop/NBA/draftkings_odds.py</string>
+    <string>--push</string>
+  </array>
+  <key>WorkingDirectory</key>
+  <string>/Users/solomonkhalili/Desktop/NBA</string>
+  <key>EnvironmentVariables</key>
+  <dict>
+    <key>PATH</key>
+    <string>/opt/homebrew/bin:/usr/bin:/bin</string>
+  </dict>
+  <key>RunAtLoad</key>
+  <true/>
+  <key>StartInterval</key>
+  <integer>180</integer>
+  <key>StandardOutPath</key>
+  <string>/Users/solomonkhalili/Desktop/NBA/launcher/dk.log</string>
+  <key>StandardErrorPath</key>
+  <string>/Users/solomonkhalili/Desktop/NBA/launcher/dk.log</string>
+  <key>ProcessType</key>
+  <string>Background</string>
+</dict>
+</plist>

@@ -13,3 +13,5 @@ launcher/sync.log
 todays_cards.json
 .state_out/
 run.log
+dk_prices.json
+launcher/dk.log
