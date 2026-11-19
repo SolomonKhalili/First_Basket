@@ -59,8 +59,6 @@ session: §11 step 0. Full details of every change are in §10, newest first.)*
 - **Nothing half-built.** All code is merged; 203 tests pass.
 
 **Coming up (dated)**
-- **On/after 2026-12-01:** confirm 11/02/26 got its starters from the ESPN fallback (`official_lineups` rows with
-  status `ESPN` for that date). The cloud stops re-checking 11/02 after 12/02.
 - **On/after 2026-12-08:** re-check the two inputs adopted 11/18 (opponent by position, head-to-head) and the 20%
   simple-rule mix — §7.1 item 4. Keep only what is still better in both test periods.
 - **~2026-12-20 (150+ finished games with saved odds):** test blending in sportsbook odds
@@ -214,7 +212,7 @@ player stats + team stats + tip_model ─► pregame_model.py ─► P(first bas
 | Item | State |
 |------|-------|
 | `games` | 1,524 games, 2025-10-21 → 2026-11-16. Dates are ESPN scoreboard dates (Eastern Time); status 3 (final) |
-| Labelled games (`first_baskets`) | 1,515. 9 games have no label (play-by-play missing; old, permanent) |
+| Labelled games (`first_baskets`) | Every stored game has a label (2026-11-19: of the 9 old gaps, 8 were never played — 4 postponed, 4 unneeded playoff games — and were removed; LAC @ CHI 1/20/26 filled from ESPN's summary feed). `nba.repair_old_gaps` re-asks ESPN once a week about any older game without a label; `_played` stops postponed games being stored as finished; `get_pbp` falls back to the summary feed when the library's feed is empty |
 | 2025-26 regular season | 1,230 labelled games (Oct 21 – Apr 12) — training data |
 | 2025-26 playoffs | 87 labelled games (incomplete) — excluded from training |
 | 2026-27 season | 198 labelled games (Oct 20 – Nov 16) — training data and walk-forward test |

@@ -130,6 +130,37 @@ def get_todays_games() -> list[dict]:
         })
     return games
 
+def flatten_summary(summary: dict) -> dict:
+    """Pure (testable). ESPN's game summary -> the shape espn_nba_pbp returns (flat "a.b" keys on each play), so
+    get_pbp reads both the same way."""
+    comps = ((summary.get("header") or {}).get("competitions") or [{}])[0].get("competitors") or []
+    side = {c.get("homeAway"): (str(c["team"]["id"]), c["team"].get("abbreviation", "")) for c in comps if c.get("team")}
+    home, away = side.get("home", ("", "")), side.get("away", ("", ""))
+    plays = []
+    for q in summary.get("plays") or []:
+        parts = q.get("participants") or []
+        flat = {"team.id": str((q.get("team") or {}).get("id", "") or ""), "homeTeamId": home[0], "awayTeamId": away[0],
+                "homeTeamAbbrev": home[1], "awayTeamAbbrev": away[1],
+                "type.text": (q.get("type") or {}).get("text", ""), "period.number": (q.get("period") or {}).get("number", 0),
+                "clock.displayValue": (q.get("clock") or {}).get("displayValue", ""),
+                "scoringPlay": bool(q.get("scoringPlay")), "shootingPlay": bool(q.get("shootingPlay")),
+                "coordinate.x": (q.get("coordinate") or {}).get("x"), "coordinate.y": (q.get("coordinate") or {}).get("y")}
+        for i, a in enumerate(parts[:2]):
+            flat[f"participants.{i}.athlete.id"] = str((a.get("athlete") or {}).get("id", "") or "")
+        plays.append(flat)
+    return {"plays": plays, "boxscore": summary.get("boxscore") or {}}
+
+
+def _summary_pbp(game_id: str) -> dict:
+    try:
+        import requests
+        r = requests.get(f"https://site.web.api.espn.com/apis/site/v2/sports/basketball/nba/summary?event={game_id}",
+                         timeout=20, headers={"User-Agent": "Mozilla/5.0"})
+        return flatten_summary(r.json()) if r.ok else {}
+    except Exception:  # noqa: BLE001
+        return {}
+
+
 def get_pbp(game_id: str) -> list[dict]:
     """Play-by-play + player names from ESPN."""
     time.sleep(SLEEP)
@@ -139,6 +170,9 @@ def get_pbp(game_id: str) -> list[dict]:
         print(f"  ESPN PBP error for {game_id}: {e}")
         return []
     plays = pbp.get('plays', [])
+    if not plays:                                # the library's feed can come back empty: ESPN's summary has them
+        pbp = _summary_pbp(game_id) or pbp
+        plays = pbp.get('plays', [])
 
     # Map player ID -> name from boxscore
     names = {}
@@ -322,7 +356,7 @@ def backfill(season_year: int = 2024, max_days: int = None):
             if df is None or len(df) == 0:
                 continue
             # Only regular season games (season_type == 2), completed
-            games_df = df[(df['status_type_state'] == 'post') & (df['season_type'] == 2)]
+            games_df = df[_played(df)]
 
             for _, r in games_df.iterrows():
                 gid = str(r['game_id'])
@@ -381,6 +415,66 @@ def backfill(season_year: int = 2024, max_days: int = None):
 # ──────────────────────────────────────────────
 # AUTO-CATCHUP
 # ──────────────────────────────────────────────
+def _played(df):
+    """Rows of an ESPN scoreboard that are regular-season games played to a final score. ESPN also marks postponed
+    and cancelled games as "post" (over), so "completed" must be true too (2026-11-19: 4 postponed games had been
+    stored as finished)."""
+    completed = df['status_type_completed'].fillna(False).astype(bool) if 'status_type_completed' in df else True
+    return (df['status_type_state'] == 'post') & (df['season_type'] == 2) & completed
+
+
+GAP_DROP = {"STATUS_POSTPONED", "STATUS_CANCELED", "STATUS_CANCELLED", "STATUS_FORFEIT", "STATUS_SUSPENDED"}
+
+
+def gap_action(espn_found: bool, status_name: str, completed: bool) -> str:
+    """Pure (testable). A stored game with no first basket: what does ESPN say now?
+    -> "drop" (never played: postponed / cancelled / no longer listed — its makeup game has its own id),
+       "fill" (played: fetch its play-by-play again) or "wait" (not decided yet)."""
+    if not espn_found or status_name in GAP_DROP:
+        return "drop"
+    return "fill" if completed else "wait"
+
+
+def repair_old_gaps(con, recheck_days: int = 7) -> dict:
+    """Games older than 14 days still without a first basket (the recent ones are retried in sync_data): ask ESPN
+    again. Played -> fill in first basket, tip and lineups; never played -> remove the row. Each game is asked at
+    most once a week (table gap_checks), so a game ESPN truly has no play-by-play for costs one request a week."""
+    import requests
+    con.execute("CREATE TABLE IF NOT EXISTS gap_checks (game_id TEXT PRIMARY KEY, checked TEXT)")
+    old = (date.today() - timedelta(days=14)).strftime("%Y%m%d")
+    since = (date.today() - timedelta(days=recheck_days)).isoformat()
+    gaps = [g for (g,) in con.execute(
+        """SELECT game_id FROM games WHERE game_date < ? AND game_id NOT IN (SELECT game_id FROM first_baskets)
+           AND game_id NOT IN (SELECT game_id FROM gap_checks WHERE checked >= ?)""", (old, since))]
+    done = {"filled": 0, "dropped": 0, "still_missing": 0}
+    for gid in gaps:
+        try:
+            r = requests.get(f"https://site.web.api.espn.com/apis/site/v2/sports/basketball/nba/summary?event={gid}",
+                             timeout=20, headers={"User-Agent": "Mozilla/5.0"})
+            if r.status_code not in (200, 404):
+                continue                                         # ESPN busy: try next time
+            comp = ((r.json().get("header") or {}).get("competitions") or [{}])[0] if r.status_code == 200 else {}
+        except Exception:  # noqa: BLE001 — offline: try next time
+            continue
+        status = (comp.get("status") or {}).get("type") or {}
+        action = gap_action(bool(comp), status.get("name", ""), bool(status.get("completed")))
+        if action == "drop":
+            for table in ("lineups", "first_shots", "early_shots", "games"):
+                con.execute(f"DELETE FROM {table} WHERE game_id = ?", (gid,))
+            done["dropped"] += 1
+        elif action == "fill":
+            ingest_game(gid, con)
+            st.store_game_lineup(con, gid)
+            got = con.execute("SELECT 1 FROM first_baskets WHERE game_id = ?", (gid,)).fetchone()
+            done["filled" if got else "still_missing"] += 1
+        con.execute("INSERT OR REPLACE INTO gap_checks VALUES (?, ?)", (gid, date.today().isoformat()))
+        con.commit()
+        time.sleep(SLEEP)
+    if done["filled"] or done["dropped"]:
+        print(f"  🩹 Old gaps: {done['filled']} filled in, {done['dropped']} never-played games removed")
+    return done
+
+
 def catchup_missing_games():
     """Fetch games from the last stored DB date → yesterday. The last stored date is re-checked
     (games still in progress when it was stored); games already stored with a label are skipped."""
@@ -407,7 +501,7 @@ def catchup_missing_games():
             df = espn_nba_scoreboard(dates=[day], return_as_pandas=True)
             if df is None or len(df) == 0:
                 continue
-            games_df = df[(df['status_type_state'] == 'post') & (df['season_type'] == 2)]
+            games_df = df[_played(df)]
             for _, r in games_df.iterrows():
                 gid = str(r['game_id'])
                 home = str(r['home_abbreviation'])
@@ -436,7 +530,7 @@ def file_finished_games(day: str) -> int:
     df = espn_nba_scoreboard(dates=[day], return_as_pandas=True)
     added = 0
     if df is not None and len(df):
-        done = df[(df['status_type_state'] == 'post') & (df['season_type'] == 2)]
+        done = df[_played(df)]
         for _, r in done.iterrows():
             gid, home, away = str(r['game_id']), str(r['home_abbreviation']), str(r['away_abbreviation'])
             if home not in NBA_TEAMS or away not in NBA_TEAMS or gid in have:
@@ -648,6 +742,7 @@ def sync_data() -> str:
     for (gid,) in con.execute("""SELECT game_id FROM games WHERE game_date >= ?
                                  AND game_id NOT IN (SELECT DISTINCT game_id FROM lineups)""", (recent,)).fetchall():
         st.store_game_lineup(con, gid)
+    repair_old_gaps(con)                       # older games still missing a first basket (once a week each)
     # NBA.com's official starters + positions for every day already played (teaches the tip-off model
     # who usually jumps); each day is fetched once
     today = date.today().strftime("%Y%m%d")

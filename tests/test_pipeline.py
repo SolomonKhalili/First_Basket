@@ -441,3 +441,33 @@ def test_tip_jumpball_skips_an_empty_entry_before_the_real_one():
     assert (tip["tip_winner_team"], tip["tip_winner_player_name"], tip["tip_loser_player_name"]) == \
         ("MIA", "Bam Adebayo", "Anthony Davis")
     assert nba.tip_jumpball([empty]) is None                       # only an empty one: no tip recorded
+
+
+def test_old_gap_decisions():
+    """A stored game with no first basket: never played -> remove; played -> fill in; undecided -> wait."""
+    from nba import gap_action
+    assert gap_action(False, "", False) == "drop"                    # ESPN no longer lists it (unneeded playoff game)
+    assert gap_action(True, "STATUS_POSTPONED", False) == "drop"
+    assert gap_action(True, "STATUS_CANCELED", False) == "drop"
+    assert gap_action(True, "STATUS_FINAL", True) == "fill"
+    assert gap_action(True, "STATUS_SCHEDULED", False) == "wait"
+
+
+def test_postponed_games_are_not_counted_as_played():
+    import pandas as pd
+    from nba import _played
+    df = pd.DataFrame({"status_type_state": ["post", "post", "in", "post"], "season_type": [2, 2, 2, 3],
+                       "status_type_completed": [True, False, False, True]})
+    assert list(_played(df)) == [True, False, False, False]          # final / postponed / live / playoffs
+
+
+def test_summary_plays_read_like_the_library():
+    from nba import flatten_summary
+    s = {"header": {"competitions": [{"competitors": [
+            {"homeAway": "home", "team": {"id": "4", "abbreviation": "CHI"}},
+            {"homeAway": "away", "team": {"id": "12", "abbreviation": "LAC"}}]}]},
+         "plays": [{"type": {"text": "Driving Finger Roll Layup"}, "period": {"number": 1}, "clock": {"displayValue": "11:32"},
+                    "scoringPlay": True, "shootingPlay": True, "team": {"id": "12"}, "participants": [{"athlete": {"id": "3992"}}]}]}
+    p = flatten_summary(s)["plays"][0]
+    assert p["team.id"] == "12" and p["awayTeamAbbrev"] == "LAC" and p["participants.0.athlete.id"] == "3992"
+    assert p["clock.displayValue"] == "11:32" and p["period.number"] == 1 and p["scoringPlay"] is True
