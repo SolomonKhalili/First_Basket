@@ -2,7 +2,7 @@
 """
 Re-create picks for games played BEFORE we started saving live picks: this season (so the scorecard in
 my_predictions.xlsx covers the whole season) and last season from January 2026 (LAST_SEASON_FROM — the model needs a
-couple of months of games to learn from first), so the page can show an "overall" record next to this season's.
+week of games to learn from first) through the Finals, play-in and playoffs included, so the page can show an "overall" record next to this season's.
 
 Honest by construction — the same week-by-week test the model is graded on:
   * each week's games are predicted by a model trained only on games before that week;
@@ -34,7 +34,8 @@ warnings.filterwarnings("ignore")
 DB = "nba_first_basket.db"
 LABEL = "BACKTEST"
 MODEL_ID = "week-by-week-backtest"
-LAST_SEASON_FROM = "20260101"          # last season's games graded from here (regular season only)
+LAST_SEASON_FROM = "20251101"          # last season graded from here: the first ~10 days had no earlier games to learn from
+LAST_SEASON_PLAN = f"{LAST_SEASON_FROM}+playoffs"   # what fill_last_season last built (re-built when this changes)
 
 
 def load_training():
@@ -88,20 +89,29 @@ def recreate(con, ns, idx, live, l2, info, names, pool) -> tuple:
     return made, hits
 
 
+def last_season_games(season, dates):
+    """Last season's games to grade: regular season from LAST_SEASON_FROM, plus play-in, playoffs and Finals
+    (predicted by models trained on regular-season games before each week, as always)."""
+    return np.where(((season == "old") & (dates >= LAST_SEASON_FROM)) | (season == "playoffs"))[0]
+
+
 def fill_last_season(con) -> int:
-    """Re-create last season's picks (from LAST_SEASON_FROM) once, if they aren't there yet — run by sync_data, so the
+    """Re-create last season's picks once (and again only if LAST_SEASON_PLAN changes) — run by sync_data, so the
     cloud fills in the "overall" record by itself. Returns how many picks were added (0 = already there)."""
     picks.ensure_table(con)
-    if con.execute("SELECT 1 FROM pick_log WHERE lineup_type = ? AND game_date < ? LIMIT 1",
-                   (LABEL, picks.SEASON_START)).fetchone():
+    con.execute("CREATE TABLE IF NOT EXISTS backtest_meta (key TEXT PRIMARY KEY, value TEXT)")
+    done = con.execute("SELECT value FROM backtest_meta WHERE key = 'last_season'").fetchone()
+    if done and done[0] == LAST_SEASON_PLAN:
         return 0
+    con.execute("DELETE FROM pick_log WHERE lineup_type = ? AND game_date < ?", (LABEL, picks.SEASON_START))
     ns = load_training()
     gids, dates, season = ns["gids"], ns["dates"], ns["season"]
     info = {g: (h, a) for g, h, a in con.execute("SELECT game_id, home_team, away_team FROM games")}
     names = dict(con.execute("SELECT player_id, player_name FROM lineups"))
     live = {g for (g,) in con.execute("SELECT DISTINCT game_id FROM pick_log WHERE lineup_type != ?", (LABEL,))}
-    idx = np.where((season == "old") & (dates >= LAST_SEASON_FROM))[0]
-    made, hits = recreate(con, ns, idx, live, pm.load().get("l2", 1e-3), info, names, season != "playoffs")
+    made, hits = recreate(con, ns, last_season_games(season, dates), live, pm.load().get("l2", 1e-3), info, names,
+                          season != "playoffs")
+    con.execute("INSERT OR REPLACE INTO backtest_meta VALUES ('last_season', ?)", (LAST_SEASON_PLAN,))
     con.commit()
     print(f"  📈 Last season's record filled in: {made} games, #1 pick right in {hits / max(made, 1):.1%}")
     return made
@@ -120,7 +130,7 @@ def main() -> int:
 
     pool = season != "playoffs"
     made = hits = 0
-    for idx in (np.where(season == "new")[0], np.where((season == "old") & (dates >= LAST_SEASON_FROM))[0]):
+    for idx in (np.where(season == "new")[0], last_season_games(season, dates)):
         m, h_ = recreate(con, ns, idx, live, l2, info, names, pool)
         made += m; hits += h_
     con.commit()

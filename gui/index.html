@@ -1488,9 +1488,9 @@ async function renderRecord() {
         <div class="ring-txt"><b>This season</b><span class="num">${f.hits} of ${f.games} games · top 3: ${pct(top3, 0)}</span><br><span>random pick ≈ 10%</span></div>
       </div>
       ${f.games ? rateVerdict(rate, f.games) : ""}
-      <div class="rec-overall" title="Every game we can grade fairly: each week predicted by a model that had only seen earlier games (last season from ${esc(since)}, plus this season)">
+      <div class="rec-overall" title="Every game we can grade fairly: last season from ${esc(since)} through the Finals (play-in and playoffs included) plus this season. Each week was predicted by a model that had only seen earlier games; the first ~10 days of last season are left out because there were no earlier games to learn from.">
         <span class="num big">${pct(orate)}</span>
-        <span><b>Overall</b> <span class="num">${o.hits.toLocaleString()} of ${o.games.toLocaleString()} games${since ? ` since ${esc(since)}` : ""} · top 3: ${pct(otop3, 0)}</span></span>
+        <span><b>Overall</b> <span class="num">${o.hits.toLocaleString()} of ${o.games.toLocaleString()} games${since ? ` since ${esc(since)}` : ""} · playoffs &amp; Finals included · top 3: ${pct(otop3, 0)}</span></span>
       </div>
       ${o.games ? rateVerdict(orate, o.games) : ""}
       <div class="section-title" style="margin-top:4px">Recent games</div>
