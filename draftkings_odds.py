@@ -193,3 +193,18 @@ if __name__ == "__main__":
         print(f"{g['away_code']} @ {g['home_code']}  ({len(g['players'])} players)")
         for r in g["players"]:
             print(f"   {r['american']:+6d}  {r['player']} ({r['team']})")
+
+
+def push_to_relay(relay_url: str, games: list) -> int:
+    """Send DraftKings lines (parse_first_points output) to the relay's shared log, exactly like a viewer's browser
+    does (POST /dk-log) — the Mac app does this every few minutes so DraftKings is logged all day, not only while
+    someone has the page open. Returns how many games the relay saved as changed."""
+    body = {"games": [{"away": g["away_code"], "home": g["home_code"],
+                       "rows": [{"player": r["player"], "team": r["team"], "american": r["american"]} for r in g["players"]]}
+                      for g in games if g.get("home_code") and g.get("away_code") and g.get("players")]}
+    if not body["games"]:
+        return 0
+    r = requests.post(f"{relay_url.rstrip('/')}/dk-log", json=body, timeout=20,
+                      headers={"Origin": "http://127.0.0.1:8765", "User-Agent": "first-basket-mac"})
+    r.raise_for_status()
+    return int(r.json().get("saved", 0))

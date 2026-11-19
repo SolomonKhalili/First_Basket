@@ -277,6 +277,27 @@ def dk_relay() -> tuple:
     return 200, body
 
 
+DK_LOG_EVERY = 180                                      # seconds: DraftKings logged every 3 minutes, 6 AM – midnight
+
+
+def dk_logger(stop: threading.Event) -> None:
+    """Background thread of the Mac app: read DraftKings and add any change to the shared log (relay /dk-log), so
+    DraftKings' prices are logged all day while this Mac is on (DraftKings refuses GitHub and Cloudflare)."""
+    from datetime import datetime
+    from zoneinfo import ZoneInfo
+    import draftkings_odds as dk
+    import publish
+    while not stop.wait(5):
+        try:
+            if 6 <= datetime.now(ZoneInfo("America/New_York")).hour <= 23:
+                relay = publish.RELAY_FILE.read_text().strip() if publish.RELAY_FILE.exists() else ""
+                if relay:
+                    dk.push_to_relay(relay, dk.parse_first_points(dk.league_markets(dk.FIRST_POINTS)))
+        except Exception:  # noqa: BLE001 — offline / DraftKings busy: try again next time
+            pass
+        stop.wait(DK_LOG_EVERY)
+
+
 def to_json(obj) -> bytes:
     """JSON that tolerates numpy numbers (the model's probabilities)."""
     return json.dumps(obj, default=lambda o: o.item() if hasattr(o, "item") else str(o)).encode()
@@ -324,7 +345,8 @@ class Job:
 # DATA VIEW: the CSV and my_predictions.xlsx as tabs in the app
 # ──────────────────────────────────────────────
 DATA_TABS = ("scorecard", "picks", "lineups", "games", "odds")
-ODDS_LABELS = ["Date", "Game", "Player", "Sportsbook", "Opening price", "Closing price", "How it moved", "Times it changed"]
+ODDS_LABELS = ["Date", "Game", "Player", "Sportsbook", "Opening price", "Closing price", "How it moved", "Times it changed",
+               "Every change (time)"]
 LINEUP_LABELS = ["Date", "Game", "Team", "NBA.com early lineup (Expected)", "NBA.com final lineup (Confirmed)",
                  "Who actually started", "Early lineup right?", "Final lineup right?"]
 GAME_LABELS = {"game_start": "Date", "away_team": "Away", "home_team": "Home", "tip_winner": "Tip won by",
@@ -774,6 +796,7 @@ def main(argv) -> int:
     port = int(argv[argv.index("--port") + 1]) if "--port" in argv else PORT
     try:
         server = ThreadingHTTPServer((HOST, port), Handler)
+        threading.Thread(target=dk_logger, args=(threading.Event(),), daemon=True).start()   # DraftKings log, all day
     except OSError:
         print(f"Port {port} is busy — the GUI may already be running: open http://{HOST}:{port}\n"
               f"(or start another copy with: python3 gui.py --port {port + 1})")

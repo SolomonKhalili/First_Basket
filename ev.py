@@ -209,6 +209,18 @@ def opening_prices(con, game_date: str, matchup: str) -> dict:
     return out
 
 
+def _clock(at) -> str:
+    """A log time -> '9:03 AM' (New York). FanDuel's log stores local ISO times; DraftKings' log stores epoch ms."""
+    from datetime import datetime
+    from zoneinfo import ZoneInfo
+    try:
+        t = datetime.fromtimestamp(int(at) / 1000, ZoneInfo("America/New_York")) if str(at).isdigit() \
+            else datetime.fromisoformat(str(at))
+        return t.strftime("%-I:%M %p")
+    except (ValueError, OSError):
+        return str(at)
+
+
 def odds_moves(con) -> list:
     """One row per player per book per game, newest day first: [date, game, player, book, opened, closed, moved,
     times changed]. "closed" = the last price saved (before tip-off once the game has started). Both books' logs."""
@@ -216,18 +228,20 @@ def odds_moves(con) -> list:
     seen = {}
     for book, table in (("FanDuel", "odds_log"), ("DraftKings", "dk_odds_log")):
         try:
-            q = con.execute(f"SELECT game_date, matchup, player_name, american FROM {table} ORDER BY logged_at")
+            q = con.execute(f"SELECT game_date, matchup, player_name, american, logged_at FROM {table} ORDER BY logged_at")
         except Exception:  # noqa: BLE001 — table not there yet
             continue
-        for d, m, name, a in q:
-            r = seen.setdefault((d, m, name, book), [a, a, 0])
+        for d, m, name, a, at in q:
+            r = seen.setdefault((d, m, name, book), [a, a, 0, [(at, a)]])
             if a != r[1]:
                 r[2] += 1
+                r[3].append((at, a))
             r[1] = a
     rows = []
-    for (d, m, name, book), (first, last, changes) in seen.items():
+    for (d, m, name, book), (first, last, changes, steps) in seen.items():
         moved = ("same" if first == last else
                  "↓ payout dropped" if profit_per_dollar(last) < profit_per_dollar(first) else "↑ payout rose")
-        rows.append([f"{d[4:6]}/{d[6:8]}/{d[2:4]}", m, name, book, f"{first:+d}", f"{last:+d}", moved, changes])
+        rows.append([f"{d[4:6]}/{d[6:8]}/{d[2:4]}", m, name, book, f"{first:+d}", f"{last:+d}", moved, changes,
+                     " → ".join(f"{a:+d} ({_clock(at)})" for at, a in steps)])
     rows.sort(key=lambda r: (r[0][6:] + r[0][:5], r[1], r[2], r[3]), reverse=True)
     return rows

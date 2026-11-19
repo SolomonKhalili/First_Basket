@@ -133,5 +133,6 @@ def test_odds_moves_log_both_books():
         con.execute("INSERT INTO odds_log (game_id, game_date, logged_at, matchup, player_name, american) VALUES ('g','20261119',?,'A @ B','P',?)", (at, a))
     con.execute("INSERT INTO dk_odds_log VALUES ('20261119','A @ B','t1','P','B',800)")
     rows = {r[3]: r for r in ev.odds_moves(con)}
-    assert rows["FanDuel"][4:] == ["+700", "+600", "↓ payout dropped", 2]
-    assert rows["DraftKings"][4:] == ["+800", "+800", "same", 0]
+    assert rows["FanDuel"][4:8] == ["+700", "+600", "↓ payout dropped", 2]
+    assert rows["FanDuel"][8].count("→") == 2                        # every change listed
+    assert rows["DraftKings"][4:8] == ["+800", "+800", "same", 0]
