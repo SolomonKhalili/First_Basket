@@ -392,6 +392,18 @@ def data_version() -> str:
     return str(max(times)) if times else "0"
 
 
+def games_played(con) -> dict:
+    """{season "2026-27": {player name: games he played (any minutes)}} from the box scores — for "of N games"."""
+    out = {}
+    for name, d, n in con.execute(
+            """SELECT l.player_name, g.game_date, 1 FROM lineups l JOIN games g USING(game_id)
+               WHERE COALESCE(l.minutes, 0) > 0"""):
+        y = int(d[:4]); start = y if d[4:6] >= "08" else y - 1
+        season = f"{start}-{str(start + 1)[2:]}"
+        out.setdefault(season, {})[name] = out.setdefault(season, {}).get(name, 0) + n
+    return out
+
+
 def data_tab(tab: str) -> dict:
     """One tab of the Data view: {"tab", "columns": [{"key", "label", "yesno"}], "rows": [[...]]}.
     scorecard / picks / lineups are the my_predictions.xlsx tabs (same functions as the file);
@@ -406,7 +418,8 @@ def data_tab(tab: str) -> dict:
     if tab == "picks":
         rows = picks.prediction_rows(con)
         cols = [{"key": k, "label": picks.LABELS[k], "yesno": k in picks.YES_NO} for k in picks.COLUMNS]
-        return {"tab": tab, "version": data_version(), "columns": cols, "rows": [[r[k] for k in picks.COLUMNS] for r in rows]}
+        return {"tab": tab, "version": data_version(), "columns": cols, "rows": [[r[k] for k in picks.COLUMNS] for r in rows],
+                "played": games_played(con)}
     if tab == "lineups":
         cols = [{"key": f"c{i}", "label": label, "yesno": i >= 6} for i, label in enumerate(LINEUP_LABELS)]
         return {"tab": tab, "version": data_version(), "columns": cols, "rows": picks.lineup_rows(con)}
@@ -414,7 +427,7 @@ def data_tab(tab: str) -> dict:
         keep = [nba.CSV_HEADER.index(k) for k in GAME_LABELS]
         cols = [{"key": k, "label": GAME_LABELS[k], "yesno": False} for k in GAME_LABELS]
         rows = [[r[i] for i in keep] for r in reversed(nba.csv_rows(con))]
-        return {"tab": tab, "version": data_version(), "columns": cols, "rows": rows}
+        return {"tab": tab, "version": data_version(), "columns": cols, "rows": rows, "played": games_played(con)}
     if tab == "odds":                         # both books' prices through the day (ev.odds_moves)
         import ev
         cols = [{"key": f"o{i}", "label": label, "yesno": False} for i, label in enumerate(ODDS_LABELS)]

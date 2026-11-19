@@ -868,6 +868,8 @@ details.oc[open] { grid-column: 1 / -1; }
 .snote { margin-top: 6px; font-size: 12.5px; color: var(--muted); }
 .sblock { padding: 6px 0 10px; } .sblock + .sblock { border-top: 1px dashed var(--line); }
 .sbk { font-size: 12.5px; color: var(--muted); }
+.who-p { display: block; font-family: var(--body, inherit); font-size: 12px; font-weight: 500; color: var(--muted); text-transform: none; letter-spacing: 0; margin-top: 2px; }
+.tlegend { font-size: 12px; color: var(--muted); margin: 6px 2px 0; }
 </style>
 </head>
 <body>
@@ -1521,6 +1523,7 @@ function bookSection(c, book, recLine, shortName) {
     <div class="book-h">${book} <small>${isFD ? "including free throws" : "excluding free throws"}</small></div>
     <div class="sub-h">🏀 First basket <small>— top 5</small></div>
     <div class="tscroll"><table class="bk-table bk3">${head("Player")}<tbody>${rows || `<tr><td colspan="4">${missing(c, book)}</td></tr>`}</tbody></table></div>
+    <div class="tlegend"><b>2/13</b> under a name = scored first in 2 of his 13 games <b>this season</b>.</div>
     ${teamRows ? `${teamHero(c, c.first_team || {}, dkTeamP)}<div class="sub-h">🏀 First team to score <small>(${isFD ? "including" : "excluding"} free throws)</small></div>
     <div class="tscroll"><table class="bk-table bk3">${head("Team")}<tbody>${teamRows}</tbody></table></div>` : ""}
   </div>`;
@@ -2488,6 +2491,13 @@ function renderPlayerSummary(d) {
   const cards = [];
   const card = (role, big, label, sub = "") =>
     cards.push(`<button data-role="${role}" class="${$("dprole").value === role ? "on" : ""}"><b class="num">${big}</b><small>${label}</small>${sub ? `<br><small>${sub}</small>` : ""}</button>`);
+  // which time period these numbers cover (said on the card, so nobody mistakes this season for all time)
+  const curSeason = seasonOf(new Date().toLocaleDateString("en-US", { month: "2-digit", day: "2-digit", year: "2-digit" }));
+  const period = season ? `in the ${season} season` : dstate.tab === "picks" ? `this season (${curSeason})` : "in all our data (since Oct 2025)";
+  const played = d.played || {}, who = shown || "";
+  const gp = season ? (played[season] || {})[who] : dstate.tab === "picks" ? (played[curSeason] || {})[who]
+    : Object.values(played).reduce((k, s) => k + ((s || {})[who] || 0), 0) || undefined;
+  const ofGames = gp ? `of ${gp} games he played` : "";
   if (dstate.tab === "picks") {
     const p1 = rows.filter((r) => m(r, "pick_1")), p1done = p1.filter((r) => ["YES", "NO"].includes(v(r, "pick_1_right")));
     const p1right = p1done.filter((r) => v(r, "pick_1_right") === "YES").length;
@@ -2498,17 +2508,17 @@ function renderPlayerSummary(d) {
     const at = rows.filter((r) => m(r, "actual_tip_winner")).length;
     card("pick_1", p1.length, "times our #1 pick", p1done.length ? `<span class="ok">${p1right} right</span> of ${p1done.length} played` : "");
     card("pick_2", p2.length, "times our #2 pick", p2.length ? `${p2scored} of those he scored first` : "");
-    card("actual_first_scorer", sf, "times scored first");
+    card("actual_first_scorer", sf, "times scored first", ofGames);
     card("predicted_tip_winner", pt.length, "times predicted to win the tip", ptdone.length ? `<span class="ok">${ptright} right</span> of ${ptdone.length}` : "");
     card("actual_tip_winner", at, "times actually won the tip");
   } else {
     const sf = rows.filter((r) => m(r, "first_basket_scorer")).length;
     const won = rows.filter((r) => m(r, "tip_winner_player_name")).length, lost = rows.filter((r) => m(r, "tip_loser_player_name")).length;
-    card("first_basket_scorer", sf, "times scored first");
+    card("first_basket_scorer", sf, "times scored first", ofGames);
     card("tip_winner_player_name", won, "tips won", won + lost ? `${Math.round((won / (won + lost)) * 100)}% of ${won + lost} jump balls` : "");
     card("tip_loser_player_name", lost, "tips lost");
   }
-  $("dpsum").innerHTML = `<span class="who">${esc(shown || $("dq").value)}</span>` + cards.join("");
+  $("dpsum").innerHTML = `<span class="who">${esc(shown || $("dq").value)}<small class="who-p">${esc(period)}</small></span>` + cards.join("");
   $("dpsum").hidden = false;
 }
 
