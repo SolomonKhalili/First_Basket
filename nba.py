@@ -1272,7 +1272,11 @@ def predict_today(first_pass: bool = True, teams: set = frozenset(), ui=None) ->
                             h5, a5 = (sub["players"], away_starters) if team == home_team else (home_starters, sub["players"])
                             bp, bfg, binfo = score_lineup(h5, a5)
                             k = next(i for i, x in enumerate(binfo) if st.norm_name(x["name"]) == st.norm_name(rep))
-                            backup_chance[nm] = {"name": rep, "id": str(binfo[k]["id"]), "team": team, "fd": float(bp[k]),
+                            backup_chance[nm] = {"name": rep, "id": str(binfo[k]["id"]), "team": team,
+                                                 # his rank among the 10 starters if he plays (FanDuel / DraftKings rule)
+                                                 "rank_fd": int(1 + sum(float(x) > float(bp[k]) for x in bp)),
+                                                 "rank_dk": int(1 + sum(float(x) > float(bfg[k]) for x in bfg)) if bfg is not None else None,
+                                                 "fd": float(bp[k]),
                                                  "dk": float(bfg[k]) if bfg is not None else None}
                     except Exception:  # noqa: BLE001 — a missing backup never blocks the picks
                         pass
