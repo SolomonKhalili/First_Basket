@@ -94,14 +94,27 @@ def most_experienced_jumper(con, player_ids, before: str, extended: bool = False
     return best
 
 
+# The tip-off call shown on each game (extended=True) counts this season's tips double. Tested 2026-11-19 (weights
+# 1/2/3/5/8): 2x was the only one with better log-loss in BOTH seasons (2025-26 0.6297 -> 0.6275, 2026-27
+# 0.6321 -> 0.6310; tip winners called 65.1% -> 64.6% and 65.6% -> 67.0%). The first-basket model's tip input
+# (extended=False) is unchanged.
+SEASON_WEIGHT = 2.0
+
+
+def _season_start(d: str) -> str:
+    return f"{d[:4]}0801" if d[4:6] >= "08" else f"{int(d[:4]) - 1}0801"
+
+
 def jumper_rate(con, player_id, before: str, extended: bool = False) -> float:
-    """Shrunk tip win rate from every tip he took before `before`."""
+    """Shrunk tip win rate from every tip he took before `before` (this season's tips count double for the shown call)."""
     if not player_id:
         return PRIOR_RATE
+    w = SEASON_WEIGHT if extended else 1.0
     wins, n = con.execute(
-        f"""SELECT COALESCE(SUM(tip_winner_player_id = ?), 0), COUNT(*) FROM {_tips(con, extended)}
+        f"""SELECT COALESCE(SUM((tip_winner_player_id = ?) * (CASE WHEN game_date >= ? THEN ? ELSE 1.0 END)), 0),
+                  COALESCE(SUM(CASE WHEN game_date >= ? THEN ? ELSE 1.0 END), 0) FROM {_tips(con, extended)}
            WHERE game_date < ? AND ? IN (tip_winner_player_id, tip_loser_player_id)""",
-        (player_id, before, player_id)).fetchone()
+        (player_id, _season_start(before), w, _season_start(before), w, before, player_id)).fetchone()
     return (wins + K * PRIOR_RATE) / (n + K)
 
 
