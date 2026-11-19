@@ -227,6 +227,26 @@ def _clock(at) -> str:
         return str(at)
 
 
+STEADY_SECONDS = 300   # a DraftKings price must hold 5 min to count as a change (see steady)
+
+
+def steady(steps: list, day: str, min_sec: int = STEADY_SECONDS) -> list:
+    """Drop short-lived DraftKings prices: [(time, american), ...] in time order -> only prices that held at least
+    `min_sec` seconds (the opening price and the latest one always stay). DraftKings reaches us from the Mac, ESPN's
+    copy (minutes behind) and viewers' browsers (prices can differ by state), so the raw log flips back and forth
+    (11/19: Boozer 620 <-> 630 logged 118 times); a real price change lasts."""
+    from datetime import datetime
+    if len(steps) < 3:
+        return list(steps)
+    t = [datetime.fromisoformat(_utc(at, day).replace("Z", "+00:00")) for at, _ in steps]
+    keep = [steps[0]]
+    for i in range(1, len(steps)):
+        lasts = i == len(steps) - 1 or (t[i + 1] - t[i]).total_seconds() >= min_sec
+        if lasts and steps[i][1] != keep[-1][1]:
+            keep.append(steps[i])
+    return keep
+
+
 def odds_moves(con) -> list:
     """One row per player per book per game, newest day first: [date, game, player, book, opened, closed, moved,
     times changed]. "closed" = the last price saved (before tip-off once the game has started). Both books' logs."""
@@ -254,6 +274,8 @@ def odds_moves(con) -> list:
     except Exception:  # noqa: BLE001
         pass
     for (d, m, name, book), (first, last, changes, steps) in seen.items():
+        if book == "DraftKings":                               # only prices that held (see steady)
+            steps = steady(steps, d); last = steps[-1][1]; changes = len(steps) - 1
         opened_at, closed_at = times.get((d, m, book), (None, None))
         moved = ("same" if first == last else
                  "↓ payout dropped" if profit_per_dollar(last) < profit_per_dollar(first) else "↑ payout rose")
@@ -378,5 +400,9 @@ def odds_track(con, day: str) -> dict:
         pass
     out = []
     for g in games.values():
+        for kind in ("players", "teams"):                      # DraftKings: only prices that held (see steady)
+            for row in g[kind].values():
+                if "DraftKings" in row["books"]:
+                    row["books"]["DraftKings"] = [list(x) for x in steady([tuple(x) for x in row["books"]["DraftKings"]], day)]
         out.append({"matchup": g["matchup"], "players": list(g["players"].values()), "teams": list(g["teams"].values())})
     return {"day": day, "games": sorted(out, key=lambda g: g["matchup"])}

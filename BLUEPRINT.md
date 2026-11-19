@@ -778,6 +778,12 @@ NBA/
   Model files record `early_m`; `_retrain_if_needed` retrains when it doesn't match. Season/last-10 trust re-checked:
   current 30 / 10 still best. (Note: `season_backtest.fill_fg_grades` grades the field-goal model with the
   first-points early setting — re-grade only if those grades are re-run.)
+- **Fixed — DraftKings "changes" were mostly noise** (`ev.steady`): DraftKings prices arrive from the Mac, ESPN's copy
+  (minutes behind) and viewers' browsers (prices can differ by state), so the raw log flipped back and forth (Boozer
+  620 ↔ 630, 118 "changes" on 11/19). The Odds tracker and the Data odds tab now count a DraftKings price only if it
+  held ≥ 5 min (latest price always shown): Boozer 118 → 22, Coward ~100 → 19. The raw log is unchanged.
+- **Fixed — "✗ Our #7 pick" label overflowing** on Yesterday tiles (the "not offered" style `.miss` capped it at 64 px;
+  now `.miss:not(.tag)`), and ESPN's "Not Specified" no longer shows before an injury.
 - **Site clean-up (evening):** status line says "model retrained with new settings" instead of "updated with 0 new games";
   questionable tag is two short lines ("⚠️ Questionable" / "if out: Holiday 9.4%"); repeated free-throw labels removed
   (book box header, team table title → "Both teams", one-line team note).

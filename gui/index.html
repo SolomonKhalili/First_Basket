@@ -127,7 +127,7 @@ button { font: inherit; cursor: pointer; border: 0; color: inherit; }
 .tile .meta { display: flex; align-items: center; gap: 6px; font-size: 12.5px; color: var(--muted); }
 .tile .meta .live-txt { color: var(--live); font-weight: 650; }
 .tile .res { font-size: 12.5px; border-top: 1px dashed var(--line); padding-top: 6px; color: var(--muted); overflow-wrap: anywhere; }
-.tile .res .tag { display: inline-block; white-space: nowrap; margin-top: 2px; }
+.tile .res .tag { display: inline-flex; align-items: center; gap: 3px; white-space: nowrap; margin-top: 2px; width: max-content; }
 .tile .res b { color: var(--text); font-weight: 600; }
 .tag { font-size: 11px; font-weight: 700; border-radius: 6px; padding: 1px 6px; margin-left: 4px; white-space: nowrap; }
 .tag.hit { background: var(--good-soft); color: var(--good); border: 1px solid color-mix(in srgb, var(--good) 55%, transparent); font-weight: 700; animation: pop .5s ease both; }
@@ -746,7 +746,7 @@ body.bets-mode .dayswitch, body.bets-mode #yestSum, body.bets-mode #dataView { d
 .oa { font-size: 16px; margin-left: 2px; } .oa.dn { color: var(--warn); } .oa.up { color: var(--muted); }
 .spark { width: 100%; height: 22px; } .spark path, .spark line { fill: none; stroke-width: 2; stroke: var(--muted); vector-effect: non-scaling-stroke; }
 .spark.up path { stroke: var(--warn); } .spark.down path { stroke: #60a5fa; }
-.miss { font-size: 10.5px; line-height: 1.2; color: var(--muted); font-weight: 600; display: inline-block; max-width: 64px; } .miss.unavailable { color: var(--warn); }
+.miss:not(.tag) { font-size: 10.5px; line-height: 1.2; color: var(--muted); font-weight: 600; display: inline-block; max-width: 64px; } .miss.unavailable:not(.tag) { color: var(--warn); }
 
 /* calm tables (owner: "too overstimulating" on phones) */
 .bk-table .bk-fd, .bk-table .bk-dk { background: none !important; }
@@ -1072,7 +1072,7 @@ const LINEUP = { CONFIRMED: "Confirmed lineup", EXPECTED: "Expected lineup", PRO
 const RESULT = { hit: "✓ Our pick", top3: "In our top 3", miss: "✗ Missed" };
 /* the scorer's exact spot on our list: "✓ Our #1 pick", "Our #2 pick", "✗ Our #7 pick", "✗ Not in our picks" */
 const rankLabel = (g) => g.result === "hit" ? "✓ Our #1 pick"
-  : g.rank ? `${g.result === "miss" ? "✗ " : ""}Our #${g.rank} pick`
+  : g.rank ? `${g.result === "miss" ? "<span>✗</span>" : ""}<span>Our #${g.rank} pick</span>`
   : g.result === "miss" ? "✗ Not in our picks" : RESULT[g.result];
 const $ = (id) => document.getElementById(id);
 const esc = (s) => String(s ?? "").replace(/[&<>"']/g, (c) => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
@@ -3051,7 +3051,7 @@ function backupPct(c, name, rule) {
 function injuryLine(r, c) {
   const starters = new Set([...(c.home_starters || []), ...(c.away_starters || [])].map((s) => s.name));
   const confirmed = c.label === "CONFIRMED", playing = confirmed && starters.has(r.name);
-  const hurt = (r.detail || "").split(",")[0] || "injury not given";
+  const hurt = (r.detail || "").split(",")[0].replace(/^Not Specified\s*/i, "").trim() || "injury not given";
   const m = String(r.return || "").match(/(\d{4})-(\d{2})-(\d{2})/);
   const back = m ? new Date(+m[1], +m[2] - 1, +m[3]).toLocaleDateString([], { month: "short", day: "numeric" }) : "";
   const h = r.history || [], first = h.length ? h[0][0] : r.status, firstQ = h.find(([s]) => !/out/i.test(s));

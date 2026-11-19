@@ -70,7 +70,8 @@ viewer's own time zone.
   out", "now in the confirmed starting lineup") and the likely replacement. Updates on every refresh.
 - **👥 Starters** — every game: NBA.com's projected five next to the confirmed five (~30 min before tip-off).
 - **📈 Odds tracker** — tabs **First basket** / **First team to score**; per player and book: opening → now, a small
-  chart, 🟢 Better / 🔴 Worse; tap a book to see **every change with its time**.
+  chart, 🟢 Better / 🔴 Worse; tap a book to see **every change with its time** (DraftKings: only prices that held at
+  least 5 minutes, because its prices reach us from several sources that briefly disagree).
 - **💵 My bets** — each login has its own tracker. Tap a player → **Straight bet** or **Parlay** → book (odds fill in)
   → amount. Settles itself; Straight / Parlays tabs with profit; ✕ deletes. Stored encrypted on the Cloudflare relay.
 - **📊 Data** — **Scorecard** (tabs Last season / This season / All time: #1 pick, #1 or #2, tip-off winner, all
