@@ -132,6 +132,64 @@ def add_logged_cards(result: dict) -> dict:
     return dict(result, cards=result.get("cards", []) + made)
 
 
+def day_cards(day: str) -> dict:
+    """A past day for the page's "Yesterday" view: every game we picked that day, rebuilt from the picks logged before
+    tip-off (with the last saved FanDuel line), plus who scored first, our rank for him and the final score.
+    day = 'YYYYMMDD'. {"date", "cards", "games", "hits", "graded"}."""
+    import requests
+    import nba
+    from datetime import datetime
+    con = nba.db()
+    try:
+        ids = [r[0] for r in con.execute(
+            "SELECT game_id FROM pick_log WHERE REPLACE(game_date, '-', '') = ? GROUP BY game_id ORDER BY MIN(id)", (day,))]
+        scorer = {str(g): n for g, n in con.execute(
+            f"SELECT game_id, scorer_name FROM first_baskets WHERE game_id IN ({','.join('?' * len(ids))})", ids)} if ids else {}
+    finally:
+        con.close()
+    finals = {}
+    try:                                                   # final scores + start times (one ESPN request)
+        ev = requests.get("https://site.api.espn.com/apis/site/v2/sports/basketball/nba/scoreboard",
+                          params={"dates": day}, timeout=20).json().get("events", [])
+        for e in ev:
+            comp = e["competitions"][0]
+            sc = {c["homeAway"]: c.get("score") for c in comp["competitors"]}
+            finals[str(e["id"])] = {"home_score": sc.get("home"), "away_score": sc.get("away"),
+                                    "state": e["status"]["type"]["state"], "detail": e["status"]["type"].get("shortDetail", "")}
+    except Exception:  # noqa: BLE001 — scores are extra
+        pass
+    sched = []
+    for gid in ids:
+        con = nba.db()
+        try:
+            m = con.execute("SELECT matchup FROM pick_log WHERE game_id = ? ORDER BY id DESC LIMIT 1", (gid,)).fetchone()[0]
+        finally:
+            con.close()
+        away, home = [x.strip() for x in m.split("@")]
+        sched.append({"game_id": gid, "away_team": away, "home_team": home, "start": finals.get(str(gid), {}).get("detail", "")})
+    res = add_logged_cards({"cards": [], "schedule": sched})
+    from starters import norm_name
+    games, hits, graded = [], 0, 0
+    for c in res["cards"]:
+        gid = str(c["game_id"]); who = scorer.get(gid)
+        if not who and finals.get(gid, {}).get("state") in ("in", "post"):     # not filed yet: ESPN's play-by-play
+            try:
+                import nba
+                with nba._quiet([]):
+                    fb = nba.first_basket(nba.get_pbp(gid))
+                who = fb["playerName"] if fb else None
+            except Exception:  # noqa: BLE001
+                who = None
+        order = [n for n, *_ in c.get("probs", [])]
+        rank = next((i + 1 for i, n in enumerate(order) if who and norm_name(n) == norm_name(who)), None)
+        if who:
+            graded += 1; hits += rank == 1
+        games.append({"game_id": gid, "matchup": c["matchup"], "away": c["away"], "home": c["home"],
+                      "first_basket": who, "rank": rank, **finals.get(gid, {})})
+    label = datetime.strptime(day, "%Y%m%d").strftime("%A, %B %-d")
+    return {"date": label, "cards": res["cards"], "games": games, "hits": hits, "graded": graded}
+
+
 def keep_todays_cards(result: dict, path: Path = CARDS_FILE) -> dict:
     """Games that already tipped off are skipped by later runs (the model is pre-game only), so their picks card
     would vanish. Keep every card made today: a new run's card replaces that game's old one; the others stay."""
@@ -554,6 +612,11 @@ class Handler(BaseHTTPRequestHandler):
                     self._send(400, to_json({"error": f"unknown tab {tab!r}"}))
                 else:
                     self._send(200, to_json(data_tab(tab)))
+            elif path == "/api/yesterday":                  # the page's "Yesterday" view
+                from datetime import datetime as _dt, timedelta
+                from zoneinfo import ZoneInfo
+                y = (_dt.now(ZoneInfo("America/New_York")) - timedelta(days=1)).strftime("%Y%m%d")
+                self._send(200, to_json(day_cards(y)))
             elif path == "/api/record":
                 self._send(200, to_json(track_record()))
             elif path.startswith("/api/fd/"):                # live FanDuel odds for the page (see fd_relay)

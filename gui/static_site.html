@@ -218,6 +218,7 @@
     try { await refresh(false); } catch (e) { return reply({ error: "log in first" }, 401); }
     if (path === "/api/status") return reply(bundle.status);
     if (path === "/api/record") return reply(bundle.record);
+    if (path === "/api/yesterday") return reply(bundle.yesterday || { cards: [], games: [], hits: 0, graded: 0 });
     if (path === "/api/data_version") return reply({ version: bundle.version });
     if (path === "/api/data") {
       const d = bundle.data[u.searchParams.get("tab") || "picks"];

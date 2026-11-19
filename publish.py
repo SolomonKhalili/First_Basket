@@ -103,7 +103,17 @@ def build_bundle(result) -> dict:
         "board": board.data,
         "record": gui.track_record(),
         "data": {tab: gui.data_tab(tab) for tab in gui.DATA_TABS},
+        "yesterday": _yesterday(gui, now),
     }
+
+
+def _yesterday(gui, now) -> dict:
+    """The page's "Yesterday" view (gui.day_cards); empty if it can't be built."""
+    from datetime import timedelta
+    try:
+        return gui.day_cards((now - timedelta(days=1)).strftime("%Y%m%d"))
+    except Exception:  # noqa: BLE001
+        return {"date": "", "cards": [], "games": [], "hits": 0, "graded": 0}
 
 
 def build_site(enc: dict, users: dict, out: Path) -> None:
