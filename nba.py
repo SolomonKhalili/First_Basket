@@ -881,7 +881,8 @@ def _retrain_if_needed(con) -> str:
     # Every labelled game not in the training data yet — including ones labelled late with an older date
     labelled = {r[0] for r in con.execute("SELECT game_id FROM first_baskets f JOIN games g USING(game_id)")}
     new_games = len(labelled - in_training)
-    if not new_games and os.path.exists("pregame_model_fg.json"):   # (the field-goal model: trained once if missing)
+    fg_ok = os.path.exists("pregame_model_fg.json") and "team_labels" in open("pregame_model_fg.json").read()
+    if not new_games and fg_ok:      # (the field-goal model: trained again if missing or its team part is the old kind)
         return "model up to date"
     for script in ("build_features.py", "train_pregame.py"):
         r = subprocess.run([sys.executable, script, "--incremental"], capture_output=True, text=True)

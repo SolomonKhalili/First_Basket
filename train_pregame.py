@@ -235,7 +235,7 @@ try:
         fg_idx = all_idx[Y_FG[all_idx].sum(1) == 1]     # games where a starter made the first field goal
         team_fg, w_fg, mu_fg, sd_fg = fit2(fg_idx, l2)
         Y, home_first = _Y, _hf
-        json.dump({"type": "two_stage", "labels": "first_field_goal", "features": pm.FEATURES,
+        json.dump({"type": "two_stage", "labels": "first_field_goal", "team_labels": "first_field_goal", "features": pm.FEATURES,
                    "player_features": pm.PLAYER_FEATURES, "team": team_fg, "w": w_fg.tolist(), "mu": mu_fg.tolist(),
                    "sd": sd_fg.tolist(), "l2": l2, "train_games": int(len(all_idx)),
                    "trained_through": str(max(dates[all_idx]))}, open("pregame_model_fg.json", "w"), indent=2)

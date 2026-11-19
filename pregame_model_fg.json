@@ -65,5 +65,6 @@
   ],
   "l2": 0.001,
   "train_games": 1446,
-  "trained_through": "20261118"
+  "trained_through": "20261118",
+  "team_labels": "first_field_goal"
 }
