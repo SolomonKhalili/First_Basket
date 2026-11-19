@@ -1,6 +1,6 @@
 # NBA First Basket Scorer — Project Blueprint
 
-> **Last updated:** 2026-11-19 (ESPN fallback for blank NBA.com lineup days; Today / Yesterday views, AWAY / HOME labels, iPhone and desktop layout fixes, paper betting explained) · **Owner:** Solomon · **Folder:** `~/Desktop/NBA`
+> **Last updated:** 2026-11-19 ("Where we left off" in §0; ESPN fallback for blank NBA.com lineup days; Today / Yesterday views, AWAY / HOME labels, iPhone and desktop layout fixes, paper betting explained) · **Owner:** Solomon · **Folder:** `~/Desktop/NBA`
 >
 > Single source of truth for the project's state: what works, how well, what is known to be wrong, and
 > what comes next. Update it in the same session as any change (checklist in §11). Every number here was
@@ -36,6 +36,25 @@ and — later — compare those odds with sportsbook prices.
   lineups, injuries and odds every 3 minutes from 9 AM to the last tip-off, re-runs the picks and republishes;
   FanDuel odds on the page refresh every ~30 s through a free Cloudflare relay; results are filed as each game ends;
   the nightly update (4 AM ET) retrains. A Cloudflare timer keeps the job running; the Mac is only a backup. Details §4a.
+
+**Where we left off (2026-11-19, ~7:30 AM ET) — read this first in a new session.**
+- **Owner's setup from now on:** Claude on the Mac with **Remote Control** on (Claude desktop app → Settings →
+  Claude Code → Remote Control, NBA folder added), used from the phone's Claude app → Code → pick the Mac. Owner
+  was setting this up at 7:30 AM. If you are running on the Mac in a fresh session: **first bring the folder up to
+  date with GitHub's `main`** (it holds the 11/19 morning work below; the Mac had not pulled it yet). The Mac's
+  synced data files may differ from `main`; keep the newer data (the cloud's), don't lose either.
+- **Merged 11/19 (PR #1):** ESPN fallback for lineup days NBA.com left blank (11/02/26 is filled on the next cloud
+  update; must happen before 12/02/26, when `nba.py` stops re-checking it); `tests/test_live_mode.py` no longer
+  writes real DraftKings lines into `nba_first_basket.db`; docs caught up. 196 tests pass.
+- **Check pending:** first fully automatic morning start (Cloudflare timer → live job from 9 AM ET, 11/19). At 7:00
+  AM the site was last published 4:02 AM (nightly run) and `/timer-check` said "nothing to do · start permission:
+  OK". Confirm the site republished after 9 AM; if not, look at the timer and the live job (§4a).
+- **Next:** re-test "first basket vs tonight's opponent" and "matchups by position" on/after **2026-12-08** (§7.1
+  item 4: `experiments/h2h_fb_test.py`, `matchups_test.py`, `combined_test.py`; adopt only if better in both
+  periods). Optional tidy-up: `.claude/worktrees/` on the Mac holds 9 old project copies that can be deleted.
+- **Not recoverable, don't chase:** NBA.com's early (Expected) lineups before 11/17/26.
+- **Talking to the owner:** plain words, short answers, one clear next step. The owner is not technical and got
+  lost in git/branch talk on 11/19 — keep git out of the conversation (hard rule 8); just say what was saved.
 
 **Hard rules (decisions already made).**
 1. Use only the two most recent seasons (2025-26 and 2026-27); rosters and roles change too fast for older data.
