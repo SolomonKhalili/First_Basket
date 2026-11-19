@@ -625,13 +625,14 @@ th .short { display: none; }
   <div class="board-wrap" id="yestWrap" hidden>
     <div class="section-title"><span>Yesterday</span><span style="font-weight:400;text-transform:none;letter-spacing:0">· final scores</span></div>
     <div class="board" id="yestBoard"></div>
+    <div class="hint">Left team = <b>away</b>, right team = <b>home</b> (@ means “at”).</div>
   </div>
   <div class="board-wrap" id="boardWrap">
     <div class="section-title"><span>Tonight</span><span id="boardUpdated" style="font-weight:400;text-transform:none;letter-spacing:0"></span></div>
     <div class="board" id="board">
       <div class="tile skel" style="height:78px"></div><div class="tile skel" style="height:78px"></div><div class="tile skel" style="height:78px"></div>
     </div>
-    <div class="hint" id="boardHint"><span id="boardHintText">Tap games to show only those below. To re-run the model for them, press <b>Selected</b>; for every game, <b>All games</b>.</span></div>
+    <div class="hint" id="boardHint"><span id="boardHintText">Left team = <b>away</b>, right team = <b>home</b>. Tap games to show only those below. To re-run the model for them, press <b>Selected</b>; for every game, <b>All games</b>.</span></div>
   </div>
 
   <div class="progress" id="progress"><span class="bouncer">🏀</span><span id="step">Working…</span><span class="elapsed num" id="elapsed"></span></div>
@@ -1293,15 +1294,23 @@ function renderResult(res) {
   renderTicker(); updateCardsLive();
 }
 
+const homeAway = (m) => {                        // 'MEM @ CLE' -> 'MEM (away) at CLE (home)'
+  const [a, h] = String(m || "").split(" @ ");
+  return h ? `${esc(a)} <i>(away)</i> at ${esc(h)} <i>(home)</i>` : esc(m);
+};
 function paperBlock(p) {
   if (!p) return "";
   if (!p.bets) return `<div class="paper"><div class="section-title">💰 Paper betting (pretend money)</div>
     <div class="hint" style="margin:0">We pretend to bet $1 on every good deal and keep score after the games, to see if the “good deals” really pay off. No results yet: check back after tonight's games.</div></div>`;
-  return `<div class="paper"><div class="section-title">💰 Paper betting (pretend $1 on every good deal)</div>
+  const back = p.bets + p.profit;            // what came back from the $1 stakes
+  const lucky = p.profit - p.expected_profit;
+  return `<div class="paper"><div class="section-title">💰 Paper betting (pretend money)</div>
+    <div class="hint" style="margin:0 0 8px">Whenever our model thinks FanDuel's price on a player is <b>too generous</b> (a “good deal”), we pretend to bet <b>$1</b> on him, then check after the game. This tests whether the model can actually beat the sportsbook.</div>
     <div class="big num ${p.profit > 0 ? "pos" : "neg"}">${money(p.profit)}</div>
-    <div class="hint num" style="margin:2px 0 8px">${p.bets} pretend bets · ${p.wins} won · the model expected ${money(p.expected_profit)}</div>
+    <div class="hint num" style="margin:2px 0 8px">${p.bets} bets × $1 = <b>$${p.bets}</b> spent · ${p.wins} won · <b>$${back.toFixed(2)}</b> came back → ${p.profit >= 0 ? "up" : "down"} <b>${money(p.profit)}</b><br>
+      The model expected about <b>${money(p.expected_profit)}</b>${p.bets < 100 ? ` — ${Math.abs(lucky) > 3 ? (lucky > 0 ? "we've been lucky so far" : "we've been unlucky so far") + ", " : ""}too few bets yet to judge (long shots win rarely but pay a lot)` : ""}.</div>
     <ul class="recent">${p.rows.map((b) => `<li><span class="${b.won ? "ok" : "no"}">${b.won ? "✓" : "✗"}</span>
-      <span>${esc(b.player)} ${american(b.american)} <small>${esc(b.matchup)} · ${b.won ? `won ${money(b.profit)}` : "lost $1"}</small></span></li>`).join("")}</ul></div>`;
+      <span>${esc(b.player)} ${american(b.american)} <small>${homeAway(b.matchup)} · ${b.won ? `won ${money(b.profit)}` : "lost $1"}</small></span></li>`).join("")}</ul></div>`;
 }
 
 async function renderRecord() {
@@ -1833,7 +1842,7 @@ async function loadMe() {
     const me = await getJSON("/api/me");
     ROLE = me.role;
     document.body.classList.toggle("viewer", ROLE === "viewer");
-    if (ROLE === "viewer") $("boardHintText").textContent = "Tap games to show only those below — tap again to remove.";
+    if (ROLE === "viewer") $("boardHintText").innerHTML = "Left team = <b>away</b>, right team = <b>home</b>. Tap games to show only those below — tap again to remove.";
     if (me.logins) {
       $("acct").hidden = false;
       $("acct").innerHTML = `👤 <b>${esc(me.user)}</b> <span class="role">${ROLE === "viewer" ? "viewer" : "owner"}</span> · <a href="/logout">Log out</a>`;
