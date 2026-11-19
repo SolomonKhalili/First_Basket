@@ -563,6 +563,20 @@ NBA/
 
 ## 10. Change log (newest first)
 
+### 2026-11-18 (night) — DraftKings logging, saved lines, timer fixed
+
+- **DraftKings log:** viewers' browsers send the DraftKings lines they read (only when a line changes) to the relay
+  (`POST /dk-log`, Cloudflare KV namespace `first-basket-dk`, binding `DKLOG`, kept 14 days); each cloud check pulls
+  them (`draftkings_odds.pull_relay_log`) into **`dk_odds_log`** (next to FanDuel's `odds_log`, for the beat-Vegas
+  checks) and into the snapshot that puts DraftKings on the cards — so everyone keeps the last DK line after tip-off.
+  Each browser also keeps the last line it saw (localStorage). Write path tested with a fake KV; live writes start with
+  the next slate.
+- **Started games keep their last saved FanDuel line** (rebuilt cards read `odds_log`; newer rebuilds replace older).
+- **Timer fixed:** the GH_TOKEN only had read access ("public repositories"); now `first-basket` with Actions read and
+  write. `/timer-check` on the relay reports what the timer would do and whether it may start jobs.
+- **Results filing fixed:** the cloud job's "worth running?" check now also counts games in progress and finished
+  games whose results aren't filed (it used to quit once every game had tipped off).
+
 ### 2026-11-18 (latest) — simple-rule mix adopted; recency weighting rejected
 
 - **Adopted — 20% simple rule** (`pregame_model.SIMPLE_MIX`, `experiments/recency_and_mix_test.py`): live chances =

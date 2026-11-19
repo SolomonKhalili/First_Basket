@@ -4,5 +4,7 @@
   "compatibility_date": "2026-11-01",
   "workers_dev": true,
   // every 10 minutes: make sure the website's cloud job is running (needs the GH_TOKEN secret)
-  "triggers": { "crons": ["*/10 * * * *"] }
+  "triggers": { "crons": ["*/10 * * * *"] },
+  // DraftKings log: the lines viewers' browsers read (POST/GET /dk-log)
+  "kv_namespaces": [{ "binding": "DKLOG", "id": "5233670db17f4e01808f8420b1cd345b" }]
 }
