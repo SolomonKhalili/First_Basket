@@ -20,10 +20,21 @@ def two_stage_model(a=0.0, b=1.0):
 
 
 def test_two_stage_chances_add_up_and_split_by_team():
-    p = pm.probabilities(two_stage_model(), rows(tip_home=0.7))
+    m = two_stage_model()
+    p = pm.two_stage(m["team"], m["w"], m["mu"], m["sd"], np.array(rows(tip_home=0.7), dtype=float))
     assert p.sum() == pytest.approx(1.0)
     assert p[:5].sum() == pytest.approx(0.7)          # a=0, b=1: P(home scores first) = P(home wins tip)
     assert p[5:].sum() == pytest.approx(0.3)
+
+
+def test_live_chances_mix_in_the_simple_rule():
+    m = two_stage_model()
+    R = np.array(rows(tip_home=0.7), dtype=float)
+    pure = pm.two_stage(m["team"], m["w"], m["mu"], m["sd"], R)
+    fb = R[:, pm.FEATURES.index("fb_rate_shrunk")]
+    p = pm.probabilities(m, rows(tip_home=0.7))
+    assert p.sum() == pytest.approx(1.0)
+    assert p == pytest.approx((1 - pm.SIMPLE_MIX) * pure + pm.SIMPLE_MIX * fb / fb.sum())
 
 
 def test_within_a_team_the_better_player_ranks_higher():

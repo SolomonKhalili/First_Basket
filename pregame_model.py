@@ -85,10 +85,19 @@ def two_stage(team: dict, w, mu, sd, R: np.ndarray) -> np.ndarray:
     return out
 
 
+# Mixed with the simple rule (adopted 2026-11-18, experiments/recency_and_mix_test.py): 80% model + 20% each starter's
+# shrunk season first-basket rate (normalised over the 10). Walk-forward log-loss better in both periods:
+# 2026-27 2.2365 -> 2.2347, Jan–Apr 2026 2.2727 -> 2.2649 (top pick 21.7% -> 21.2%, 14.9% -> 15.1%). 40% was worse
+# for 2026-27. Re-check with the other inputs on 2026-12-08.
+SIMPLE_MIX = 0.2
+
+
 def probabilities(model: dict, rows: list) -> np.ndarray:
     R = np.array(rows, dtype=float)
     if model.get("type") == "two_stage":
-        return two_stage(model["team"], model["w"], model["mu"], model["sd"], R)
+        p = two_stage(model["team"], model["w"], model["mu"], model["sd"], R)
+        fb = R[:, FEATURES.index("fb_rate_shrunk")]
+        return (1 - SIMPLE_MIX) * p + SIMPLE_MIX * fb / fb.sum() if fb.sum() > 0 else p
     R = R[:, :len(model["mu"])]
     Z = (R - np.array(model["mu"])) / np.array(model["sd"])          # older one-stage model files
     s = Z @ np.array(model["w"])

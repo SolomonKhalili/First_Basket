@@ -563,6 +563,14 @@ NBA/
 
 ## 10. Change log (newest first)
 
+### 2026-11-18 (latest) — simple-rule mix adopted; recency weighting rejected
+
+- **Adopted — 20% simple rule** (`pregame_model.SIMPLE_MIX`, `experiments/recency_and_mix_test.py`): live chances =
+  80% model + 20% each starter's shrunk season first-basket rate (normalised). Log-loss 2026-27 2.2365 → 2.2347,
+  Jan–Apr 2026 2.2727 → 2.2649 (both better); top pick 21.7% → 21.2%, 14.9% → 15.1%. 40% hurt 2026-27. Applied in
+  `probabilities()` (live picks); the training script's own walk-forward numbers stay unmixed. Re-check 2026-12-08.
+- **Rejected — weighting recent games more** (half-life 90/180/365 days): log-loss changes < 0.002, top pick worse.
+
 ### 2026-11-18 (later) — where accuracy is lost, and what didn't help
 
 - **Diagnosis** (`experiments/diagnose_stages.py`): stage 1 (right TEAM scores first) is only 58.6% (2026-27) /
