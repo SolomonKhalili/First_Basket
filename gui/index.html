@@ -974,59 +974,105 @@ function updateCardsLive() {
 
 /* ── Results ──────────────────────────────── */
 
-/* ── Live FanDuel odds: read when the page opens, then every ~30 s while it's open ──────────────────────────
-   Browsers can't ask FanDuel directly (it only answers its own website), so the page asks a pass-through: the
-   Mac app's /api/fd, or on the website the free relay (window.FB_ODDS_BASE; empty = not set up, and the website
-   keeps the cloud's every-few-minutes odds). It reads FanDuel's small live-price feed (~7 KB a game) for the
-   First Basket markets the cloud already matched to our players (card.fd_market: market id + selection id -> name). */
+/* ── Live sportsbook odds: read when the page opens, then every ~30 s while it's open ─────────────────────────
+   FanDuel: browsers can't ask FanDuel directly (it only answers its own website), so the page asks a pass-through —
+   the Mac app's /api/fd, or on the website the free Cloudflare relay (window.FB_ODDS_BASE). It reads FanDuel's small
+   live-price feed for the markets the cloud matched to our players (card.fd_market).
+   DraftKings: its feed allows any website to read it (Access-Control-Allow-Origin: *) but refuses cloud servers, so
+   the page reads it straight from the viewer's own phone or computer — no Mac, no server in between. One request
+   covers every game; players are matched with the same rules as fanduel_odds.match_prices. */
 const fdProfit = (a) => (a > 0 ? a / 100 : 100 / -a);
-const fdState = { at: null, prices: {}, fails: 0, timer: null };     // prices: market id -> {selection id: american}
+const fdState = { at: null, prices: {}, fails: 0, timer: null };     // FanDuel: market id -> {selection id: american}
+const dkState = { at: null, games: null, fails: 0 };                  // DraftKings: [{home, away, rows}]
+const DK_URL = "https://sportsbook-nash.draftkings.com/sites/US-NY-SB/api/sportscontent/controldata/league/leagueSubcategory/v1/markets?isBatchable=false&templateVars=42648&eventsQuery=%24filter%3DleagueId%20eq%20%2742648%27%20AND%20clientMetadata/Subcategories/any%28s%3A%20s/Id%20eq%20%2716305%27%29&marketsQuery=%24filter%3DclientMetadata/subCategoryId%20eq%20%2716305%27%20AND%20tags/all%28t%3A%20t%20ne%20%27SportcastBetBuilder%27%29&include=Events&entity=events";
+const DK_TEAMS = {"hawks": "ATL", "celtics": "BOS", "nets": "BKN", "hornets": "CHA", "bulls": "CHI", "cavaliers": "CLE", "cavs": "CLE", "mavericks": "DAL", "mavs": "DAL", "nuggets": "DEN", "pistons": "DET", "warriors": "GS", "rockets": "HOU", "pacers": "IND", "clippers": "LAC", "lakers": "LAL", "grizzlies": "MEM", "heat": "MIA", "bucks": "MIL", "timberwolves": "MIN", "wolves": "MIN", "pelicans": "NO", "knicks": "NY", "thunder": "OKC", "magic": "ORL", "76ers": "PHI", "sixers": "PHI", "suns": "PHX", "trail blazers": "POR", "blazers": "POR", "trailblazers": "POR", "kings": "SAC", "spurs": "SA", "raptors": "TOR", "jazz": "UTAH", "wizards": "WSH"};
+const SUFFIX = new Set(["jr", "sr", "ii", "iii", "iv", "v"]);
+const normName = (n) => String(n || "").normalize("NFKD").replace(/[̀-ͯ]/g, "").replace(/[^\x00-\x7f]/g, "")
+  .toLowerCase().replace(/[^a-z\s]/g, " ").split(/\s+/).filter((w) => w && !SUFFIX.has(w)).join(" ")
+  .replace(/\b[a-z](?: [a-z]\b)+/g, (m) => m.replace(/ /g, ""));
+const dkTeam = (p) => { const n = String(p?.metadata?.rosettaTeamName || p?.name || "").toLowerCase();
+  for (const [k, c] of Object.entries(DK_TEAMS)) if (n.endsWith(k)) return c; return ""; };
 
 function oddsBase() {
   if (window.FB_ODDS_BASE !== undefined) return window.FB_ODDS_BASE || null;   // the website (relay, or none yet)
   return "/api/fd";                                                            // the Mac app
 }
-const fdPre = (c) => {                       // a game that hasn't started (only those have open odds)
-  if (c.earlier || !c.fd_market) return false;
+const isPre = (c) => {                       // a game that hasn't started (only those have open odds)
+  if (c.earlier) return false;
   const g = board.find((b) => b.away_team === c.away && b.home_team === c.home);
   return !g || g.status === 1;
 };
-function fdApply(c) {                        // live prices -> the card's FanDuel column, EV and best deal
-  const live = fdState.prices[c.fd_market?.id];
-  if (!live) return;
-  const prices = {};
-  for (const [sel, name] of Object.entries(c.fd_market.runners)) if (live[sel] !== undefined) prices[name] = live[sel];
+const fdPre = (c) => isPre(c) && !!c.fd_market;
+
+function parseDK(d) {                        // DraftKings "1st Points Scorer" -> [{home, away, rows: [{player, team, american}]}]
+  const teams = {};
+  for (const e of d.events || []) {
+    const t = {}; for (const p of e.participants || []) if (p.type === "Team") t[p.venueRole] = dkTeam(p);
+    teams[e.id] = t;
+  }
+  const bySel = {};
+  for (const s of d.selections || []) (bySel[s.marketId] ||= []).push(s);
+  return (d.markets || []).map((m) => {
+    const t = teams[m.eventId] || {};
+    const rows = (bySel[m.id] || []).map((s) => {
+      const a = Number(String(s.displayOdds?.american ?? "").replace("−", "-").replace("+", ""));
+      const role = s.participants?.[0]?.venueRole;
+      return { player: String(s.label || "").trim(), team: role === "HomePlayer" ? t.Home : t.Away, american: a };
+    }).filter((r) => Number.isFinite(r.american) && r.american !== 0);
+    return { home: t.Home, away: t.Away, rows };
+  });
+}
+function matchRows(rows, players) {          // our names -> price (names first, then a unique last name on the same team)
+  const byName = new Map(rows.map((r) => [normName(r.player), r]));
+  const out = {};
+  for (const [name, team] of players) {
+    let row = byName.get(normName(name));
+    if (!row) {
+      const last = normName(name).split(" ").pop();
+      const same = rows.filter((r) => r.team === team && normName(r.player).split(" ").pop() === last);
+      row = same.length === 1 ? same[0] : null;
+    }
+    if (row) out[name] = row.american;
+  }
+  return out;
+}
+function recompute(c) {                      // value at the better of the two books, for every starter
   const players = c.probs || c.picks.map(([n, t, p]) => [n, t, p]);
-  const best = {}, book = {};                              // the better of live FanDuel and DraftKings
-  for (const [b, ps] of [["FanDuel", prices], ["DraftKings", c.draftkings || {}]])
+  const best = {}, book = {};
+  for (const [b, ps] of [["FanDuel", c.fanduel || {}], ["DraftKings", c.draftkings || {}]])
     for (const [n, a] of Object.entries(ps)) if (!(n in best) || fdProfit(a) > fdProfit(best[n])) { best[n] = a; book[n] = b; }
   const priced = players.filter(([n]) => n in best)
     .map(([name, team, prob]) => ({ name, team, prob, american: best[name], book: book[name], ev: prob * fdProfit(best[name]) - (1 - prob) }))
     .sort((a, b) => b.ev - a.ev);
-  c.fanduel = prices;
   c.best_book = book;
   c.ev = Object.fromEntries(priced.map((r) => [r.name, r.ev]));
   c.best_value = priced[0] && priced[0].ev >= VALUE_MIN ? priced[0] : null;
+}
+function fdApply(c) {                        // the latest live prices of both books -> this card
+  if (!isPre(c)) return;
+  const live = c.fd_market && fdState.prices[c.fd_market.id];
+  if (live) {
+    const prices = {};
+    for (const [sel, name] of Object.entries(c.fd_market.runners)) if (live[sel] !== undefined) prices[name] = live[sel];
+    c.fanduel = prices;
+  }
+  const g = (dkState.games || []).find((x) => x.home === c.home && x.away === c.away);
+  if (g && g.rows.length) c.draftkings = matchRows(g.rows, c.probs || c.picks.map(([n, t]) => [n, t]));
+  if (live || g) recompute(c);
 }
 function fdBadge(text, ok) {
   let el = $("fdLive");
   if (!el) { el = Object.assign(document.createElement("div"), { id: "fdLive", className: "fd-live" }); $("cards").before(el); }
   el.innerHTML = text; el.classList.toggle("ok", !!ok); el.hidden = !text;
 }
-async function refreshOdds() {
-  clearTimeout(fdState.timer);
-  const next = () => {                       // every 30 s; slower if FanDuel or the relay pushes back; hidden tabs rest
-    fdState.timer = setTimeout(refreshOdds, document.hidden ? 120e3 : Math.min(30e3 * 2 ** fdState.fails, 300e3));
-  };
-  const pre = (lastResult?.cards || []).filter(fdPre);
-  if (!oddsBase() || !pre.length) { fdBadge(""); return next(); }
+async function refreshFD(pre) {
+  if (!oddsBase() || !pre.some((c) => c.fd_market)) return null;
   try {
-    const ids = [...new Set(pre.map((c) => c.fd_market.id))].join(",");
+    const ids = [...new Set(pre.filter((c) => c.fd_market).map((c) => c.fd_market.id))].join(",");
     const r = await fetch(`${oddsBase()}/prices?ids=${encodeURIComponent(ids)}`, { cache: "no-store" });
     if (!r.ok) throw new Error(`odds ${r.status}`);
-    const markets = await r.json();
     const prices = {};
-    for (const m of Array.isArray(markets) ? markets : []) {
+    for (const m of (await r.json()) || []) {
       const open = (m.marketStatus ?? "OPEN") === "OPEN";
       prices[m.marketId] = {};
       for (const run of m.runnerDetails || []) {
@@ -1035,22 +1081,40 @@ async function refreshOdds() {
       }
     }
     fdState.prices = prices; fdState.at = new Date(); fdState.fails = 0;
-    fdRedraw();
-    fdBadge(`<span class="livedot"></span> FanDuel odds live · checked ${fdState.at.toLocaleTimeString([], { hour: "numeric", minute: "2-digit", second: "2-digit" })}`, true);
-  } catch (e) {
-    fdState.fails++;
-    if (fdState.fails >= 2) fdBadge(fdState.at ? `FanDuel odds from ${fdState.at.toLocaleTimeString([], { hour: "numeric", minute: "2-digit" })} · retrying`
-                                             : "FanDuel odds: showing the latest update · retrying live odds");
-  }
+    return true;
+  } catch (e) { fdState.fails++; return false; }
+}
+async function refreshDK() {
+  try {
+    const r = await fetch(DK_URL, { cache: "no-store", credentials: "omit" });
+    if (!r.ok) throw new Error(`dk ${r.status}`);
+    dkState.games = parseDK(await r.json()); dkState.at = new Date(); dkState.fails = 0;
+    return true;
+  } catch (e) { dkState.fails++; return false; }
+}
+async function refreshOdds() {
+  clearTimeout(fdState.timer);
+  const next = () => {                       // every 30 s; slower if a book pushes back; hidden tabs rest
+    const fails = Math.max(fdState.fails, dkState.fails);
+    fdState.timer = setTimeout(refreshOdds, document.hidden ? 120e3 : Math.min(30e3 * 2 ** Math.min(fails, 3), 300e3));
+  };
+  const pre = (lastResult?.cards || []).filter(isPre);
+  if (!pre.length) { fdBadge(""); return next(); }
+  const [fdOk, dkOk] = await Promise.all([refreshFD(pre), refreshDK()]);
+  fdRedraw();
+  const t = (d) => d.toLocaleTimeString([], { hour: "numeric", minute: "2-digit", second: "2-digit" });
+  const live = [fdOk ? "FanDuel" : null, dkOk ? "DraftKings" : null].filter(Boolean);
+  if (live.length) fdBadge(`<span class="livedot"></span> ${live.join(" + ")} odds live · checked ${t(new Date())}`, true);
+  else if (fdState.fails >= 2 || dkState.fails >= 2) fdBadge("Odds: showing the latest update · retrying live odds");
   next();
 }
 function fdRedraw() {                        // put the live prices on the cards; redraw only the cards that changed
   const els = [...document.querySelectorAll("#cards .card")];
   (lastResult?.cards || []).forEach((c, i) => {
-    if (!fdPre(c) || !fdState.prices[c.fd_market.id]) return;
-    const before = JSON.stringify(c.fanduel);
+    if (!isPre(c)) return;
+    const before = JSON.stringify([c.fanduel, c.draftkings]);
     fdApply(c);
-    if (els[i] && JSON.stringify(c.fanduel) !== before) {
+    if (els[i] && JSON.stringify([c.fanduel, c.draftkings]) !== before) {
       const hidden = els[i].hidden;
       els[i].outerHTML = card(c, i).replace('class="card enter"', 'class="card"');
       const fresh = document.querySelectorAll("#cards .card")[i];
@@ -1059,13 +1123,13 @@ function fdRedraw() {                        // put the live prices on the cards
   });
   renderTicker(); updateCardsLive();
 }
-document.addEventListener("visibilitychange", () => { if (!document.hidden && Date.now() - (fdState.at || 0) > 25e3) refreshOdds(); });
+document.addEventListener("visibilitychange", () => { if (!document.hidden && Date.now() - (fdState.at || dkState.at || 0) > 25e3) refreshOdds(); });
 
 function renderResult(res) {
   setTimeout(applyCardFilter, 0);                            // keep showing only the tapped games
   if (!res) return;
   lastResult = res;
-  for (const c of res.cards) if (fdPre(c)) fdApply(c);       // keep the live odds on freshly drawn cards
+  for (const c of res.cards) fdApply(c);                     // keep the live odds on freshly drawn cards
   if (res.date) $("date").textContent = res.date;
   $("cards").innerHTML = res.cards.length ? res.cards.map(card).join("")
     : `<div class="empty">No picks to show right now — see “Not predicted” for why.</div>`;

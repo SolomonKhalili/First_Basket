@@ -33,7 +33,7 @@ accounts only by the owner: `python3 site_users.py add NAME`). Everything below 
 |---|---|---|
 | Lineups (Expected → Confirmed), injuries, picks re-run | Every 3 min, 9 AM → last tip-off | GitHub cloud job (`website_live/live-picks.yml`, `publish.py --live`) in the public website repo |
 | Website republished | On any change (≤ every ~6 min, GitHub Pages' limit) | same job |
-| **FanDuel odds** | **On page open, then every ~30 s** | the page, through a free Cloudflare relay (`website_live/odds-relay.js`) |
+| **FanDuel + DraftKings odds** | **On page open, then every ~30 s** | the page: FanDuel through a free Cloudflare relay, DraftKings directly from the viewer's browser |
 | Live scores, first baskets, "Our #N pick" | Instant | the page, straight from ESPN |
 | Results, record, CSV, spreadsheet | As each game ends (after the day's last tip-off) | same job |
 | Retraining | Nightly ~4 AM ET | same job |
@@ -158,7 +158,7 @@ With 198 games the margin of error is about ±5.5 points, so this is not statist
 | NBA.com daily lineups feed (`stats.nba.com/js/data/leaders/00_daily_lineups_YYYYMMDD.json`) | Expected/confirmed starters (appears during the game day) | Free |
 | NBA.com live box score (`cdn.nba.com/static/json/liveData/...`) | Confirmed starters (backup) | Free |
 | FanDuel sportsbook feed (public, no login) | First Basket prices; live price feed every ~30 s | Free |
-| DraftKings sportsbook feed (public, no login) | "1st Points Scorer" prices, every 3 min (sent by this Mac: DraftKings refuses cloud servers); best price across both books | Free |
+| DraftKings sportsbook feed (public, no login) | "1st Points Scorer" prices, read live by each viewer's own browser every ~30 s (DraftKings refuses cloud servers but lets browsers read it); best price across both books | Free |
 | GitHub (Actions + Pages) | Cloud updates and the private website | Free |
 | Cloudflare Workers (free plan) | Live-odds relay + the timer that keeps the cloud job on | Free, no card |
 
