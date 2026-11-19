@@ -877,6 +877,12 @@ tr.bk-row .itag.bk { color: #fbbf24; }
 .sub2 { white-space: normal; }
 .nolineup { font-size: 12.5px; color: var(--muted); font-weight: 600; }
 .itag.in.ok { color: var(--good); }
+.ctile.empty .t-none { color: var(--muted); font-size: 13px; margin-top: 14px; }
+@media (min-width: 900px) {                 /* laptop: the two teams side by side on Injuries and Starters */
+  #injList .ogame, #startList .ogame { display: grid; grid-template-columns: 1fr 1fr; column-gap: 28px; align-items: start; }
+  #injList .ogame > .ogame-h, #startList .ogame > .ogame-h { grid-column: 1 / -1; }
+  #startList .steam { border-top: 0; }
+}
 </style>
 </head>
 <body>
@@ -1438,7 +1444,9 @@ $("cards").addEventListener("click", (ev) => {             // switch a game betw
 });
 /* The two "our chance" tiles in a top box: FanDuel's rule (free throws count) and DraftKings' rule (they don't) */
 function heroTiles(pFd, pDk, oddsFd, oddsDk) {
-  const tile = (cls, book, rule, p, odds, short) => `<div class="ctile ${cls}">
+  const tile = (cls, book, rule, p, odds, short) => p === undefined && (odds === undefined || odds === null)
+    ? `<div class="ctile ${cls} empty"><div class="t-bk">${book}</div><div class="t-rule">${rule}</div><div class="t-none">No ${book} data for this game</div></div>`
+    : `<div class="ctile ${cls}">
       <div class="t-bk">${book}</div><div class="t-rule">${rule}</div>
       <div class="pct num"${p !== undefined ? ` data-v="${p}"` : ""}>${p !== undefined ? pct(p) : "–"}</div>
       <div class="t-odds">${odds !== undefined && odds !== null ? `${short} odds <b class="num">${american(odds)}</b>` : `${short} odds –`}</div></div>`;

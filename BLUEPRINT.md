@@ -778,6 +778,10 @@ NBA/
   Model files record `early_m`; `_retrain_if_needed` retrains when it doesn't match. Season/last-10 trust re-checked:
   current 30 / 10 still best. (Note: `season_backtest.fill_fg_grades` grades the field-goal model with the
   first-points early setting — re-grade only if those grades are re-run.)
+- **Yesterday's cards now have the DraftKings side** (`gui.day_cards`): closing DraftKings prices from the log (ESPN's copy
+  first) and our week-by-week first-field-goal chances (`fg_grades`, rescaled over the 10 starters). Before, the
+  rebuild only carried FanDuel, so DraftKings tiles showed "–". A tile with no data now says "No DraftKings data".
+- **Laptop layout:** Injuries and Starters show the two teams side by side (≥ 900 px); phones unchanged.
 - **Fixed — website sent people to /login (GitHub 404)**: when a data download failed for a moment (GitHub mid-update),
   `static_site.html` answered 401 "log in first" and the page jumped to the Mac app's `/login`. Now a failed download
   keeps the last data and retries (`getEnc`), 401 only for a removed account or no data at all, and the page only goes

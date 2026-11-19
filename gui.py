@@ -173,6 +173,35 @@ def day_cards(day: str) -> dict:
         sched.append({"game_id": gid, "away_team": away, "home_team": home, "start": finals.get(str(gid), {}).get("detail", "")})
     res = add_logged_cards({"cards": [], "schedule": sched})
     from starters import norm_name
+    # DraftKings side for past days (owner: "I thought we could get it from ESPN"): its last price before tip-off from the
+    # DraftKings log (ESPN's copy when there is one), and our week-by-week first-FIELD-GOAL chances (fg_grades)
+    con = nba.db()
+    try:
+        for c in res["cards"]:
+            gid, m = str(c["game_id"]), c["matchup"]
+            names = {norm_name(n): n for n, *_ in c.get("probs", [])}
+            fg = {}
+            for name, p in con.execute("SELECT player_name, prob FROM fg_grades WHERE game_id = ?", (gid,)):
+                if norm_name(name) in names:
+                    fg[names[norm_name(name)]] = float(p)
+            if fg and not c.get("probs_fg"):
+                tot = sum(fg.values()) or 1.0
+                c["probs_fg"] = {n: p / tot for n, p in fg.items()}
+            dk = {}
+            for table in ("dk_espn_log", "dk_odds_log"):
+                try:
+                    for name, a in con.execute(f"SELECT player_name, american FROM {table} WHERE game_date = ? AND matchup = ? "
+                                               "ORDER BY logged_at", (day, m)):
+                        if norm_name(name) in names:
+                            dk[names[norm_name(name)]] = int(a)          # the last one wins: closing price
+                except Exception:  # noqa: BLE001 — table not there
+                    continue
+                if dk:
+                    break
+            if dk and not c.get("draftkings"):
+                c["draftkings"] = dk
+    finally:
+        con.close()
     games, hits, graded, tip_hits, tip_graded = [], 0, 0, 0, 0
     for c in res["cards"]:
         gid = str(c["game_id"]); who = scorer.get(gid)
