@@ -1,8 +1,8 @@
 # Keeps the First Basket website live, with nobody running anything. Lives in the PUBLIC website repo
 # (SolomonKhalili/first-basket), where GitHub Actions minutes are unlimited and free.
 #   • every 20 minutes from ~9 AM to ~midnight New York time: if games are still to come, it stays on and re-checks
-#     FanDuel's odds, NBA.com's lineups (Expected -> Confirmed) and injuries every 3 minutes all day,
-#     re-runs the picks and republishes whenever something changes. A new run waits for the
+#     FanDuel's odds, NBA.com's lineups (Expected -> Confirmed) and injuries every 3 minutes near tip-offs (every
+#     15 minutes otherwise), re-runs the picks and republishes whenever something changes. A new run waits for the
 #     current one, so there's always one on duty until the last tip-off.
 #   • nightly ~4 AM: files last night's results, refreshes the spreadsheet/CSV, retrains, republishes.
 # The code and model stay in the PRIVATE repo: this job downloads them with a secret key, and its public log only
@@ -26,6 +26,7 @@ concurrency:
 
 permissions:
   contents: write
+  actions: write       # to start itself again with new code (see the last step)
 
 jobs:
   picks:
@@ -82,3 +83,10 @@ jobs:
         run: |
           cd app
           python -u publish.py --${{ steps.kind.outputs.kind }} --out ../site_out 2>> run.log || { echo "stopped with an error (details in the private log)"; exit 1; }
+
+      - name: Start again with the new code
+        # publish.py stops when GitHub's main has newer code (and leaves app/.restart): start a fresh run right away
+        if: always() && hashFiles('app/.restart') != ''
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: gh workflow run live-picks.yml -R ${{ github.repository }} -f kind=live && echo "started a fresh run with the new code"

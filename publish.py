@@ -298,8 +298,9 @@ def live(out: Path, once: bool = False) -> int:
             except Exception:  # noqa: BLE001 — not set up yet
                 pass
             if newer_code(HERE):                         # improvements pushed today go live now, not tomorrow:
-                save_state()                             # hand over to a fresh run (GitHub always has one queued;
-                say("new code on GitHub — restarting with it")   # the Cloudflare timer starts one otherwise)
+                save_state()                             # hand over to a fresh run, which the workflow's last step
+                (HERE / ".restart").write_text("new code")   # starts straight away (it sees this file)
+                say("new code on GitHub — restarting with it")
                 return 0
             try:                                         # DraftKings prices from the Mac (DraftKings refuses clouds)
                 _git("fetch", "-q", "--depth", "1", os.environ["STATE_REMOTE"], "dk-prices", cwd=HERE)
