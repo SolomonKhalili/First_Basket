@@ -259,7 +259,9 @@ def odds_moves(con) -> list:
                  "↓ payout dropped" if profit_per_dollar(last) < profit_per_dollar(first) else "↑ payout rose")
         rows.append([f"{d[4:6]}/{d[6:8]}/{d[2:4]}", m, name, book, f"{first:+d}", f"{last:+d}", moved, changes,
                      " → ".join(f"{a:+d} ({_clock(at)})" for at, a in steps),
-                     _clock(opened_at) if opened_at else _clock(steps[0][0]), _clock(closed_at) if closed_at else "–"])
+                     _clock(min(opened_at, steps[0][0]) if opened_at and not str(steps[0][0]).endswith(" 00:00:00")
+                            else steps[0][0] if not opened_at else opened_at),
+                     _clock(closed_at) if closed_at else "–"])
     rows.sort(key=lambda r: (r[0][6:] + r[0][:5], r[1], r[2], r[3]), reverse=True)
     return rows
 

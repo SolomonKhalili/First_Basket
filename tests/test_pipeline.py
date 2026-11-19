@@ -67,6 +67,7 @@ def test_sync_retries_recent_gaps_drops_orphans_and_rewrites_the_csv(project, mo
     monkeypatch.setattr(st, "store_official_lineups", lambda c, d: fetched.append(d))
     monkeypatch.setattr(nba, "SLEEP", 0)
     monkeypatch.setattr(nba, "audit_season", lambda *a: 0)          # (whole-season check: network, tested apart)
+    monkeypatch.setattr(nba, "apply_data_patches", lambda c: 0)      # (tested apart)
     monkeypatch.setattr(nba, "repair_old_gaps", lambda c: {})
 
     summary = nba.sync_data()
@@ -503,3 +504,21 @@ def test_retrain_trains_the_field_goal_model_once_if_missing(trained_through_yes
     monkeypatch.setattr(subprocess, "run", fake_run({}, calls))
     nba._retrain_if_needed(trained_through_yesterday)
     assert ["train_pregame.py", "--incremental"] in calls
+
+
+def test_data_patches_load_once(tmp_path, monkeypatch):
+    import json
+    import sqlite3
+    import nba
+    (tmp_path / "p.json").write_text(json.dumps({"games": [{"game_id": "9", "game_date": "20260430", "home": "MIN", "away": "DEN",
+        "home_score": 110, "away_score": 98, "season_type": 3, "tip": {},
+        "first_basket": {"personId": "1", "playerName": "A", "teamTricode": "DEN", "shotType": "Layup", "period": 1, "clock": "11:17"},
+        "first_fg": {"personId": "1", "playerName": "A", "teamTricode": "DEN", "shotType": "Layup"},
+        "first_shots": {}, "early_shots": {}, "lineups": [["9", "DEN", "1", "A", 1, 30.0]]}]}))
+    monkeypatch.setattr(nba, "PATCH_DIR", tmp_path)
+    con = sqlite3.connect(":memory:")
+    con.execute("CREATE TABLE games (game_id TEXT PRIMARY KEY, game_date TEXT, home_team TEXT, away_team TEXT, home_score INT, away_score INT, status INT, tip_winner_team TEXT, tip_winner_player_id TEXT, tip_winner_player_name TEXT, tip_loser_player_id TEXT, tip_loser_player_name TEXT)")
+    con.execute("CREATE TABLE first_baskets (game_id TEXT PRIMARY KEY, scorer_player_id TEXT, scorer_name TEXT, scorer_team TEXT, shot_type TEXT, period INT, clock TEXT, x REAL, y REAL)")
+    con.execute("CREATE TABLE lineups (game_id TEXT, team TEXT, player_id TEXT, player_name TEXT, is_starter INT, minutes REAL, PRIMARY KEY (game_id, team, player_id))")
+    assert nba.apply_data_patches(con) == 1 and nba.apply_data_patches(con) == 0
+    assert con.execute("SELECT scorer_name FROM first_baskets").fetchone() == ("A",)

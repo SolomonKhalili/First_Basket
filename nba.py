@@ -7,6 +7,7 @@ Data: ESPN (via sportsdataverse) | DB: SQLite | ML: scikit-learn
 from sportsdataverse.nba import espn_nba_scoreboard, espn_nba_pbp
 import sqlite3
 import time
+from pathlib import Path
 import json
 import os
 import csv
@@ -597,6 +598,53 @@ def audit_season(con, key: str, start: str, end: str) -> int:
     return added
 
 
+PATCH_DIR = Path(__file__).parent / "data_patches"
+
+
+def apply_data_patches(con) -> int:
+    """Game data the cloud can't fetch itself (e.g. playoff games only NBA.com has — NBA.com refuses cloud servers),
+    read once on the Mac and saved as JSON in data_patches/. Loaded on every update; changes nothing when already in.
+    Returns how many games were added."""
+    import json as _json
+    added = 0
+    con.execute(FIRST_SHOTS_SCHEMA); con.execute(EARLY_SHOTS_SCHEMA); con.execute(FIRST_FG_SCHEMA)
+    for f in sorted(PATCH_DIR.glob("*.json")) if PATCH_DIR.exists() else []:
+        for g in _json.loads(f.read_text()).get("games", []):
+            gid = str(g["game_id"])
+            if con.execute("SELECT 1 FROM first_baskets WHERE game_id = ?", (gid,)).fetchone():
+                continue
+            con.execute("INSERT OR IGNORE INTO games (game_id, game_date, home_team, away_team, status) VALUES (?, ?, ?, ?, 3)",
+                        (gid, g["game_date"], g["home"], g["away"]))
+            con.execute("UPDATE games SET home_score = ?, away_score = ? WHERE game_id = ?", (g["home_score"], g["away_score"], gid))
+            note_type(con, gid, g.get("season_type", 3))
+            fb = g["first_basket"]
+            con.execute("""INSERT OR REPLACE INTO first_baskets (game_id, scorer_player_id, scorer_name, scorer_team, shot_type,
+                           period, clock, x, y) VALUES (?, ?, ?, ?, ?, ?, ?, NULL, NULL)""",
+                        (gid, fb["personId"], fb["playerName"], fb["teamTricode"], fb["shotType"], fb["period"], fb["clock"]))
+            fg = g["first_fg"]
+            con.execute("INSERT OR REPLACE INTO first_fg VALUES (?, ?, ?, ?, ?)",
+                        (gid, fg["personId"], fg["playerName"], fg["teamTricode"], fg["shotType"]))
+            tip = g.get("tip") or {}
+            if tip:
+                con.execute("""UPDATE games SET tip_winner_team=?, tip_winner_player_id=?, tip_winner_player_name=?,
+                               tip_loser_player_id=?, tip_loser_player_name=? WHERE game_id=?""",
+                            (tip.get("tip_winner_team"), tip.get("tip_winner_player_id"), tip.get("tip_winner_player_name"),
+                             tip.get("tip_loser_player_id"), tip.get("tip_loser_player_name"), gid))
+            for team, a in (g.get("first_shots") or {}).items():
+                con.execute("INSERT OR REPLACE INTO first_shots VALUES (?,?,?,?,?,?)",
+                            (gid, team, a["personId"], a["playerName"], a["made"], a["shotType"]))
+            for team, lst in (g.get("early_shots") or {}).items():
+                for seq, a in enumerate(lst, 1):
+                    con.execute("INSERT OR REPLACE INTO early_shots VALUES (?,?,?,?,?,?)",
+                                (gid, team, seq, a["personId"], a["playerName"], a["made"]))
+            st.save_lineups(con, [tuple(r) for r in g.get("lineups", [])])
+            added += 1
+    con.commit()
+    if added:
+        print(f"  🩹 {added} game(s) loaded from data_patches/")
+    return added
+
+
 def catchup_missing_games():
     """Fetch games from the last stored DB date → yesterday. The last stored date is re-checked
     (games still in progress when it was stored); games already stored with a label are skipped."""
@@ -866,6 +914,7 @@ def sync_data() -> str:
     for (gid,) in con.execute("""SELECT game_id FROM games WHERE game_date >= ?
                                  AND game_id NOT IN (SELECT DISTINCT game_id FROM lineups)""", (recent,)).fetchall():
         st.store_game_lineup(con, gid)
+    apply_data_patches(con)                    # games only the Mac could fetch (data_patches/*.json)
     for key, (a, b) in SEASONS_TO_AUDIT.items():  # whole past seasons vs ESPN's schedule (once each)
         audit_season(con, key, a, b)
     repair_old_gaps(con)                       # older games still missing a first basket (once a week each)
