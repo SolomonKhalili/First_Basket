@@ -3,6 +3,8 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="color-scheme" content="dark">
+<meta name="theme-color" content="#0a0c11">
 <title>First Basket Picks</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -10,17 +12,7 @@
 <style>
 :root {
   --display: "Barlow Condensed", "Arial Narrow", -apple-system, sans-serif;   /* sporty headline font */
-  --bg: #f3f0e9; --surface: #ffffff; --surface-2: #f5f2ec; --text: #17151a; --muted: #736d68;
-  --line: #e6e1d8; --accent: #ea580c; --accent-soft: #fff0e3; --good: #15803d; --good-soft: #e5f5ea;
-  --warn: #b45309; --warn-soft: #fef3c7; --bad: #b91c1c; --bad-soft: #fde8e8; --live: #dc2626;
-  --shadow: 0 1px 2px rgba(28,25,23,.05), 0 4px 16px rgba(28,25,23,.06);
-  --shadow-up: 0 2px 4px rgba(28,25,23,.06), 0 12px 28px rgba(28,25,23,.10);
-  --glow: radial-gradient(900px 420px at 0% -10%, rgba(234,88,12,.12), transparent 60%),
-          radial-gradient(800px 380px at 100% -10%, rgba(37,99,235,.08), transparent 60%);
-  --gold: #d97706;
-}
-@media (prefers-color-scheme: dark) {
-  :root {
+  color-scheme: dark;              /* always the dark look, whatever the phone/laptop setting */
     --bg: #0a0c11; --surface: #12151c; --surface-2: #1a1e27; --text: #eef0f4; --muted: #949cab;
     --line: #242a35; --accent: #ff7a1a; --accent-soft: #2b1a0c; --good: #4ade80; --good-soft: #10261a;
     --warn: #fbbf24; --warn-soft: #2a2412; --bad: #f87171; --bad-soft: #2b1617; --live: #f87171;
@@ -29,7 +21,6 @@
     --glow: radial-gradient(900px 460px at 0% -10%, rgba(255,122,26,.16), transparent 60%),
             radial-gradient(800px 420px at 100% -10%, rgba(59,130,246,.12), transparent 60%);
     --gold: #fbbf24;
-  }
 }
 * { box-sizing: border-box; }
 [hidden] { display: none !important; }
@@ -119,7 +110,14 @@ button { font: inherit; cursor: pointer; border: 0; color: inherit; }
 .tile::before { content: ""; position: absolute; left: 0; right: 0; top: 0; height: 3px;
   background: linear-gradient(90deg, var(--away-c) 0 50%, var(--home-c) 50% 100%); }
 .tile.pickable:hover { transform: translateY(-2px); box-shadow: var(--shadow-up); }
-.tile[aria-pressed="true"] { border-color: var(--accent); background: var(--accent-soft); box-shadow: 0 0 0 1px var(--accent) inset; }
+.tile[aria-pressed="true"] { border-color: var(--accent); background: linear-gradient(160deg, color-mix(in srgb, var(--accent) 22%, var(--surface)), var(--surface) 75%);
+  box-shadow: 0 0 0 2px var(--accent), 0 0 22px color-mix(in srgb, var(--accent) 45%, transparent); transform: translateY(-2px); }
+.tile[aria-pressed="true"]::after { content: "✓ Selected"; position: absolute; bottom: 9px; right: 10px; font-size: 11px; font-weight: 800;
+  letter-spacing: .03em; color: #fff; background: var(--accent); padding: 3px 8px; border-radius: 999px; }
+.tile[aria-pressed="true"] { padding-bottom: 36px; }        /* room for the "✓ Selected" tag */
+.board.has-sel .tile:not([aria-pressed="true"]) { opacity: .45; filter: saturate(.6); }
+.board.has-sel .tile:not([aria-pressed="true"]):hover { opacity: .8; }
+.tile { transition: transform .12s ease, box-shadow .2s, border-color .2s, opacity .2s, filter .2s; }
 .tile.live { border-color: color-mix(in srgb, var(--live) 45%, var(--line)); }
 .tile .teams { display: flex; align-items: center; gap: 7px; font-family: var(--display); font-weight: 700;
   font-size: 21px; letter-spacing: .02em; line-height: 1; }
@@ -735,6 +733,7 @@ function syncButtons() {
   const n = selected.size;
   $("runSelected").hidden = !n;
   $("runSelected").textContent = `Selected (${n})`;
+  $("board").classList.toggle("has-sel", n > 0);            // fade the games that aren't selected
   applyCardFilter();
 }
 
