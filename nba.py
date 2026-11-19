@@ -934,7 +934,8 @@ def _retrain_if_needed(con) -> str:
             last = (r.stderr or r.stdout).strip().splitlines()[-1:] or [""]
             print(f"⚠️ {script} failed — predicting with the existing model ({last[0]})")
             return "model update FAILED"
-    return f"model updated with {new_games} new game{'s' * (new_games != 1)}"
+    return (f"model updated with {new_games} new game{'s' * (new_games != 1)}" if new_games
+            else "model retrained with new settings")
 
 
 def sync_data() -> str:
