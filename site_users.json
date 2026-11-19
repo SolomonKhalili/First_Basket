@@ -6,6 +6,13 @@
     "salt": "Qg/RUD6D/yvcTERK207ZfA==",
     "wk": "XDwpWKQn5FOSs+SapcSrbEXYFePE3y6lBgw/nPmsEgK4cQSB5+Ae0EhZs6D3ZE4L"
   },
+  "simon": {
+    "created": "2026-11-18",
+    "iter": 600000,
+    "iv": "TVW+YeC9IEfqcQBg",
+    "salt": "qE0+sOAG+scrjAl8CYDLvQ==",
+    "wk": "ZOSpXZYDTGgfx04U2+eURjYuxKI5DZSuAblkxRa8mEG5zCQTAKEb17IZqy4hcuMw"
+  },
   "solomon": {
     "created": "2026-11-18",
     "iter": 600000,
