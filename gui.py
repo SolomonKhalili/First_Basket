@@ -401,7 +401,8 @@ def data_tab(tab: str) -> dict:
     con = nba.db()
     if tab == "scorecard":
         return {"tab": tab, "version": data_version(), "lines": picks.scorecard(picks.prediction_rows(con),
-                                                       today=time.strftime("%m/%d/%y"))}
+                                                       today=time.strftime("%m/%d/%y")),
+                "periods": picks.scorecard_periods(con)}
     if tab == "picks":
         rows = picks.prediction_rows(con)
         cols = [{"key": k, "label": picks.LABELS[k], "yesno": k in picks.YES_NO} for k in picks.COLUMNS]

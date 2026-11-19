@@ -168,12 +168,13 @@ CHECKS = ("pick_1_right", "top_2_right", "tip_right")   # what the counters coun
 YES_NO = ("pick_1_right", "top_2_right", "tip_right", "team_right")
 
 
-def prediction_rows(con) -> list:
+def prediction_rows(con, start: str = None, end: str = "99999999") -> list:
     """One dict per game this season — our final pre-game pick next to what actually happened — newest first
     (today at the top, opening night at the bottom). Results read 'pending' until the first basket is known."""
     ensure_table(con)
     rows = con.execute("""SELECT game_id, game_date, matchup, lineup_type, players_json, tip_home, home_jumper, away_jumper
-                          FROM pick_log WHERE game_date >= ? ORDER BY logged_at, id""", (SEASON_START,)).fetchall()
+                          FROM pick_log WHERE game_date >= ? AND game_date < ? ORDER BY logged_at, id""",
+                       (start or SEASON_START, end)).fetchall()
     final = {}
     for r in rows:                       # later picks replace earlier ones: the last pick before the game
         final[r[0]] = r
@@ -372,6 +373,28 @@ def add_running_counts(rows: list) -> None:
         p1_right += r["pick_1_right"] == "YES"; p1_n += 1
         r["running_all"] = f"{all_right} of {all_n} ({all_right / all_n:.0%})"
         r["running_pick_1"] = f"{p1_right} of {p1_n} ({p1_right / p1_n:.0%})"
+
+
+def scorecard_boxes(rows: list) -> dict:
+    """The four Scorecard boxes for a set of games: {"boxes": [{label, right, total}], "games", "first", "last"}."""
+    boxes = []
+    for key, label in SCORECARD:
+        done = [r[key] for r in rows if r[key] in ("YES", "NO")]
+        boxes.append({"label": label, "right": done.count("YES"), "total": len(done)})
+    every = [r[k] for r in rows for k in CHECKS if r[k] in ("YES", "NO")]
+    boxes.append({"label": "All our predictions combined", "right": every.count("YES"), "total": len(every), "all": True})
+    finished = [r for r in rows if r["pick_1_right"] in ("YES", "NO")]
+    order = sorted((r["date"] for r in finished if r["date"]), key=lambda d: d[6:] + d[:5])
+    return {"boxes": boxes, "games": len(finished), "first": order[0] if order else "", "last": order[-1] if order else ""}
+
+
+def scorecard_periods(con) -> list:
+    """Last season / this season / all time, each with its four boxes."""
+    this = prediction_rows(con)
+    last = prediction_rows(con, "00000000", SEASON_START)
+    return [{"key": "last", "name": f"Last season ({LAST_SEASON_NAME})", **scorecard_boxes(last)},
+            {"key": "this", "name": f"This season ({SEASON_NAME})", **scorecard_boxes(this)},
+            {"key": "all", "name": "All time", **scorecard_boxes(this + last)}]
 
 
 def scorecard(rows: list, today: str = "") -> list:

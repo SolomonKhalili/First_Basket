@@ -848,6 +848,7 @@ details.oc[open] { grid-column: 1 / -1; }
 .hero2 .ctile .pct { font-size: 36px; margin: 6px 0 4px; line-height: 1; }
 .ctile .t-odds { font-size: 14px; color: #c9ced8; } .ctile .t-odds b { color: #fff; }
 @media (max-width: 520px) { .hero2 .ctile .pct { font-size: 32px; } .hero2 .shot { width: 92px; } }
+.sc-tabs { margin-bottom: 12px; }
 </style>
 </head>
 <body>
@@ -2250,6 +2251,28 @@ function closeData() {
   history.replaceState(null, "", location.pathname);
 }
 
+/* Scorecard: Last season / This season / All time tabs, each with the same four boxes */
+let scPeriod = "this";
+function renderPeriods(d) {
+  const p = d.periods.find((x) => x.key === scPeriod) || d.periods[1];
+  const label = { last: "Last season", this: "This season", all: "All time" };
+  const tabs = `<div class="btabs bk-tabs sc-tabs" role="tablist">${d.periods.map((x) =>
+    `<button type="button" data-scp="${x.key}" class="${x.key === p.key ? "on" : ""}" role="tab">${label[x.key]}</button>`).join("")}</div>`;
+  const cards = p.boxes.map((b) => { const r = b.total ? b.right / b.total : 0;
+    return `<div class="sc-card ${b.all ? "total" : ""}"><div class="k">${esc(b.label)}</div>
+      <div class="v num">${b.total ? `${Math.round(r * 100)}%` : "–"}</div><div class="n num">${b.right.toLocaleString()} of ${b.total.toLocaleString()} right</div>
+      <div class="sc-bar"><i style="width:${(r * 100).toFixed(1)}%"></i></div></div>`; }).join("");
+  const span = p.games ? `${p.games.toLocaleString()} finished games · ${p.first} to ${p.last}` : "No finished games yet";
+  return `<div class="sc">${tabs}<div class="sc-head"><h3>${esc(p.name)}</h3><p>${span}</p></div>
+    <div class="sc-grid">${cards}</div></div>`;
+}
+document.addEventListener("click", (ev) => {
+  const b = ev.target.closest("[data-scp]");
+  if (!b) return;
+  scPeriod = b.dataset.scp;
+  const d = dstate.data.scorecard;
+  if (d && d.periods) $("dbody").innerHTML = renderPeriods(d);
+});
 function renderScorecard(lines) {
   const head = [], cards = [], notes = [];
   let inTable = false;
@@ -2299,7 +2322,7 @@ function filteredRows() {
 function renderData() {
   const d = dstate.data[dstate.tab];
   if (!d) return;
-  if (dstate.tab === "scorecard") { $("dbody").innerHTML = renderScorecard(d.lines); return; }
+  if (dstate.tab === "scorecard") { $("dbody").innerHTML = d.periods ? renderPeriods(d) : renderScorecard(d.lines); return; }
   // team list from the rows
   const seen = new Set();
   for (const r of d.rows) for (const v of r) for (const m of String(v ?? "").matchAll(/\b[A-Z]{2,4}\b/g)) if (TEAM_COLOR[m[0]]) seen.add(m[0]);
