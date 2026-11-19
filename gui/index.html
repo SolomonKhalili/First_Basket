@@ -867,7 +867,7 @@ details.oc[open] { grid-column: 1 / -1; }
       <button class="btn secondary" id="oddsBtn" title="Every odds change today, with the time">📈 Odds tracker</button>
       <button class="btn secondary" id="betsBtn" title="The bets you placed: wins, losses and profit">💵 My bets</button>
       <button class="btn secondary" id="dataBtn" title="Your spreadsheet and CSV as tabs: scorecard, picks, lineups, all games">📊 Data</button>
-      <button class="btn secondary" id="learnBtn" title="A 1-minute beginner's guide to EV (good deal or bad deal?)">🎓 What's EV?</button>
+      <button class="btn secondary" id="learnBtn" title="What the 💰 value tag means, in 3 short slides">💰 What's value?</button>
       <button class="btn secondary" id="runSelected" hidden>Selected games</button>
       <button class="btn" id="runAll">🏀 All games</button>
       <span class="acct" id="acct" hidden></span>
@@ -1006,7 +1006,7 @@ details.oc[open] { grid-column: 1 / -1; }
 </dialog>
 <dialog class="learn" id="learn" aria-labelledby="learnTitle">
   <div class="learn-head">
-    <span style="font-size:22px">🎓</span><h2 id="learnTitle">Good deal or bad deal?</h2>
+    <span style="font-size:22px">💰</span><h2 id="learnTitle">What's 💰 value?</h2>
     <span class="step-of" id="learnStepOf"></span>
     <button class="x" id="learnClose" aria-label="Close">✕</button>
   </div>
@@ -2032,49 +2032,34 @@ function tonightExample() {
 }
 
 const LEARN = [
-  () => {
-    const p = payout(EX.odds);
-    return `<div class="kicker">Step 1 · The prize</div><h3>“+450” is just the prize</h3>
-      <p class="bigline">Bet $1 on a player. If he scores the first basket, you win <span style="color:var(--good)">$${p.toFixed(2)}</span>.
-        If he doesn't, you lose your $1.</p>
-      <div class="ticket"><div class="win"><small>He scores first</small><b>+$${p.toFixed(2)}</b></div>
-        <div class="lose"><small>He doesn't</small><b>−$1.00</b></div></div>
-      <p class="muted">Bigger number = bigger prize. +900 wins $9, +1200 wins $12.</p>`;
-  },
-  () => {
-    const p = payout(EX.odds), w = Math.round(EX.chance * 100), l = 100 - w, total = w * p - l;
-    return `<div class="kicker">Step 2 · Add it up</div><h3>Bet $1 in all 100 games</h3>
-      <div class="ticket"><div class="win"><small>${w} wins × $${p.toFixed(2)}</small><b>+$${(w * p).toFixed(0)}</b></div>
-        <div class="lose"><small>${l} losses × $1</small><b>−$${l}</b></div></div>
-      <div class="callout good"><div class="bigline">You end up <b class="g">${money(total)}</b> after 100 bets.</div>
-        That's about <b class="g">${cents(total / 100)}</b> for every $1 you bet.</div>
-      <p class="bigline">That number is the <b>EV</b>, short for <i>expected value</i>.</p>
-      <p><b style="color:var(--good)">Above zero = good deal</b>: the prize is big enough for how often he scores.<br>
-        <b style="color:var(--bad)">Below zero = bad deal</b>: the prize is too small.</p>`;
-  },
-  () => {                                   // a REAL example from tonight — no sliders, no math
+  () => {                                   // 1. the two odds on every row
     const t = tonightExample();
-    if (!t) return `<div class="kicker">Step 3 · A real example</div><h3>How to spot value</h3>
-      <p class="bigline">On each game, compare <b>Our odds</b> with the sportsbook's odds.</p>
-      <p class="bigline">If the sportsbook <b>pays more</b> than our odds, it's marked <b style="color:var(--good)">💰 value</b>. You don't have to do any math.</p>`;
-    return `<div class="kicker">Step 3 · A real example from tonight</div><h3>${esc(t.name)}</h3>
-      <div class="ticket"><div class="lose"><small>Our odds</small><b style="color:var(--text)">${american(fairOdds(t.prob))}</b><small>${pct(t.prob, 0)} chance</small></div>
-        <div class="win"><small>${esc(t.book || "FanDuel")} pays</small><b>${american(t.american)}</b><small>💰 value</small></div></div>
-      <p class="bigline">${esc(t.book || "FanDuel")}'s <b>${american(t.american)}</b> pays <b>more</b> than our <b>${american(fairOdds(t.prob))}</b> — so it's <b style="color:var(--good)">value</b>.</p>
-      <p class="muted">You don't have to do any math: the site compares them for you and marks value in green.</p>`;
+    const name = t ? esc(t.name) : "A player", ours = t ? american(fairOdds(t.prob)) : "+400", book = t ? esc(t.book || "FanDuel") : "FanDuel",
+          theirs = t ? american(t.american) : "+500", chance = t ? pct(t.prob, 0) : "20%";
+    return `<div class="kicker">Step 1 · Two odds</div><h3>Every player has two odds</h3>
+      <div class="ticket"><div class="lose"><small>Our odds</small><b style="color:#7dd3fc">${ours}</b><small>from our ${chance} prediction</small></div>
+        <div class="win"><small>${book} odds</small><b style="color:var(--text)">${theirs}</b><small>what the sportsbook pays</small></div></div>
+      <p class="bigline"><b style="color:#7dd3fc">Our odds</b> = what the payout <i>should</i> be, based on our prediction.</p>
+      <p class="bigline"><b>${book} odds</b> = what the sportsbook actually pays${t ? ` for ${name}` : ""}.</p>`;
   },
-  () => {
+  () => {                                   // 2. what 💰 means
     const t = tonightExample();
-    const ex = t ? `<div class="callout good">🏀 <b>Tonight's best value:</b> ${esc(t.name)} at <b class="g">${american(t.american)}</b>
-        (about <b class="g">${cents(t.ev)}</b> for every $1). Even so, he <i>won't</i> score first about ${Math.round((1 - t.prob) * 10)} times out of 10.</div>` : "";
-    return `<div class="kicker">Step 4 · Remember</div><h3>Three things to remember</h3>
+    const ours = t ? american(fairOdds(t.prob)) : "+400", theirs = t ? american(t.american) : "+500";
+    return `<div class="kicker">Step 2 · 💰 value</div><h3>💰 = the sportsbook pays more</h3>
+      <p class="bigline">When the sportsbook pays <b>more</b> than our odds, you'll see <b style="color:var(--good)">💰 value</b> next to its odds.</p>
+      <div class="callout good"><div class="bigline">${theirs} is a bigger payout than ${ours} → <b class="g">💰 value</b></div></div>
+      <p class="bigline">When it pays <b>less</b> than our odds, there's no 💰. You don't have to do any math — the site compares them for you.</p>
+      <p class="muted">We only show 💰 for our top 5 players and for the team we favor to score first.</p>`;
+  },
+  () => {                                   // 3. what it does NOT mean
+    const t = tonightExample(), miss = t ? Math.round((1 - t.prob) * 10) : 8;
+    return `<div class="kicker">Step 3 · Remember</div><h3>💰 doesn't mean “he'll score”</h3>
       <ul class="checklist">
-        <li><span>🎲</span><span><b>Value still loses most nights.</b> It only pays off over lots and lots of bets.</span></li>
-        <li><span>🧠</span><span><b>It's only as good as our model's guess.</b> If the guess is wrong, the “good deal” isn't one. The <b>Paper betting</b> panel keeps score so we can find out.</span></li>
-        <li><span>🛑</span><span><b>This app never bets.</b> It only looks at prices. Only ever risk money you can afford to lose.</span></li>
-      </ul>
-      ${ex}
-      <p class="muted"><b>In the app:</b> look for the green <b style="color:var(--good)">💰 value</b> tags in each game's table and the <b>💰 Best value</b> line.</p>`;
+        <li><span>🎲</span><span><b>He still usually won't score first.</b> ${t ? `${esc(t.name)} won't score first about ${miss} times out of 10.` : "Even a top pick misses most nights."} 💰 only means the price is good.</span></li>
+        <li><span>📈</span><span><b>It pays off over many bets, not one night.</b> Like a coin that pays a little extra every time it lands your way.</span></li>
+        <li><span>🧠</span><span><b>It's only as good as our predictions.</b> Check the 🏆 Scorecard to see how often we've been right.</span></li>
+        <li><span>🛑</span><span><b>This site never bets for you.</b> Only bet what you can afford to lose.</span></li>
+      </ul>`;
   },
 ];
 
