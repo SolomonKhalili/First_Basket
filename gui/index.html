@@ -839,15 +839,15 @@ details.oc[open] { grid-column: 1 / -1; }
 .hero2 .who { padding-bottom: 12px; flex: 1; min-width: 0; }
 .hero2 .shot { width: 108px; height: 92px; }
 .team-hero.hero2 .shot { height: 92px; padding-bottom: 10px; }
-.tiles-h { font-size: 11px; color: var(--accent); text-transform: uppercase; letter-spacing: .1em; font-weight: 700; margin: 12px 0 8px; }
-.tiles { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
-.tile { text-align: center; background: rgba(0,0,0,.28); border: 1px solid var(--line); border-radius: 12px; padding: 10px 8px; }
-.tile.fd { box-shadow: inset 0 3px 0 #3b82f6; } .tile.dk { box-shadow: inset 0 3px 0 #22c55e; }
-.tile .t-bk { font-weight: 800; font-size: 15px; }
-.tile .t-rule { font-size: 13px; color: #c9ced8; margin-top: 1px; }
-.hero2 .tile .pct { font-size: 36px; margin: 6px 0 4px; line-height: 1; }
-.tile .t-odds { font-size: 14px; color: #c9ced8; } .tile .t-odds b { color: #fff; }
-@media (max-width: 520px) { .hero2 .tile .pct { font-size: 32px; } .hero2 .shot { width: 92px; } }
+.ctiles-h { font-size: 11px; color: var(--accent); text-transform: uppercase; letter-spacing: .1em; font-weight: 700; margin: 12px 0 8px; }
+.ctiles { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+.ctile { position: static; overflow: visible; text-align: center; background: rgba(0,0,0,.28); border: 1px solid var(--line); border-radius: 12px; padding: 10px 8px; }
+.ctile.fd { box-shadow: inset 0 3px 0 #3b82f6; } .ctile.dk { box-shadow: inset 0 3px 0 #22c55e; }
+.ctile .t-bk { font-weight: 800; font-size: 15px; }
+.ctile .t-rule { font-size: 13px; color: #c9ced8; margin-top: 1px; }
+.hero2 .ctile .pct { font-size: 36px; margin: 6px 0 4px; line-height: 1; }
+.ctile .t-odds { font-size: 14px; color: #c9ced8; } .ctile .t-odds b { color: #fff; }
+@media (max-width: 520px) { .hero2 .ctile .pct { font-size: 32px; } .hero2 .shot { width: 92px; } }
 </style>
 </head>
 <body>
@@ -1392,7 +1392,7 @@ $("cards").addEventListener("click", (ev) => {             // switch a game betw
 });
 /* The two "our chance" tiles in a top box: FanDuel's rule (free throws count) and DraftKings' rule (they don't) */
 function heroTiles(pFd, pDk, oddsFd, oddsDk) {
-  const tile = (cls, book, rule, p, odds, short) => `<div class="tile ${cls}">
+  const tile = (cls, book, rule, p, odds, short) => `<div class="ctile ${cls}">
       <div class="t-bk">${book}</div><div class="t-rule">${rule}</div>
       <div class="pct num"${p !== undefined ? ` data-v="${p}"` : ""}>${p !== undefined ? pct(p) : "–"}</div>
       <div class="t-odds">${odds !== undefined && odds !== null ? `${short} odds <b class="num">${american(odds)}</b>` : `${short} odds –`}</div></div>`;
