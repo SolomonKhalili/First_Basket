@@ -818,7 +818,6 @@ function applyCardFilter() {
 }
 
 function toast(html, kind = "") {
-  return;                                          // pop-ups turned off (owner's choice, 2026-11-18): tiles show results
   const t = document.createElement("div");
   t.className = `toast ${kind}`;
   t.innerHTML = html;
@@ -826,16 +825,21 @@ function toast(html, kind = "") {
   setTimeout(() => { t.style.transition = "opacity .4s"; t.style.opacity = "0"; setTimeout(() => t.remove(), 450); }, 7000);
 }
 
+const watchedLive = new Set();     // live games the page has seen without a first basket (alert when it comes)
 async function refreshBoard(first = false) {
   try {
     const d = await getJSON("/api/games");
     board = d.games;
     if (!lastResult) $("date").textContent = d.date;
     $("boardUpdated").textContent = d.updated ? `· live scores updated ${d.updated}` : "";
-    for (const g of board) {                         // toast for first baskets that just came in
+    // Pop-up ONLY when you're watching: the page saw this game live with no first basket yet, and now it has one.
+    // Opening or refreshing the page never pops up baskets that already happened. Tapped games only, if you tapped any.
+    for (const g of board) {
+      if (g.status === 2 && !g.first_basket) { watchedLive.add(g.game_id); continue; }
       if (!g.first_basket || announced.has(g.game_id)) continue;
       announced.add(g.game_id);
-      if (first) continue;
+      if (first || !watchedLive.has(g.game_id)) continue;
+      if (selected.size && !selected.has(g.game_id)) continue;
       const msg = g.result === "hit" ? `✓ <b>${esc(g.first_basket.name)}</b> scored first — our pick!`
         : `🏀 <b>${esc(g.first_basket.name)}</b> scored first${g.rank ? ` — our #${g.rank} pick` : ""}`;
       toast(`${msg}<small>${esc(g.away_team)} @ ${esc(g.home_team)}${g.our_pick && g.result !== "hit" ? ` · we had ${esc(g.our_pick.name)}` : ""}</small>`,
