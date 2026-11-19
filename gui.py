@@ -145,6 +145,9 @@ def day_cards(day: str) -> dict:
             "SELECT game_id FROM pick_log WHERE REPLACE(game_date, '-', '') = ? GROUP BY game_id ORDER BY MIN(id)", (day,))]
         scorer = {str(g): n for g, n in con.execute(
             f"SELECT game_id, scorer_name FROM first_baskets WHERE game_id IN ({','.join('?' * len(ids))})", ids)} if ids else {}
+        tips = {str(g): (team, name) for g, team, name in con.execute(          # who actually won the opening tip
+            f"SELECT game_id, tip_winner_team, tip_winner_player_name FROM games WHERE game_id IN ({','.join('?' * len(ids))})",
+            ids)} if ids else {}
     finally:
         con.close()
     finals = {}
@@ -169,7 +172,7 @@ def day_cards(day: str) -> dict:
         sched.append({"game_id": gid, "away_team": away, "home_team": home, "start": finals.get(str(gid), {}).get("detail", "")})
     res = add_logged_cards({"cards": [], "schedule": sched})
     from starters import norm_name
-    games, hits, graded = [], 0, 0
+    games, hits, graded, tip_hits, tip_graded = [], 0, 0, 0, 0
     for c in res["cards"]:
         gid = str(c["game_id"]); who = scorer.get(gid)
         if not who and finals.get(gid, {}).get("state") in ("in", "post"):     # not filed yet: ESPN's play-by-play
@@ -184,10 +187,19 @@ def day_cards(day: str) -> dict:
         rank = next((i + 1 for i, n in enumerate(order) if who and norm_name(n) == norm_name(who)), None)
         if who:
             graded += 1; hits += rank == 1
+        tip = c.get("tip") or {}                                         # our tip call: the team we gave >= 50%
+        called = max(tip, key=tip.get) if tip else None
+        won_team, won_name = tips.get(gid, (None, None))
+        tip_right = (called == won_team) if called and won_team else None
+        if tip_right is not None:
+            tip_graded += 1; tip_hits += tip_right
         games.append({"game_id": gid, "matchup": c["matchup"], "away": c["away"], "home": c["home"],
-                      "first_basket": who, "rank": rank, **finals.get(gid, {})})
+                      "first_basket": who, "rank": rank, "tip_call": called, "tip_call_prob": tip.get(called) if called else None,
+                      "tip_call_jumper": (c.get("jumpers") or {}).get(called) if called else None,
+                      "tip_winner_team": won_team, "tip_winner": won_name, "tip_right": tip_right, **finals.get(gid, {})})
     label = datetime.strptime(day, "%Y%m%d").strftime("%A, %B %-d")
-    return {"date": label, "cards": res["cards"], "games": games, "hits": hits, "graded": graded}
+    return {"date": label, "cards": res["cards"], "games": games, "hits": hits, "graded": graded,
+            "tip_hits": tip_hits, "tip_graded": tip_graded}
 
 
 def keep_todays_cards(result: dict, path: Path = CARDS_FILE) -> dict:

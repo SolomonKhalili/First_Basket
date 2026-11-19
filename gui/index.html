@@ -749,6 +749,17 @@ body.bets-mode .dayswitch, body.bets-mode #yestSum, body.bets-mode #dataView { d
 .bk-table .ourp { display: block; font-size: 11px; color: var(--muted); opacity: .8; }
 .bk-table .px.good { color: #fff; background: color-mix(in srgb, var(--good) 28%, transparent); border: 1px solid var(--good); border-radius: 8px; padding: 1px 6px; }
 .bk-table .vtag { display: block; font-size: 10.5px; font-weight: 800; color: var(--good); margin-top: 2px; white-space: nowrap; }
+
+/* tables always fit the card (long names wrap) */
+.tscroll .bk-table { width: 100%; table-layout: fixed; }
+.tscroll .bk-table th:first-child, .tscroll .bk-table td:first-child { width: 31%; }
+.tscroll .bk-table.fd-only th:first-child, .tscroll .bk-table.fd-only td:first-child { width: 44%; }
+.tscroll .bk-table .nm, .tscroll .bk-table .nshort, .tscroll .bk-table .nfull { white-space: normal; overflow-wrap: anywhere; }
+.tscroll .bk-table td, .tscroll .bk-table th { padding-left: 3px; padding-right: 3px; }
+@container cardbody (max-width: 520px) { .bk-table .ourp, .bk-table .vtag { font-size: 9.5px; } .bk-table thead th { font-size: 9.5px; letter-spacing: 0; } }
+.bb-who b { white-space: normal !important; overflow: visible !important; text-overflow: clip !important; }
+.tipok { color: var(--good); font-weight: 700; } .tipno { color: var(--bad); font-weight: 700; }
+.tscroll .bk-table td, .tscroll .bk-table th { padding-left: 2px; padding-right: 2px; }
 </style>
 </head>
 <body>
@@ -1000,7 +1011,11 @@ function tile(g) {
   }
   const op = g.our_pick;
   if (g.past && op?.name) res += `<div class="res">Our pick: <b>${esc(op.name)}</b> <span class="num">${pct(op.prob, 0)}</span></div>`;
-  if (op && (pre || g.past) && (op.away_jumper || op.home_jumper)) {      // who jumps for each team (from our latest pick)
+  if (g.past && g.tip_call) {                                            // yesterday: our tip call and how it went
+    const who = g.tip_call_jumper ? esc(g.tip_call_jumper.split(" ").slice(-1)[0]) : esc(g.tip_call);
+    res += `<div class="res tipline">Tip: we said <b>${who}</b> (${esc(g.tip_call)}${g.tip_call_prob ? ` ${pct(g.tip_call_prob, 0)}` : ""}) · ${
+      g.tip_right === true ? `<span class="tipok">✅ right</span>` : g.tip_right === false ? `<span class="tipno">❌ ${esc((g.tip_winner || g.tip_winner_team || "").split(" ").slice(-1)[0])} won it</span>` : "result not in yet"}</div>`;
+  } else if (op && (pre || g.past) && (op.away_jumper || op.home_jumper)) {      // who jumps for each team (from our latest pick)
     const last = (n) => {                      // surname, skipping suffixes: 'Wendell Carter Jr.' -> 'Carter'
       if (!n) return "?";
       const w = n.split(" ").filter((x) => !/^(jr|sr|ii|iii|iv|v)\.?$/i.test(x));
@@ -1286,15 +1301,16 @@ function bookTable(c, i, recLine, shortName) {
     return `<span class="px ${good ? "good" : ""}" title="${book}: ${good ? `pays MORE than we say — value (about ${cents(ev)} per $1 over many bets)` : "pays less than we say"}">${american(a)}</span>${good ? `<span class="vtag">💰 value</span>` : ""}`;
   };
   const ours = (p) => (p === undefined ? "–" : `<span class="our">${american(fairOdds(p))}</span><span class="ourp">${pct(p, 0)} chance</span>`);
+  const dkOn = Object.keys(dk).length > 0 || Object.keys(fg).length > 0;   // past games without DraftKings data: FanDuel only
   const rows = list.map(([name, team, p], r) => `<tr data-name="${esc(name)}" class="${r === 0 ? "pick1" : r === 1 ? "pick2" : ""}">
       <td><div class="player">${logo(team, 18)}<span class="pn"><span class="nm"><span class="nfull">${esc(name)}</span><span class="nshort">${esc(shortName(name))}</span></span><span class="sub2"><span class="tc">${esc(team)} · </span>${recLine(name)}</span></span> <small class="tcode">${esc(team)}</small></div></td>
       <td class="r num bk-fd">${ours(p)}</td><td class="r bk-fd">${odds("FanDuel", name, p)}</td>
-      <td class="r num bk-dk">${ours(fg[name])}</td><td class="r bk-dk">${odds("DraftKings", name, fg[name])}</td></tr>`).join("");
+      ${dkOn ? `<td class="r num bk-dk">${ours(fg[name])}</td><td class="r bk-dk">${odds("DraftKings", name, fg[name])}</td>` : ""}</tr>`).join("");
   return `<div class="team-sec"><div class="fact-title">🏀 First basket</div>
     <div class="bk-rule"><b>Our odds</b> = what we think is fair, with our chance he scores first. <b>Pays</b> = the sportsbook's odds. <b class="g">💰 value</b> = the sportsbook pays more than our odds. FanDuel counts free throws · DraftKings only field goals.</div>
-    <div class="tscroll ${c.fd_closed ? "fd-closed" : ""}"><table class="bk-table" style="--i:${i}">
-      <thead><tr><th rowspan="2">Player</th><th colspan="2" class="bk-fd bk-head">FanDuel</th><th colspan="2" class="bk-dk bk-head">DraftKings</th></tr>
-        <tr><th class="r bk-fd">Our odds</th><th class="r bk-fd">FD pays</th><th class="r bk-dk">Our odds</th><th class="r bk-dk">DK pays</th></tr></thead>
+    <div class="tscroll ${c.fd_closed ? "fd-closed" : ""}"><table class="bk-table ${dkOn ? "" : "fd-only"}" style="--i:${i}">
+      <thead><tr><th rowspan="2">Player</th><th colspan="2" class="bk-fd bk-head">FanDuel</th>${dkOn ? '<th colspan="2" class="bk-dk bk-head">DraftKings</th>' : ""}</tr>
+        <tr><th class="r bk-fd">Our odds</th><th class="r bk-fd">FD pays</th>${dkOn ? '<th class="r bk-dk">Our odds</th><th class="r bk-dk">DK pays</th>' : ""}</tr></thead>
       <tbody>${rows}</tbody></table></div></div>`;
 }
 /* "First team to score" — same columns as the player table, teams as rows */
@@ -1589,7 +1605,7 @@ async function showYesterday() {
   if (viewDay !== "yesterday") return;
   const games = Object.fromEntries((yest.games || []).map((g) => [g.matchup, g]));
   $("yestSum").innerHTML = yest.graded
-    ? `<b>${esc(yest.date)}</b> · our #1 pick scored first in <b>${yest.hits} of ${yest.graded}</b> games (random ≈ 10%)`
+    ? `<b>${esc(yest.date)}</b> · our #1 pick scored first in <b>${yest.hits} of ${yest.graded}</b> games (random ≈ 10%)${yest.tip_graded ? ` · our tip-off call was right in <b>${yest.tip_hits} of ${yest.tip_graded}</b>` : ""}`
     : `<b>${esc(yest.date || "Yesterday")}</b> · no finished games to show`;
   for (const c of yest.cards) { const g = games[c.matchup] || {}; if (g.away_score) c.start = `${g.detail || "Final"} ${g.away_score}–${g.home_score}`; applySavedDK(c); }
   $("yestBoard").innerHTML = yest.cards.map((c) => {          // same tiles as Today, finished games
@@ -1597,6 +1613,8 @@ async function showYesterday() {
     const r = g.rank === 1 ? "hit" : g.rank && g.rank <= 3 ? "top3" : g.first_basket ? "miss" : null;
     return tile({ past: true, game_id: g.game_id || c.matchup, away_team: c.away, home_team: c.home,
       status: g.away_score != null ? 3 : 1, away_score: g.away_score ?? "", home_score: g.home_score ?? "", start: "", start_utc: "",
+      tip_call: g.tip_call, tip_call_prob: g.tip_call_prob, tip_call_jumper: g.tip_call_jumper, tip_right: g.tip_right,
+      tip_winner: g.tip_winner, tip_winner_team: g.tip_winner_team,
       first_basket: g.first_basket ? { name: g.first_basket } : null, result: r, rank: g.rank,
       our_pick: { name: top[0], prob: top[2], away_jumper: j[c.away], home_jumper: j[c.home], tip_home: c.tip?.[c.home] } });
   }).join("");
