@@ -1337,7 +1337,7 @@ function card(c, i) {
   const starterLine = (team, players) => `<div class="sblock"><div class="iteam-h">${logo(team, 18)}${esc(TEAM_NAMES[team] || team)}</div>
     <ol class="slist">${players.map((p) => { const s = (c.injuries || {})[p.name];
       const bk = (c.backups || {})[p.name];
-      return `<li>${esc(p.name)}${s ? ` <span class="itag in">⚠️ ${esc(/day/i.test(s) ? "Questionable" : s)}</span>` : ""}${bk ? `<div class="sbk">↳ if he sits: ${esc(bk)}</div>` : ""}</li>`; }).join("")}</ol></div>`;
+      return `<li>${esc(p.name)}${s ? ` <span class="itag in">⚠️ ${esc(/day/i.test(s) ? "Questionable" : s)}</span>` : ""}${bk ? `<div class="sbk">↳ if he sits: ${esc(bk)}${backupPct(c, p.name, "fd")}</div>` : ""}</li>`; }).join("")}</ol></div>`;
   // the top pick's price at each book; the better one gets the ★
   const topBooks = [["FanDuel", fdOn ? fd[top[0]] : undefined], ["DraftKings", dk[top[0]]]].filter(([, a]) => a !== undefined);
   const topBest = topBooks.length > 1 && topBooks[0][1] !== topBooks[1][1] ? (c.best_book || {})[top[0]] : null;
@@ -1506,7 +1506,7 @@ function bookSection(c, book, recLine, shortName) {
   };
   const ids = Object.fromEntries([...(c.home_starters || []), ...(c.away_starters || [])].map((s) => [s.name, s.player_id]));
   const rows = list.map(([name, team, p], r) => `<tr data-name="${esc(name)}" data-book="${book}" class="${r === 0 ? "pick1" : r === 1 ? "pick2" : ""}">
-      <td><div class="player"><span class="fwrap">${ids[name] ? `<img class="face" src="${headshot(ids[name])}" alt="" loading="lazy" onerror="this.remove()">` : ""}<span class="rank num">${r + 1}</span></span>${logo(team, 18)}<span class="pn"><span class="nm"><span class="nfull">${esc(name)}</span><span class="nshort">${esc(shortName(name))}</span></span><span class="sub2"><span class="tc">${esc(team)} · </span>${recLine(name)}</span>${(c.injuries || {})[name] && c.label !== "CONFIRMED" ? `<span class="itag">⚠️ ${esc(/day/i.test(c.injuries[name]) ? "Questionable" : c.injuries[name])}${(c.backups || {})[name] ? ` · if he sits: ${esc(c.backups[name])}` : ""}</span>` : ""}</span> <small class="tcode">${esc(team)}</small></div></td>
+      <td><div class="player"><span class="fwrap">${ids[name] ? `<img class="face" src="${headshot(ids[name])}" alt="" loading="lazy" onerror="this.remove()">` : ""}<span class="rank num">${r + 1}</span></span>${logo(team, 18)}<span class="pn"><span class="nm"><span class="nfull">${esc(name)}</span><span class="nshort">${esc(shortName(name))}</span></span><span class="sub2"><span class="tc">${esc(team)} · </span>${recLine(name)}</span>${(c.injuries || {})[name] && c.label !== "CONFIRMED" ? `<span class="itag">⚠️ ${esc(/day/i.test(c.injuries[name]) ? "Questionable" : c.injuries[name])}${(c.backups || {})[name] ? ` · if he sits: ${esc(c.backups[name])}${backupPct(c, name, isFD ? "fd" : "dk")}` : ""}</span>` : ""}</span> <small class="tcode">${esc(team)}</small></div></td>
       <td class="r num">${pctCell(p)}</td><td class="r num">${ourCell(p)}</td><td class="r">${bookCell(prices[name], p)}</td></tr>`).join("");
   // team chance by this book's rule: FanDuel = the model's team chance; DraftKings = field-goal chances summed by team
   const teamP = {};
@@ -3019,6 +3019,12 @@ function openView(id, hash, draw) {
 const shortTime = (s) => { if (!s) return ""; const d = new Date(s.replace(" ", "T")); return isNaN(d) ? "" : d.toLocaleTimeString([], { hour: "numeric", minute: "2-digit" }); };
 const sevWord = (s) => (/out/i.test(s) ? "out" : /doubt/i.test(s) ? "doubtful" : /day/i.test(s) ? "day-to-day (questionable)" : String(s || "").toLowerCase());
 /* one injured player in plain words: what he's listed as, what changed today, and always the injury */
+/* " (10.5% to score first)" — the backup's chance if the questionable starter sits (re-scored lineup) */
+function backupPct(c, name, rule) {
+  const b = (c.backup_chance || {})[name];
+  const p = b && (rule === "dk" ? b.dk : b.fd);
+  return p !== undefined && p !== null ? ` (${pct(p)} to score first${rule === "dk" ? ", excl. free throws" : ""})` : "";
+}
 function injuryLine(r, c) {
   const starters = new Set([...(c.home_starters || []), ...(c.away_starters || [])].map((s) => s.name));
   const confirmed = c.label === "CONFIRMED", playing = confirmed && starters.has(r.name);
@@ -3037,7 +3043,7 @@ function injuryLine(r, c) {
   } else {
     tag = `<span class="ist q">⚠️ ${esc(/day/i.test(r.status) ? "Questionable" : r.status)}</span>`;
     text = confirmed ? `Listed as ${sevWord(r.status)} — <b>not in the confirmed starting lineup</b>`
-      : `Listed as ${sevWord(r.status)} — game-time decision${(c.backups || {})[r.name] ? ` · <b>if he sits: ${esc(c.backups[r.name])} likely starts</b>` : ""}`;
+      : `Listed as ${sevWord(r.status)} — game-time decision${(c.backups || {})[r.name] ? ` · <b>if he sits: ${esc(c.backups[r.name])} likely starts${backupPct(c, r.name, "fd")}</b>` : ""}`;
   }
   return `<li><span class="iname">${esc(r.name)}</span>${tag}<small>${text} · <b class="ihurt">${esc(hurt)}</b>${starters.has(r.name) && !confirmed ? " · in our expected lineup" : ""}</small></li>`;
 }
@@ -3064,7 +3070,7 @@ async function drawStarters() {
       ${[[c.away, c.away_starters], [c.home, c.home_starters]].map(([tm, ours]) => {
         const r = today.find((x) => x[1] === c.matchup && x[2] === tm) || [];
         const proj = names(r[3]), conf = names(r[4]), used = (ours || []).map((s) => s.name);
-        const list = (arr) => arr ? `<ol class="slist">${arr.map((n) => `<li>${esc(n)}${(c.injuries || {})[n] ? ` <span class="itag in">⚠️ ${esc(/day/i.test(c.injuries[n]) ? "Questionable" : c.injuries[n])}</span>` : ""}${(c.backups || {})[n] && !conf ? `<div class="sbk">↳ if he sits: ${esc(c.backups[n])}</div>` : ""}</li>`).join("")}</ol>` : "";
+        const list = (arr) => arr ? `<ol class="slist">${arr.map((n) => `<li>${esc(n)}${(c.injuries || {})[n] ? ` <span class="itag in">⚠️ ${esc(/day/i.test(c.injuries[n]) ? "Questionable" : c.injuries[n])}</span>` : ""}${(c.backups || {})[n] && !conf ? `<div class="sbk">↳ if he sits: ${esc(c.backups[n])}${backupPct(c, n, "fd")}</div>` : ""}</li>`).join("")}</ol>` : "";
         const swapped = proj && used.length && used.some((n) => !proj.includes(n))
           ? `<div class="snote">🔁 Our picks use: ${used.map(esc).join(", ")} (we swapped out players ruled out after NBA.com posted).</div>` : "";
         return `<div class="steam"><div class="iteam-h">${logo(tm, 18)}${esc(TEAM_NAMES[tm] || tm)}</div>

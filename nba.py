@@ -1204,29 +1204,36 @@ def predict_today(first_pass: bool = True, teams: set = frozenset(), ui=None) ->
         # NBA.com lists positions with its lineups; its starting C usually takes the tip (tip_model.team_jumper)
         home_c = next((p['player_id'] for p in home_starters if p.get('position') == 'C'), None)
         away_c = next((p['player_id'] for p in away_starters if p.get('position') == 'C'), None)
-        # Inside the first-basket model: the tip chance from the current tip history (what it was tested with)
-        tip_home, tip_away = tm.team_win_probs(con, home_team, away_team, game_date, home_ids, away_ids,
-                                               home_c, away_c)
         # Shown to the owner (🏀 Tip-off line + spreadsheet): also counts 2024-25 tips — calls more tips right
         show_home, show_away = tm.team_win_probs(con, home_team, away_team, game_date, home_ids, away_ids,
                                                  home_c, away_c, extended=True)
-        rows, info = [], []
-        for p in home_starters + away_starters:
-            is_home = 1 if p['team'] == home_team else 0
-            pstats = bf.compute_player_season_stats(p['player_id'], game_date, p['team'], player_logs)
-            pstats['early_shot_share'], pstats['early_shot_count'] = bf.early_shot_share(early_index, p['player_id'], game_date)
-            # tonight's opponent (context_features): his position tonight (NBA.com's lineup slot, else his usual one)
-            opp = away_team if is_home else home_team
-            grp = st.position_group(p.get('position')) or (groups or {}).get(st.norm_name(p['name']))
-            pstats['opp_pos_share'] = ctx.opp_pos_share(opp, grp, game_date.replace('-', ''))
-            pstats['vs_opp_rate'] = ctx.vs_opp_rate(p['player_id'], opp, game_date.replace('-', ''))
-            rows.append(pm.build_row(pstats, home_team_stats if is_home else away_team_stats, is_home,
-                                     tip_win_prob=tip_home if is_home else tip_away))
-            info.append({'id': p['player_id'], 'name': p['name'], 'team': p['team']})
-            if p.get('id_matched') is False:
-                notes.append(f"{p['name']}: no past games found — scored with default stats")
-        probs = pm.probabilities(pg, rows)
-        probs_fg = pm.probabilities(pg_fg, rows) if pg_fg else None      # first FIELD GOAL chances (DraftKings)
+
+        def score_lineup(h5, a5):
+            """The model's chances for these 10 starters -> (probs, probs_fg, info). Used for tonight's lineup and
+            for "if a questionable starter sits" (his backup in, everyone re-scored, tip chance included)."""
+            h_ids, a_ids = [p['player_id'] for p in h5], [p['player_id'] for p in a5]
+            h_c = next((p['player_id'] for p in h5 if p.get('position') == 'C'), None)
+            a_c = next((p['player_id'] for p in a5 if p.get('position') == 'C'), None)
+            # Inside the first-basket model: the tip chance from the current tip history (what it was tested with)
+            t_home, t_away = tm.team_win_probs(con, home_team, away_team, game_date, h_ids, a_ids, h_c, a_c)
+            rows_, info_ = [], []
+            for p in h5 + a5:
+                is_home = 1 if p['team'] == home_team else 0
+                pstats = bf.compute_player_season_stats(p['player_id'], game_date, p['team'], player_logs)
+                pstats['early_shot_share'], pstats['early_shot_count'] = bf.early_shot_share(early_index, p['player_id'], game_date)
+                # tonight's opponent (context_features): his position tonight (NBA.com's lineup slot, else his usual one)
+                opp = away_team if is_home else home_team
+                grp = st.position_group(p.get('position')) or (groups or {}).get(st.norm_name(p['name']))
+                pstats['opp_pos_share'] = ctx.opp_pos_share(opp, grp, game_date.replace('-', ''))
+                pstats['vs_opp_rate'] = ctx.vs_opp_rate(p['player_id'], opp, game_date.replace('-', ''))
+                rows_.append(pm.build_row(pstats, home_team_stats if is_home else away_team_stats, is_home,
+                                          tip_win_prob=t_home if is_home else t_away))
+                info_.append({'id': p['player_id'], 'name': p['name'], 'team': p['team']})
+            return (pm.probabilities(pg, rows_), pm.probabilities(pg_fg, rows_) if pg_fg else None, info_)
+
+        probs, probs_fg, info = score_lineup(home_starters, away_starters)      # probs_fg: first FIELD GOAL (DraftKings)
+        notes += [f"{p['name']}: no past games found — scored with default stats"
+                  for p in home_starters + away_starters if p.get('id_matched') is False]
         order = [int(i) for i in np.argsort(probs)[::-1]]
 
         names = {p['player_id']: p['name'] for p in home_starters + away_starters}
@@ -1249,7 +1256,7 @@ def predict_today(first_pass: bool = True, teams: set = frozenset(), ui=None) ->
         injury_list = _injury_list(con, game_date, (away_team, home_team), inj_report, team_of)
         # a starter listed as questionable/doubtful/day-to-day: who would most likely start if he sits (same swap rule
         # we use for players ruled out), so the page can show the backup next to him
-        backups = {}
+        backups, backup_chance = {}, {}
         if source != "nba_confirmed":
             for team, five in ((home_team, home_starters), (away_team, away_starters)):
                 for nm, status, _ in st.injury_flags([p["name"] for p in five], inj_report):
@@ -1262,6 +1269,11 @@ def predict_today(first_pass: bool = True, teams: set = frozenset(), ui=None) ->
                         rep = next((r["in"] for r in sub["replaced"] if st.norm_name(r["out"]) == st.norm_name(nm)), None)
                         if rep:
                             backups[nm] = rep
+                            h5, a5 = (sub["players"], away_starters) if team == home_team else (home_starters, sub["players"])
+                            bp, bfg, binfo = score_lineup(h5, a5)
+                            k = next(i for i, x in enumerate(binfo) if st.norm_name(x["name"]) == st.norm_name(rep))
+                            backup_chance[nm] = {"name": rep, "fd": float(bp[k]),
+                                                 "dk": float(bfg[k]) if bfg is not None else None}
                     except Exception:  # noqa: BLE001 — a missing backup never blocks the picks
                         pass
         top5 = [(info[i]['name'], info[i]['team'], float(probs[i]), pm.fair_american(float(probs[i])))
@@ -1291,7 +1303,7 @@ def predict_today(first_pass: bool = True, teams: set = frozenset(), ui=None) ->
             **_team_first_odds(fd_games, home_team, away_team, first_team, dk_games, con, game_date),
             "home": home_team, "away": away_team,
             "home_starters": home_starters, "away_starters": away_starters,
-            "injuries": injuries, "injury_list": injury_list, "backups": backups, "notes": notes,
+            "injuries": injuries, "injury_list": injury_list, "backups": backups, "backup_chance": backup_chance, "notes": notes,
         })
 
     st.save_seen_lineups(con)                  # keep NBA.com's Expected and Confirmed lists (Lineups tab)
