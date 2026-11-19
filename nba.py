@@ -1348,16 +1348,14 @@ def _fanduel_card(fd_games, home: str, away: str, top5: list, everyone: list = (
                 if fd_games is not None else "FanDuel odds unavailable right now."}
         if not dk_prices:
             return base
-        priced = ev.priced_players(players, dk_prices)
-        best = priced[0] if priced and ev.is_value(priced[0]["ev"]) else None
-        return {**base, "draftkings": dk_prices, "best_book": {n: "DraftKings" for n in dk_prices},
-                "ev": {r["name"]: r["ev"] for r in priced}, "fd_market": None,
-                "best_value": ({**{k: best[k] for k in ("name", "team", "prob", "american", "ev")}, "book": "DraftKings"}
-                               if best else None), "_priced": []}
+        return {**base, "draftkings": dk_prices, "best_book": {}, "ev": {}, "fd_market": None,   # shown, not valued:
+                "best_value": None, "_priced": []}                                                  # field goals only
     matched = fd.match_prices(game["players"], [(p["name"], p["team"]) for p in players])
     prices = {name: row["american"] for name, row in matched.items()}
     fd_priced = ev.priced_players(players, prices)          # FanDuel only: what odds_log / paper betting record
-    best_prices, best_book = _best_prices({"FanDuel": prices, "DraftKings": dk_prices})
+    # value uses FanDuel only: DraftKings' player market pays on the first FIELD GOAL (free throws don't count — its
+    # bet slip, 2026-11-19), a different bet from our first-POINTS chances (free throws decide ~9% of games)
+    best_prices, best_book = _best_prices({"FanDuel": prices})
     priced = ev.priced_players(players, best_prices)        # value at whichever book pays more
     note = ""
     if not fd.is_complete(game["players"]):

@@ -32,7 +32,8 @@ def test_best_price_across_books():
     assert book == {"A": "DraftKings", "B": "FanDuel", "C": "DraftKings"}
 
 
-def test_card_uses_better_book_for_value():
+def test_value_uses_fanduel_only():
+    """DraftKings' player market pays on the first FIELD GOAL (free throws don't count): shown, never used for value."""
     fd_games = [{"home_code": "SAC", "away_code": "PHX", "players": [
         {"player": "Devin Booker", "team": "PHX", "american": 400, "market_id": "1", "selection_id": "9"}]}]
     dk_games = [{"home_code": "SAC", "away_code": "PHX", "players": [
@@ -40,9 +41,10 @@ def test_card_uses_better_book_for_value():
     everyone = [{"name": "Devin Booker", "team": "PHX", "prob": 0.2}]
     card = nba._fanduel_card(fd_games, "SAC", "PHX", [("Devin Booker", "PHX", 0.2, 400)], everyone, dk_games)
     assert card["fanduel"] == {"Devin Booker": 400} and card["draftkings"] == {"Devin Booker": 600}
-    assert card["best_book"]["Devin Booker"] == "DraftKings"
-    assert abs(card["ev"]["Devin Booker"] - (0.2 * 6 - 0.8)) < 1e-9      # EV at the better (DraftKings) price
-    assert card["best_value"]["book"] == "DraftKings"
+    assert card["best_book"]["Devin Booker"] == "FanDuel"
+    assert abs(card["ev"]["Devin Booker"] - (0.2 * 4 - 0.8)) < 1e-9      # EV at FanDuel's price, not DraftKings'
+    dk_only = nba._fanduel_card([], "SAC", "PHX", [("Devin Booker", "PHX", 0.2, 400)], everyone, dk_games)
+    assert dk_only["draftkings"] and dk_only["best_value"] is None and dk_only["ev"] == {}
 
 
 def test_snapshot_used_only_when_fresh(tmp_path):

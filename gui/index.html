@@ -799,7 +799,7 @@ body.bets-mode .dayswitch, body.bets-mode #yestSum, body.bets-mode #dataView { d
           <dl class="legend">
             <dt>Chance</dt><dd>The model's chance this player scores the game's first basket. A random pick would be 10%.</dd>
             <dt>Fair odds</dt><dd>The break-even price. A bet only makes sense if the sportsbook pays more (e.g. +700 when fair is +500).</dd>
-            <dt>DraftKings</dt><dd>DraftKings' price for the same bet ("1st Points Scorer": free throws count, like FanDuel). The price with the <b>★ and gold outline</b> is the better of the two books (bet there); the faded one pays less. Value uses the ★ price.</dd>
+            <dt>DraftKings (FG only)</dt><dd>DraftKings' price for its first-scorer bet. <b>Careful:</b> DraftKings only counts the first <b>field goal</b> — free throws don't count (FanDuel's do, like our model). That decides about 1 game in 11, so DraftKings is a slightly different bet: its prices are shown for comparison but <b>Value, ★ and Tonight's best bets use FanDuel only</b>.</dd>
             <dt>FanDuel</dt><dd>FanDuel's current First Basket price. <b style="color:var(--good)">Green</b> = it pays more than the fair odds, so the model sees value. Grey = it pays less.</dd>
             <dt>Value (EV) <button class="whats" data-learn="0">1-minute guide</button></dt><dd>Is FanDuel's prize big enough for how often the model thinks he scores first? <b style="color:var(--good)">Green +10¢</b> = good deal: about 10¢ profit for every $1 over many bets. Grey = bad deal. A good deal still loses most nights.</dd>
             <dt>↓ ↑ under a price</dt><dd><b style="color:var(--warn)">↓</b> = the payout dropped since this morning: the sportsbook now thinks he's <b>more</b> likely to score first (people are betting him). ↑ = it went up. If one of our good bets shows ↓, it's getting worse — <b>bet it soon</b> (shown as ⏰ in Tonight's best bets).</dd>
@@ -1082,7 +1082,7 @@ function card(c, i) {
   const bookCell = (prices, book, name, fair) => {
     const price = prices[name];
     if (price === undefined) return `<td class="r"><span class="fd none">–</span></td>`;
-    const value = payout(price) > payout(fair);
+    const value = book === "FanDuel" && payout(price) > payout(fair);    // DraftKings: different bet (field goals only)
     const both = dkOn && fd[name] !== undefined && dk[name] !== undefined && fd[name] !== dk[name];   // both price him, differently
     const best = both && (c.best_book || {})[name] === book;
     const mark = !both ? "" : best ? "best" : "worse";
@@ -1170,7 +1170,7 @@ function card(c, i) {
       </div>
       ${valueLine}
       <div class="tscroll ${dkOn ? "two-books" : ""} ${c.fd_closed ? "fd-closed" : ""}"><table style="--i:${i}">
-        <thead><tr><th></th><th>Player</th><th class="r"><span class="long">Chance</span><span class="short">%</span></th><th class="r">Fair</th>${fdOn ? '<th class="r"><span class="long">FanDuel</span><span class="short">FD</span></th>' + (dkOn ? '<th class="r"><span class="long">DraftKings</span><span class="short">DK</span></th>' : '') + '<th class="r" title="Good deal? (best price of the books) Average profit per $1 in the long run">Value<button class="whats" data-learn="2" title="What is this?">?</button></th>' : ""}</tr></thead>
+        <thead><tr><th></th><th>Player</th><th class="r"><span class="long">Chance</span><span class="short">%</span></th><th class="r">Fair</th>${fdOn ? '<th class="r"><span class="long">FanDuel</span><span class="short">FD</span></th>' + (dkOn ? '<th class="r" title="DraftKings pays on the first FIELD GOAL — free throws don\'t count — so its prices are a slightly different bet and aren\'t used for Value"><span class="long">DraftKings <small>(FG only)</small></span><span class="short">DK·FG</span></th>' : '') + '<th class="r" title="Good deal? (best price of the books) Average profit per $1 in the long run">Value<button class="whats" data-learn="2" title="What is this?">?</button></th>' : ""}</tr></thead>
         <tbody>${rows}</tbody>
       </table></div>
       ${c.fd_closed ? `<div class="small-note">FanDuel has closed first-basket betting (tip-off is near) — its last prices are shown faded.</div>`
@@ -1351,7 +1351,7 @@ function applySavedDK(c) {                   // a started game: its last saved D
 function recompute(c) {                      // value at the better of the two books, for every starter
   const players = c.probs || c.picks.map(([n, t, p]) => [n, t, p]);
   const best = {}, book = {};
-  for (const [b, ps] of [["FanDuel", c.fanduel || {}], ["DraftKings", c.draftkings || {}]])
+  for (const [b, ps] of [["FanDuel", c.fanduel || {}]])   // DraftKings = first FIELD GOAL only: shown, never valued
     for (const [n, a] of Object.entries(ps)) if (!(n in best) || fdProfit(a) > fdProfit(best[n])) { best[n] = a; book[n] = b; }
   const priced = players.filter(([n]) => n in best)
     .map(([name, team, prob]) => ({ name, team, prob, american: best[name], book: book[name], ev: prob * fdProfit(best[name]) - (1 - prob) }))
@@ -2151,7 +2151,7 @@ function bestBets() {
   const out = [];
   for (const c of (lastResult?.cards || [])) {
     if (!isPre(c)) continue;
-    const books = { FanDuel: c.fd_closed ? {} : (c.fanduel || {}), DraftKings: c.draftkings || {} };
+    const books = { FanDuel: c.fd_closed ? {} : (c.fanduel || {}) };     // DraftKings is field goals only: not compared
     for (const [name, team, prob] of (c.probs || c.picks.map(([n, t, p]) => [n, t, p]))) {
       let best = null;
       for (const [book, ps] of Object.entries(books)) {
