@@ -893,8 +893,8 @@ tr.bk-row .sub2 b { color: #fbbf24; font-weight: 700; }
       <button class="btn secondary" id="betsBtn" title="The bets you placed: wins, losses and profit">💵 My bets</button>
       <button class="btn secondary" id="dataBtn" title="Your spreadsheet and CSV as tabs: scorecard, picks, lineups, all games">📊 Data</button>
       <button class="btn secondary" id="learnBtn" title="What the 💰 value tag means, in 3 short slides">💰 What's value?</button>
-      <button class="btn secondary" id="runSelected" hidden>Selected games</button>
-      <button class="btn" id="runAll">🏀 All games</button>
+      <button class="btn secondary" id="runSelected" hidden>🔄 Update selected</button>
+      <button class="btn" id="runAll" title="Run the model again for every game now">🔄 Update picks</button>
       <span class="acct" id="acct" hidden></span>
     </div>
   </div>
@@ -972,7 +972,7 @@ tr.bk-row .sub2 b { color: #fbbf24; font-weight: 700; }
     <div class="board" id="board">
       <div class="tile skel" style="height:78px"></div><div class="tile skel" style="height:78px"></div><div class="tile skel" style="height:78px"></div>
     </div>
-    <div class="hint" id="boardHint"><span id="boardHintText">Left team = <b>away</b>, right team = <b>home</b>. Tap games to show only those below. To re-run the model for them, press <b>Selected</b>; for every game, <b>All games</b>.</span></div>
+    <div class="hint" id="boardHint"><span id="boardHintText">Left team = <b>away</b>, right team = <b>home</b>. Tap games to show only those below. To re-run the model for them, press <b>Update selected</b>; for every game, <b>Update picks</b>.</span></div>
   </div>
 
   <div class="progress" id="progress"><span class="bouncer">🏀</span><span id="step">Working…</span><span class="elapsed num" id="elapsed"></span></div>
@@ -981,7 +981,7 @@ tr.bk-row .sub2 b { color: #fbbf24; font-weight: 700; }
   <div class="layout">
     <main>
       <section class="bestbets" id="bestBets" hidden style="display:none"></section>
-      <div class="cards" id="cards"><div class="empty">Press <b>All games</b> to run the model.</div></div>
+      <div class="cards" id="cards"><div class="empty">Press <b>🔄 Update picks</b> to run the model.</div></div>
     </main>
     <aside class="side">
       <div class="panel" id="record"><div class="section-title">Track record</div><div class="hint">Loading…</div></div>
@@ -1188,7 +1188,7 @@ function renderTicker() {
 function syncButtons() {
   const n = selected.size;
   $("runSelected").hidden = !n;
-  $("runSelected").textContent = `Selected (${n})`;
+  $("runSelected").textContent = `🔄 Update selected (${n})`;
   $("board").classList.toggle("has-sel", n > 0);            // fade the games that aren't selected
   applyCardFilter();
 }
@@ -1513,13 +1513,13 @@ function bookSection(c, book, recLine, shortName) {
     const b = (c.backup_chance || {})[starter], p = b && b[rule];
     if (!b || p === undefined || p === null || c.label === "CONFIRMED" || (list.length >= 5 && p < fifth)) return "";
     return `<tr class="bk-row" data-name="${esc(b.name)}" data-book="${book}">
-      <td><div class="player"><span class="fwrap">${b.id ? `<img class="face" src="${headshot(b.id)}" alt="" loading="lazy" onerror="this.remove()">` : ""}<span class="rank num">↳</span></span><span class="pn"><span class="nm"><span class="nfull">${esc(b.name)}</span><span class="nshort">${esc(shortName(b.name))}</span></span><span class="sub2">${esc(b.team || "")} · <b>only if ${esc(shortName(starter))} sits</b></span></span></div></td>
+      <td><div class="player"><span class="fwrap">${b.id ? `<img class="face" src="${headshot(b.id)}" alt="" loading="lazy" onerror="this.remove()">` : ""}<span class="rank num">↳</span></span><span class="pn"><span class="nm"><span class="nfull">${esc(b.name)}</span><span class="nshort">${esc(shortName(b.name))}</span></span><span class="sub2">${esc(b.team || "")} · <b>if ${esc(starter.split(" ").slice(-1)[0])} sits</b></span></span></div></td>
       <td class="r num">${pctCell(p)}</td><td class="r num">${ourCell(p)}</td><td class="r">${bookCell(prices[b.name], p)}</td></tr>`;
   };
   const inList = new Set(list.map(([n]) => n));
   const extraBackups = Object.keys(c.backup_chance || {}).filter((s) => !inList.has(s)).map(backupRow).join("");   // starter outside the top 5
   const rows = list.map(([name, team, p], r) => `<tr data-name="${esc(name)}" data-book="${book}" class="${r === 0 ? "pick1" : r === 1 ? "pick2" : ""}">
-      <td><div class="player"><span class="fwrap">${ids[name] ? `<img class="face" src="${headshot(ids[name])}" alt="" loading="lazy" onerror="this.remove()">` : ""}<span class="rank num">${r + 1}</span></span>${logo(team, 18)}<span class="pn"><span class="nm"><span class="nfull">${esc(name)}</span><span class="nshort">${esc(shortName(name))}</span></span><span class="sub2"><span class="tc">${esc(team)} · </span>${recLine(name)}</span>${(c.injuries || {})[name] && c.label !== "CONFIRMED" ? `<span class="itag">⚠️ ${esc(/day/i.test(c.injuries[name]) ? "Questionable" : c.injuries[name])}${(c.backups || {})[name] ? ` · if he sits: ${esc(c.backups[name])}${backupPct(c, name, isFD ? "fd" : "dk")}` : ""}</span>` : ""}</span> <small class="tcode">${esc(team)}</small></div></td>
+      <td><div class="player"><span class="fwrap">${ids[name] ? `<img class="face" src="${headshot(ids[name])}" alt="" loading="lazy" onerror="this.remove()">` : ""}<span class="rank num">${r + 1}</span></span>${logo(team, 18)}<span class="pn"><span class="nm"><span class="nfull">${esc(name)}</span><span class="nshort">${esc(shortName(name))}</span></span><span class="sub2"><span class="tc">${esc(team)} · </span>${recLine(name)}</span>${(c.injuries || {})[name] && c.label !== "CONFIRMED" ? `<span class="itag">⚠️ ${esc(/day/i.test(c.injuries[name]) ? "Questionable" : c.injuries[name])}${(c.backups || {})[name] && !backupRow(name) ? ` · backup: ${esc(shortName(c.backups[name]))}${(() => { const b = (c.backup_chance || {})[name], q = b && b[rule]; return q !== undefined && q !== null ? ` ${pct(q)}` : ""; })()}` : ""}</span>` : ""}</span> <small class="tcode">${esc(team)}</small></div></td>
       <td class="r num">${pctCell(p)}</td><td class="r num">${ourCell(p)}</td><td class="r">${bookCell(prices[name], p)}</td></tr>
       ${backupRow(name)}`).join("") + extraBackups;
   // team chance by this book's rule: FanDuel = the model's team chance; DraftKings = field-goal chances summed by team
