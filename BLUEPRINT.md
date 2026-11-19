@@ -751,8 +751,13 @@ NBA/
   home edge (`tip_newjumper_test.py`, each helps one season only). Per-feature shrinkage was already tuned 11/17.
   Context: our top pick ≈ StatsBench's published 17.7%; first-team accuracy ceiling ≈ 55–58% (tip winner scores
   first 66%); press reports the NBA asked partner books to stop "first-of" markets from Oct 2026.
-- **In progress:** full 2024-25 season downloaded into a COPY of the project to test training on it (never into the
-  real database unless it wins in both periods).
+- **Adopted — 2024-25 season as player HISTORY** (`data_patches/history_2024_25.json.gz`, 0.7 MB: 1,321 games with
+  first baskets, tips, starters, early/first shots, first FGs + 28,154 box-score lines; `nba.apply_history_patch` loads
+  it once, `build_features` merges the box scores, `train_pregame.HISTORY_BEFORE` keeps those games out of training,
+  `_retrain_if_needed` rebuilds from scratch when older games appear). Walk-forward (same 215 / 734 test games):
+  2026-27 2.23766 → **2.23423**, Jan–Apr 2026 2.27248 → **2.25775** (top pick 20.9 → 19.1% / 15.1 → 17.0%). Using the
+  1,231 games also as training examples was better this season but worse in Jan–Apr — not used (owner's trade concern).
+  The first-basket model's tip input now also counts 2024-25 tips (as in the test).
 
 ### 2026-11-18 (later) — where accuracy is lost, and what didn't help
 

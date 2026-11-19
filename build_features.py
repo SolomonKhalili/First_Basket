@@ -88,6 +88,14 @@ def build_player_game_logs():
         with open(PLAYER_LOGS_CACHE, 'rb') as f:
             player_logs.update(pickle.load(f))
     known = {g['game_id'] for logs in player_logs.values() for g in logs}
+    hist = os.path.join("data_patches", "history_2024_25.json.gz")   # 2024-25 box scores (player history, nba.py)
+    if os.path.exists(hist):
+        import gzip, json as _json
+        for pid, lst in _json.loads(gzip.open(hist, "rt").read())["logs"].items():
+            add = [g for g in lst if g["game_id"] not in known]
+            if add:
+                player_logs[pid].extend(add); player_logs[pid].sort(key=lambda g: g["game_date"], reverse=True)
+        known = {g['game_id'] for logs in player_logs.values() for g in logs}
 
     con = db()
     changed = sync_first_basket_flags(player_logs, con)

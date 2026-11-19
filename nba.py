@@ -601,6 +601,36 @@ def audit_season(con, key: str, start: str, end: str) -> int:
 PATCH_DIR = Path(__file__).parent / "data_patches"
 
 
+HISTORY_PATCH = "history_2024_25.json.gz"
+
+
+def apply_history_patch(con) -> int:
+    """The 2024-25 season (data_patches/history_2024_25.json.gz): games, first baskets, starters, early/first shots and
+    first field goals — used as player HISTORY only (adopted 2026-11-19: walk-forward log-loss 2026-27 2.2377 -> 2.2342,
+    Jan–Apr 2026 2.2725 -> 2.2578; train_pregame never trains on these games). Loaded once; adds nothing after that.
+    Returns how many games were added."""
+    import gzip as _gz, json as _json
+    f = PATCH_DIR / HISTORY_PATCH
+    if not f.exists():
+        return 0
+    data = _json.loads(_gz.open(f, "rt").read())
+    games = data["tables"]["games"]
+    gi = games["columns"].index("game_id")
+    have = {r[0] for r in con.execute("SELECT game_id FROM games WHERE game_date < '20250801'")}
+    if all(str(r[gi]) in have for r in games["rows"]):
+        return 0
+    con.execute(FIRST_SHOTS_SCHEMA); con.execute(EARLY_SHOTS_SCHEMA); con.execute(FIRST_FG_SCHEMA)
+    st.ensure_lineups_table(con)
+    for t, tab in data["tables"].items():
+        cols = tab["columns"]
+        con.executemany(f"INSERT OR IGNORE INTO {t} ({', '.join(cols)}) VALUES ({', '.join('?' * len(cols))})", tab["rows"])
+    di = games["columns"].index("game_date")
+    for r in games["rows"]:                      # 2024-25 play-in / playoffs began 2025-04-15
+        note_type(con, str(r[gi]), 3 if str(r[di]) >= "20250415" else 2)
+    con.commit()
+    return len(games["rows"]) - len(have)
+
+
 def apply_data_patches(con) -> int:
     """Game data the cloud can't fetch itself (e.g. playoff games only NBA.com has — NBA.com refuses cloud servers),
     read once on the Mac and saved as JSON in data_patches/. Loaded on every update; changes nothing when already in.
@@ -884,8 +914,13 @@ def _retrain_if_needed(con) -> str:
     fg_ok = os.path.exists("pregame_model_fg.json") and "team_labels" in open("pregame_model_fg.json").read()
     if not new_games and fg_ok:      # (the field-goal model: trained again if missing or its team part is the old kind)
         return "model up to date"
+    # Games older than what's already trained on (e.g. the 2024-25 history season) change every later game's player
+    # history, so the matrices are rebuilt from scratch once instead of only appending.
+    new_dates = [d for (gid, d) in con.execute("SELECT game_id, game_date FROM games") if gid in labelled - in_training]
+    trained_dates = [d for (gid, d) in con.execute("SELECT game_id, game_date FROM games") if gid in in_training]
+    full = bool(new_dates and trained_dates and min(new_dates) < min(trained_dates))
     for script in ("build_features.py", "train_pregame.py"):
-        r = subprocess.run([sys.executable, script, "--incremental"], capture_output=True, text=True)
+        r = subprocess.run([sys.executable, script] + ([] if full else ["--incremental"]), capture_output=True, text=True)
         if script == "train_pregame.py" and r.returncode == 3:     # new model tested worse: old one kept
             print(f"⚠️ {r.stdout.strip().splitlines()[-1]}")
             return f"kept the existing model ({new_games} new game{'s' * (new_games != 1)} added to the data)"
@@ -916,6 +951,7 @@ def sync_data() -> str:
                                  AND game_id NOT IN (SELECT DISTINCT game_id FROM lineups)""", (recent,)).fetchall():
         st.store_game_lineup(con, gid)
     apply_data_patches(con)                    # games only the Mac could fetch (data_patches/*.json)
+    apply_history_patch(con)                   # 2024-25 season as player history (once)
     for key, (a, b) in SEASONS_TO_AUDIT.items():  # whole past seasons vs ESPN's schedule (once each)
         audit_season(con, key, a, b)
     repair_old_gaps(con)                       # older games still missing a first basket (once a week each)

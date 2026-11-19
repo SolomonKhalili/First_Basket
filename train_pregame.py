@@ -5,7 +5,7 @@ Stage 1 (team): logistic regression of "home team scored first" on logit(P(home 
 Stage 2 (player): conditional logit over the 5 starters of the team that scored first (player inputs only).
 The previous one-stage model is still trained in the walk-forward test and printed for comparison.
 
-Training data = 2025-26 regular season + every 2026-27 game so far (playoffs excluded), so the model
+Training data = 2025-26 regular season + every 2026-27 game so far (playoffs excluded; 2024-25 is player history only), so the model
 keeps learning this season (trades, rookies, new roles).
 
 Honest test = WALK-FORWARD over 2026-27: each week is predicted by a model trained only on games
@@ -32,6 +32,7 @@ import starters as st
 
 REG_SEASON_END = "20260412"   # last day of the 2025-26 regular season
 NEW_SEASON_START = "20260801"
+HISTORY_BEFORE = "20250801"     # 2024-25: player history only, never a training example (nba.apply_history_patch)
 L2_GRID = [1e-3, 3e-3, 1e-2, 3e-2, 1e-1, 3e-1]
 WORSE_MARGIN = 0.01           # keep the old model if the new walk-forward log-loss is worse by more than this
 KEPT_PREVIOUS = 3             # exit code when the previous model is kept
@@ -89,8 +90,8 @@ try:                                   # play-in / playoff games of any season (
     POSTSEASON = {g for (g,) in _con.execute("SELECT game_id FROM game_types WHERE season_type IN (3, 5)")}
 except Exception:  # noqa: BLE001
     POSTSEASON = set()
-season = np.array(["playoffs" if g in POSTSEASON else "old" if d <= REG_SEASON_END else "new" if d >= NEW_SEASON_START
-                   else "playoffs" for g, d in zip(gids, dates)])
+season = np.array(["history" if d < HISTORY_BEFORE else "playoffs" if g in POSTSEASON else "old" if d <= REG_SEASON_END
+                   else "new" if d >= NEW_SEASON_START else "playoffs" for g, d in zip(gids, dates)])
 dates = np.array(dates)
 
 
@@ -182,7 +183,7 @@ l2_one = min(L2_GRID, key=lambda v: logloss(predict(fit(tr, v), va), va))     # 
 
 # ── Walk-forward test over 2026-27: week by week, trained only on games before that week ──
 new_idx = np.where(season == "new")[0]
-train_pool = season != "playoffs"
+train_pool = (season != "playoffs") & (season != "history")
 wf_P, wf_idx, one_P = [], [], []
 if len(new_idx):
     first, last = min(dates[new_idx]), max(dates[new_idx])     # matrices may hold late-added games out of date order

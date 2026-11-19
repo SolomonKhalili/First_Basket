@@ -21,6 +21,7 @@ def project(tmp_path, monkeypatch):
     monkeypatch.setattr(nba, "DB", db)
     monkeypatch.setattr(bf, "DB", db)
     monkeypatch.setattr(nba, "CSV_PATH", str(tmp_path / "first_basket_data.csv"))
+    monkeypatch.setattr(nba, "PATCH_DIR", tmp_path / "data_patches")     # never the real 2024-25 season file
     nba.init()
     return nba.db()
 
@@ -539,3 +540,27 @@ def test_retrain_redoes_an_old_kind_field_goal_model(trained_through_yesterday, 
     monkeypatch.setattr(subprocess, "run", fake_run({}, calls))
     nba._retrain_if_needed(trained_through_yesterday)
     assert any("train_pregame.py" in " ".join(c) for c in calls)
+
+
+# ── 2024-25 history season (data_patches/history_2024_25.json.gz) ─────────────
+def test_history_patch_loads_once(project, tmp_path, monkeypatch):
+    import gzip
+    pd = tmp_path / "patches"; pd.mkdir()
+    monkeypatch.setattr(nba, "PATCH_DIR", pd)
+    cols = [r[1] for r in project.execute("PRAGMA table_info(games)")]
+    row = [None] * len(cols)
+    row[cols.index("game_id")], row[cols.index("game_date")] = "h1", "20250301"
+    row[cols.index("home_team")], row[cols.index("away_team")], row[cols.index("status")] = "NY", "BOS", 3
+    fb_cols = [r[1] for r in project.execute("PRAGMA table_info(first_baskets)")]
+    fb = [None] * len(fb_cols); fb[fb_cols.index("game_id")], fb[fb_cols.index("scorer_player_id")] = "h1", "7"
+    data = {"tables": {"games": {"columns": cols, "rows": [row]}, "first_baskets": {"columns": fb_cols, "rows": [fb]}}, "logs": {}}
+    with gzip.open(pd / nba.HISTORY_PATCH, "wt") as f:
+        json.dump(data, f)
+    assert nba.apply_history_patch(project) == 1
+    assert nba.apply_history_patch(project) == 0                      # already in: nothing added
+    assert project.execute("SELECT season_type FROM game_types WHERE game_id = 'h1'").fetchone()[0] == 2
+
+
+def test_history_patch_missing_file_does_nothing(project, tmp_path, monkeypatch):
+    monkeypatch.setattr(nba, "PATCH_DIR", tmp_path / "nothing_here")
+    assert nba.apply_history_patch(project) == 0
