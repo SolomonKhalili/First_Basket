@@ -87,6 +87,7 @@ def trained_through_yesterday(project):
     """Training matrices cover one game played 2 days ago."""
     add_game(project, "trained", ymd(2))
     json.dump(["trained"], open("game_ids.json", "w"))
+    json.dump({}, open("pregame_model_fg.json", "w"))           # the DraftKings (field-goal) model exists too
     return project
 
 
@@ -493,3 +494,12 @@ def test_nba_com_plays_translate_like_espn():
     assert nba.first_shots(acts)["DET"]["personId"] == "e3"               # missed layup = first shot
     fb = nba.first_basket(acts)
     assert fb["clock"] == "11:20" and fb["teamTricode"] == "NY" and fb["actionType"] == "free_throw"
+
+
+def test_retrain_trains_the_field_goal_model_once_if_missing(trained_through_yesterday, monkeypatch):
+    import os
+    os.remove("pregame_model_fg.json")
+    calls = []
+    monkeypatch.setattr(subprocess, "run", fake_run({}, calls))
+    nba._retrain_if_needed(trained_through_yesterday)
+    assert ["train_pregame.py", "--incremental"] in calls
