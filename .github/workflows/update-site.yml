@@ -38,6 +38,10 @@ jobs:
       - name: Which kind of run
         id: kind
         run: |
+          if [ "${{ github.event_name }}" = "schedule" ] && [ "${{ vars.LIVE_ENABLED }}" = "true" ]; then
+            echo "The live job in SolomonKhalili/first-basket keeps the website updated — nothing to do here."
+            echo "kind=off" >> "$GITHUB_OUTPUT"; exit 0
+          fi
           if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then kind="${{ inputs.kind }}"
           elif [ "${{ github.event.schedule }}" = "7 9 * * *" ]; then kind=nightly
           else kind=hourly; fi
@@ -52,6 +56,7 @@ jobs:
         id: check
         run: |
           pip install -q requests
+          if [ "${{ steps.kind.outputs.kind }}" = "off" ]; then echo "skip=1" >> "$GITHUB_OUTPUT"; exit 0; fi
           if [ "${{ steps.kind.outputs.kind }}" = "hourly" ]; then
             python publish.py --should-run hourly || echo "skip=1" >> "$GITHUB_OUTPUT"
           fi
@@ -85,7 +90,7 @@ jobs:
           git init -q -b main
           git -c user.name="First Basket bot" -c user.email="bot@users.noreply.github.com" add -A
           git -c user.name="First Basket bot" -c user.email="bot@users.noreply.github.com" commit -q -m "Picks $(date '+%Y-%m-%d %H:%M %Z')"
-          git push -q --force git@github.com:SolomonKhalili/first-basket.git main   # replace: no growing history
+          git push -q --force git@github.com:SolomonKhalili/first-basket.git HEAD:gh-pages   # the website branch
           echo "published"
 
       - name: Save data for next time
