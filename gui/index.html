@@ -560,7 +560,6 @@ th .short { display: none; }
 .dayswitch button.on { background: var(--accent); color: #fff; }
 .yest-sum { margin: 12px 0 0; padding: 12px 14px; background: var(--surface); border: 1px solid var(--line); border-radius: 14px; font-size: 14px; }
 .yest-sum b { color: var(--text); }
-.yest-board { margin-top: 12px; }
 .tile.past { cursor: default; }
 .fd.best { box-shadow: inset 0 0 0 2px var(--gold); font-weight: 800; }
 .fd.best:not(.value) { color: var(--text); }
@@ -623,7 +622,10 @@ th .short { display: none; }
     <button id="dayYest" role="tab">Yesterday</button><button id="dayToday" class="on" role="tab">Today</button>
   </div>
   <div class="yest-sum" id="yestSum" hidden></div>
-  <div class="board yest-board" id="yestBoard" hidden></div>
+  <div class="board-wrap" id="yestWrap" hidden>
+    <div class="section-title"><span>Yesterday</span><span style="font-weight:400;text-transform:none;letter-spacing:0">· final scores</span></div>
+    <div class="board" id="yestBoard"></div>
+  </div>
   <div class="board-wrap" id="boardWrap">
     <div class="section-title"><span>Tonight</span><span id="boardUpdated" style="font-weight:400;text-transform:none;letter-spacing:0"></span></div>
     <div class="board" id="board">
@@ -749,13 +751,14 @@ function tile(g) {
   if (g.first_basket) {
     const r = g.result;
     res = `<div class="res">🏀 First: <b>${esc(g.first_basket.name)}</b>${r ? `<span class="tag ${r}">${rankLabel(g)}</span>` : ""}
-      ${r && r !== "hit" && g.our_pick ? `<br>we had ${esc(g.our_pick.name)}` : ""}</div>`;
+      ${r && r !== "hit" && g.our_pick && !g.past ? `<br>we had ${esc(g.our_pick.name)}` : ""}</div>`;
   } else if (g.our_pick) {
     const fb = g.records?.name?.fb;                  // his first baskets / games this season
     const fbTxt = fb && fb[1] ? `<span class="rec" title="Scored the game's first basket in ${fb[0]} of his ${fb[1]} games this season"> · 1st basket <b>${fb[0]}</b>/${fb[1]}</span>` : "";
     res = `<div class="res">${live ? "Waiting for the first basket · " : ""}Our pick: <b>${esc(g.our_pick.name)}</b> <span class="num">${pct(g.our_pick.prob, 0)}</span>${fbTxt}</div>`;
   }
   const op = g.our_pick;
+  if (g.past && op?.name) res += `<div class="res">Our pick: <b>${esc(op.name)}</b> <span class="num">${pct(op.prob, 0)}</span></div>`;
   if (op && (pre || g.past) && (op.away_jumper || op.home_jumper)) {      // who jumps for each team (from our latest pick)
     const last = (n) => {                      // surname, skipping suffixes: 'Wendell Carter Jr.' -> 'Carter'
       if (!n) return "?";
@@ -1231,7 +1234,7 @@ let viewDay = "today", yest = null;
 function setDayButtons() {
   $("dayToday").classList.toggle("on", viewDay === "today"); $("dayYest").classList.toggle("on", viewDay === "yesterday");
   for (const id of ["boardWrap", "fdLive", "filterNote"]) if ($(id)) $(id).hidden = viewDay === "yesterday" || (id === "filterNote" && !selected.size);
-  $("yestSum").hidden = $("yestBoard").hidden = viewDay !== "yesterday";
+  $("yestSum").hidden = $("yestWrap").hidden = viewDay !== "yesterday";
 }
 async function showYesterday() {
   viewDay = "yesterday"; setDayButtons();
