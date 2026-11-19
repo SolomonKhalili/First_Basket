@@ -79,3 +79,13 @@ def test_live_job_restarts_only_for_code_changes():
     assert not code_changed(["site_users.json"]) and not code_changed(["website_live/relay_url.txt"])
     assert not code_changed(["BLUEPRINT.md", "README.md"]) and not code_changed(["tests/test_bets.py"])
     assert not code_changed([])
+
+
+def test_nap_without_github_just_waits(monkeypatch):
+    import publish
+    slept = []
+    monkeypatch.delenv("STATE_REMOTE", raising=False)
+    clock = iter([0, 0, 60, 60, 120, 120, 180, 180, 999, 999])
+    monkeypatch.setattr(publish.time, "time", lambda: next(clock))
+    monkeypatch.setattr(publish.time, "sleep", lambda s: slept.append(s))
+    assert publish.nap(150) is False and slept and all(s <= 60 for s in slept)

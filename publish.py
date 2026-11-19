@@ -225,6 +225,21 @@ def code_changed(changed_files) -> bool:
     return any(f.startswith("gui/") or (f.endswith(CODE_FILES) and not f.startswith("tests/")) for f in changed_files)
 
 
+def nap(seconds: float) -> bool:
+    """Wait between checks, looking for new code on GitHub once a minute. True = new code arrived (stop waiting)."""
+    end = time.time() + seconds
+    while time.time() < end:
+        time.sleep(max(0.0, min(60.0, end - time.time())))
+        if os.environ.get("STATE_REMOTE"):
+            try:
+                _git("fetch", "-q", "--depth", "1", os.environ["STATE_REMOTE"], "main", cwd=HERE)
+                if newer_code(HERE):
+                    return True
+            except Exception:  # noqa: BLE001 — offline / GitHub busy: just keep waiting
+                pass
+    return False
+
+
 def newer_code(cwd) -> bool:
     """After fetching main (FETCH_HEAD): is there code newer than what this run started with?"""
     import subprocess
@@ -381,7 +396,11 @@ def live(out: Path, once: bool = False) -> int:
         if time.time() - last_save > 1800:
             save_state()
             last_save = time.time()
-        time.sleep(FAST if wait < 100 * 60 else SLOW if wait != float("inf") else 10 * 60)
+        if nap(FAST if wait < 100 * 60 else SLOW if wait != float("inf") else 10 * 60):
+            save_state()                                 # new code arrived while waiting: hand over now
+            (HERE / ".restart").write_text("new code")
+            say("new code on GitHub — restarting with it")
+            return 0
 
 
 def main(argv) -> int:
