@@ -81,7 +81,8 @@ def _score(rows):
 
 def summary(con) -> dict:
     """Track record on finished games.
-    final    = the last pick made for each game (what you would have bet)
+    final    = this season: the last pick made for each game (what you would have bet)
+    overall  = the same over every graded game (re-created picks for last season from Jan 2026 included)
     by_type  = for each lineup type, the last pick of that type per game
     by_model = for each model version, the last pick it made per game
     games    = one row per finished game (final pick), newest first"""
@@ -92,8 +93,11 @@ def summary(con) -> dict:
                   f.scorer_player_id, f.scorer_name
            FROM pick_log p JOIN first_baskets f ON f.game_id = p.game_id
            ORDER BY p.logged_at, p.id""").fetchall()
-    final, by_type, by_model = {}, {}, {}
+    final, everything, by_type, by_model = {}, {}, {}, {}
     for r in rows:   # later rows overwrite earlier ones -> the last pick wins
+        everything[r[1]] = r                       # every graded game (last season from Jan 2026 + this season)
+        if (r[2] or "") < SEASON_START:
+            continue                               # the rest is this season only
         final[r[1]] = r
         by_type.setdefault(r[5], {})[r[1]] = r
         by_model.setdefault(r[6], {})[r[1]] = r
@@ -105,7 +109,9 @@ def summary(con) -> dict:
     games = [{"game_id": r[1], "game_date": r[2], "matchup": r[4], "lineup_type": r[5], "pick": r[8],
               "prob": r[9], "actual": r[12], "hit": r[7] == r[11]}
              for r in sorted(final.values(), key=lambda r: (r[2] or "", r[3]), reverse=True)]
+    first = min((r[2] for r in everything.values() if r[2]), default="")
     return {"final": _score([item(r) for r in final.values()]),
+            "overall": {**_score([item(r) for r in everything.values()]), "since": first},
             "by_type": {k: _score([item(r) for r in v.values()]) for k, v in by_type.items()},
             "by_model": {k: _score([item(r) for r in v.values()]) for k, v in by_model.items()},
             "games": games}

@@ -287,3 +287,22 @@ def test_lineups_tab_says_when_nba_com_published_no_lineups():
     con.execute("INSERT INTO official_lineup_days VALUES ('20261102', 0)")          # NBA.com's file had no players
     row = picks.lineup_rows(con)[0]
     assert row[4].startswith("Not available: NBA.com never posted starting lineups this day")
+
+
+def test_record_splits_this_season_from_overall():
+    """The page shows this season's #1-pick record and an overall one (last season's re-created picks included)."""
+    import json, sqlite3
+    import picks
+    con = sqlite3.connect(":memory:")
+    picks.ensure_table(con)
+    con.execute("CREATE TABLE first_baskets (game_id TEXT, scorer_player_id TEXT, scorer_name TEXT)")
+    for gid, day, scorer in (("a", "20260210", "1"), ("b", "20260211", "9"), ("c", "20261105", "1")):
+        picks.log_pick(con, {"game_id": gid, "game_date": day, "matchup": "X @ Y", "lineup_type": "BACKTEST",
+                             "lineup_source": "t", "lineup_sig": gid, "model_id": "m",
+                             "players": [{"id": "1", "name": "P", "team": "Y", "prob": 0.2}],
+                             "logged_at": f"{day[:4]}-{day[4:6]}-{day[6:]}T00:00:00"})
+        con.execute("INSERT INTO first_baskets VALUES (?, ?, 'S')", (gid, scorer))
+    s = picks.summary(con)
+    assert s["final"]["games"] == 1 and s["final"]["hits"] == 1             # this season: game c only
+    assert s["overall"]["games"] == 3 and s["overall"]["hits"] == 2 and s["overall"]["since"] == "20260210"
+    assert [g["game_id"] for g in s["games"]] == ["c"]                       # recent list stays this season

@@ -743,6 +743,11 @@ def sync_data() -> str:
                                  AND game_id NOT IN (SELECT DISTINCT game_id FROM lineups)""", (recent,)).fetchall():
         st.store_game_lineup(con, gid)
     repair_old_gaps(con)                       # older games still missing a first basket (once a week each)
+    try:                                       # last season's re-created picks for the "overall" record (once)
+        import season_backtest
+        season_backtest.fill_last_season(con)
+    except Exception as e:  # noqa: BLE001 — never block the update over the record
+        print(f"  ⚠️ last season's record not filled in: {e}")
     # NBA.com's official starters + positions for every day already played (teaches the tip-off model
     # who usually jumps); each day is fetched once
     today = date.today().strftime("%Y%m%d")
@@ -878,8 +883,11 @@ def predict_today(first_pass: bool = True, teams: set = frozenset(), ui=None) ->
             with _quiet(warn):
                 summary = sync_data()
         try:
-            acc = f"Model's top pick was right in {pm.load()['test_top1']:.1%} of this season's games (random = 10%)"
-        except (OSError, KeyError, ValueError):
+            s = picks.summary(db())
+            f, o = s["final"], s["overall"]
+            acc = (f"Model's #1 pick scored first: {f['hits'] / f['games']:.1%} this season ({f['hits']} of {f['games']}) · "
+                   f"{o['hits'] / o['games']:.1%} overall ({o['games']:,} games) · random = 10%")
+        except (OSError, KeyError, ValueError, ZeroDivisionError, sqlite3.Error):
             acc = ""
         ui.header(date.today().strftime("%A, %B %-d, %Y"), summary, acc)
 
