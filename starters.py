@@ -9,6 +9,7 @@ Sources, in order of trust:
 
 All dates are 'YYYYMMDD' strings, matching games.game_date in the DB.
 """
+import re
 
 import ast
 import sqlite3
@@ -513,7 +514,9 @@ def _detail(p: dict) -> str:
     if isinstance(d, dict) and (d.get("type") or d.get("returnDate")):
         what = " ".join(x for x in (d.get("side"), d.get("type")) if x)
         ret = d.get("returnDate")
-        return (what + (f", est. return {ret}" if ret else "")).strip(", ")
+        m = re.match(r"(\d{4})-(\d{2})-(\d{2})", str(ret or ""))
+        ret_txt = f"{m[2]}/{m[3]}/{m[1]}" if m else ret                 # month/day/year (owner's choice)
+        return (what + (f", est. return {ret_txt}" if ret else "")).strip(", ")
     return str(p.get("shortComment") or p.get("longComment") or "")[:90]
 
 

@@ -175,7 +175,7 @@ ESPN_ROW = {"id": 1, "display_name": "Atlanta Hawks", "injuries": str([
 def test_parse_real_espn_row():
     r = st.parse_injury_rows([ESPN_ROW])
     assert r[0] == {"name": "Asa Newell", "team": "ATL", "status": "Out",
-                    "detail": "Left Toe, est. return 2026-11-13",
+                    "detail": "Left Toe, est. return 11/13/2026",
                     "note": "Newell (toe) has been ruled out for Monday's game against the Lakers.",
                     "return": "2026-11-13"}
     assert r[1]["team"] == "ATL" and r[1]["detail"].startswith("Day-to-day")
