@@ -951,10 +951,10 @@ def sync_data() -> str:
     picks.export_predictions(con)              # fills in yesterday's results in my_predictions.xlsx
     bf.build_player_game_logs()
     model = _retrain_if_needed(con)
-    last = con.execute("SELECT MAX(game_date) FROM games g JOIN first_baskets USING(game_id)").fetchone()[0] or ""
-    last = f"{int(last[4:6])}/{int(last[6:8])}/{last[:4]}" if last else "?"
+    first, last = con.execute("SELECT MIN(game_date), MAX(game_date) FROM games g JOIN first_baskets USING(game_id)").fetchone()
+    fmt = lambda d: f"{int(d[4:6])}/{int(d[6:8])}/{d[:4]}" if d else "?"
     added = f" (+{new} new)" if new else ""
-    return f"Data up to date: {n:,} games through {last}{added} · files saved · {model}"
+    return f"Data up to date: {n:,} games from {fmt(first)} to {fmt(last)}{added} · files saved · {model}"
 
 
 import contextlib
