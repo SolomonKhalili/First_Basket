@@ -211,6 +211,8 @@ button { font: inherit; cursor: pointer; border: 0; color: inherit; }
 @media (max-width: 520px) { .hero .shot { width: 78px; } .hero .shot img { width: 92px; height: 68px; } .hero .name { font-size: 22px; }
   .hero .pct { font-size: 38px; } .mu .tm { font-size: 24px; } }
 .hero .sub { font-size: 12px; color: var(--muted); margin-top: 5px; }
+.hero .sub .book-line { display: block; white-space: nowrap; margin-top: 3px; }   /* one line per sportsbook */
+.hero .big { flex: none; }
 
 .facts { display: grid; gap: 10px; margin: 14px 0 6px; }
 .fact .row { display: flex; justify-content: space-between; gap: 10px; font-size: 13px; margin-bottom: 5px; }
@@ -517,11 +519,16 @@ th .short { display: none; }
   .tscroll td.rank, .tscroll thead th:first-child { display: none; }       /* the order already shows the rank */
   .tscroll td, .tscroll th { padding-left: 2px; padding-right: 2px; }
   .tscroll .player { gap: 5px; }
-  .tscroll .fd { padding-left: 5px; padding-right: 5px; }
+  .tscroll .fd { padding-left: 4px; padding-right: 4px; min-width: 40px; font-size: 12px; }
   /* both books shown: drop "Fair" — each price's green/grey already says whether it beats fair odds */
   .tscroll.two-books th:nth-child(4), .tscroll.two-books td:nth-child(4) { display: none; }
 }
-.fd.best { text-decoration: underline; text-decoration-thickness: 2px; text-underline-offset: 3px; font-weight: 800; }
+/* better of the two books: gold outline + ★; the other book's price fades back */
+.fd.best { box-shadow: inset 0 0 0 2px var(--gold); font-weight: 800; }
+.fd.best:not(.value) { color: var(--text); }
+.fd.worse { opacity: .4; }
+.top-best { box-shadow: inset 0 0 0 1.5px var(--gold); border-radius: 6px; padding: 0 4px; }
+.top-worse { opacity: .5; }
 </style>
 </head>
 <body>
@@ -598,7 +605,7 @@ th .short { display: none; }
           <dl class="legend">
             <dt>Chance</dt><dd>The model's chance this player scores the game's first basket. A random pick would be 10%.</dd>
             <dt>Fair odds</dt><dd>The break-even price. A bet only makes sense if the sportsbook pays more (e.g. +700 when fair is +500).</dd>
-            <dt>DraftKings</dt><dd>DraftKings' price for the same bet ("1st Points Scorer": free throws count, like FanDuel). The <b>underlined</b> price is the better of the two books; Value uses it.</dd>
+            <dt>DraftKings</dt><dd>DraftKings' price for the same bet ("1st Points Scorer": free throws count, like FanDuel). The price with the <b>★ and gold outline</b> is the better of the two books (bet there); the faded one pays less. Value uses the ★ price.</dd>
             <dt>FanDuel</dt><dd>FanDuel's current First Basket price. <b style="color:var(--good)">Green</b> = it pays more than the fair odds, so the model sees value. Grey = it pays less.</dd>
             <dt>Value (EV) <button class="whats" data-learn="0">1-minute guide</button></dt><dd>Is FanDuel's prize big enough for how often the model thinks he scores first? <b style="color:var(--good)">Green +10¢</b> = good deal: about 10¢ profit for every $1 over many bets. Grey = bad deal. A good deal still loses most nights.</dd>
             <dt>Best deal</dt><dd>The best-value player in the game (out of all 10 starters, not just the top 5).</dd>
@@ -830,8 +837,10 @@ function card(c, i) {
     const price = prices[name];
     if (price === undefined) return `<td class="r"><span class="fd none">–</span></td>`;
     const value = payout(price) > payout(fair);
-    const best = dkOn && fd[name] !== undefined && dk[name] !== undefined && (c.best_book || {})[name] === book;
-    return `<td class="r"><span class="fd ${value ? "value" : ""} ${best ? "best" : ""}" title="${book}: ${value ? "pays more than fair odds" : "pays less than fair odds"}${best ? " · the better price" : ""}">${american(price)}</span></td>`;
+    const both = dkOn && fd[name] !== undefined && dk[name] !== undefined && fd[name] !== dk[name];   // both price him, differently
+    const best = both && (c.best_book || {})[name] === book;
+    const mark = !both ? "" : best ? "best" : "worse";
+    return `<td class="r"><span class="fd ${value ? "value" : ""} ${mark}" title="${book}: ${value ? "pays more than fair odds" : "pays less than fair odds"}${best ? " · ★ the better price — bet here" : both ? " · the other book pays more" : ""}">${best ? "★" : ""}${american(price)}</span></td>`;
   };
   const fdCell = (name, fair) => (fdOn ? bookCell(fd, "FanDuel", name, fair) : "") + (fdOn && dkOn ? bookCell(dk, "DraftKings", name, fair) : "");
 
@@ -883,8 +892,10 @@ function card(c, i) {
     ${players.map((p) => { const s = (c.injuries || {})[p.name];
       return `<span>${esc(p.name)}${s ? `<span class="inj ${esc(s)}">${esc(s)}</span>` : ""}</span>`; })
       .join('<span style="color:var(--muted)">·</span>')}</div>`;
-  const topFd = fdOn && fd[top[0]] !== undefined
-    ? ` · FanDuel <b style="color:${payout(fd[top[0]]) > payout(top[3]) ? "var(--good)" : "inherit"}">${american(fd[top[0]])}</b>` : "";
+  // the top pick's price at each book; the better one gets the ★
+  const topBooks = [["FanDuel", fdOn ? fd[top[0]] : undefined], ["DraftKings", dk[top[0]]]].filter(([, a]) => a !== undefined);
+  const topBest = topBooks.length > 1 && topBooks[0][1] !== topBooks[1][1] ? (c.best_book || {})[top[0]] : null;
+  const topFd = topBooks.map(([b, a]) => `<span class="book-line">${b} <b class="${b === topBest ? "top-best" : topBest ? "top-worse" : ""}" style="color:${payout(a) > payout(top[3]) ? "var(--good)" : "inherit"}">${b === topBest ? "★" : ""}${american(a)}</b></span>`).join("");
 
   const topId = [...(c.home_starters || []), ...(c.away_starters || [])].find((p) => p.name === top[0])?.player_id;
   return `<article class="card enter" style="--i:${i};--away-c:${color(c.away)};--home-c:${color(c.home)};--top-c:${color(top[1])}"
