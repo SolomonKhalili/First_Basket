@@ -1339,7 +1339,7 @@ function card(c, i) {
   const starterLine = (team, players) => `<div class="sblock"><div class="iteam-h">${logo(team, 18)}${esc(TEAM_NAMES[team] || team)}</div>
     <ol class="slist">${players.map((p) => { const s = (c.injuries || {})[p.name];
       const bk = (c.backups || {})[p.name];
-      return `<li>${esc(p.name)}${s ? ` <span class="itag in">⚠️ ${esc(/day/i.test(s) ? "Questionable" : s)}</span>` : ""}${bk ? `<div class="sbk">↳ if he sits: ${esc(bk)}${backupPct(c, p.name, "fd")}</div>` : ""}</li>`; }).join("")}</ol></div>`;
+      return `<li>${esc(p.name)}${s ? ` <span class="itag in">⚠️ ${esc(/day/i.test(s) ? "Questionable" : s)}</span>` : ""}${bk ? `<div class="sbk">↳ if he sits: ${esc(bk)}</div>` : ""}</li>`; }).join("")}</ol></div>`;
   // the top pick's price at each book; the better one gets the ★
   const topBooks = [["FanDuel", fdOn ? fd[top[0]] : undefined], ["DraftKings", dk[top[0]]]].filter(([, a]) => a !== undefined);
   const topBest = topBooks.length > 1 && topBooks[0][1] !== topBooks[1][1] ? (c.best_book || {})[top[0]] : null;
@@ -3061,7 +3061,7 @@ function injuryLine(r, c) {
   } else {
     tag = `<span class="ist q">⚠️ ${esc(/day/i.test(r.status) ? "Questionable" : r.status)}</span>`;
     text = confirmed ? `Listed as ${sevWord(r.status)} — <b>not in the confirmed starting lineup</b>`
-      : `Listed as ${sevWord(r.status)} — game-time decision${(c.backups || {})[r.name] ? ` · <b>if he sits: ${esc(c.backups[r.name])} likely starts${backupPct(c, r.name, "fd")}</b>` : ""}`;
+      : `Listed as ${sevWord(r.status)} — game-time decision${(c.backups || {})[r.name] ? ` · <b>if he sits: ${esc(c.backups[r.name])} likely starts</b>` : ""}`;
   }
   return `<li><span class="iname">${esc(r.name)}</span>${tag}<small>${text} · <b class="ihurt">${esc(hurt)}</b>${starters.has(r.name) && !confirmed ? " · in our expected lineup" : ""}</small></li>`;
 }
@@ -3088,7 +3088,7 @@ async function drawStarters() {
       ${[[c.away, c.away_starters], [c.home, c.home_starters]].map(([tm, ours]) => {
         const r = today.find((x) => x[1] === c.matchup && x[2] === tm) || [];
         const proj = names(r[3]), conf = names(r[4]), used = (ours || []).map((s) => s.name);
-        const list = (arr) => arr ? `<ol class="slist">${arr.map((n) => `<li>${esc(n)}${(c.injuries || {})[n] ? ` <span class="itag in">⚠️ ${esc(/day/i.test(c.injuries[n]) ? "Questionable" : c.injuries[n])}</span>` : ""}${(c.backups || {})[n] && !conf ? `<div class="sbk">↳ if he sits: ${esc(c.backups[n])}${backupPct(c, n, "fd")}</div>` : ""}</li>`).join("")}</ol>` : "";
+        const list = (arr) => arr ? `<ol class="slist">${arr.map((n) => `<li>${esc(n)}${(c.injuries || {})[n] ? ` <span class="itag in">⚠️ ${esc(/day/i.test(c.injuries[n]) ? "Questionable" : c.injuries[n])}</span>` : ""}${(c.backups || {})[n] && !conf ? `<div class="sbk">↳ if he sits: ${esc(c.backups[n])}</div>` : ""}</li>`).join("")}</ol>` : "";
         const swapped = proj && used.length && used.some((n) => !proj.includes(n))
           ? `<div class="snote">🔁 Our picks use: ${used.map(esc).join(", ")} (we swapped out players ruled out after NBA.com posted).</div>` : "";
         return `<div class="steam"><div class="iteam-h">${logo(tm, 18)}${esc(TEAM_NAMES[tm] || tm)}</div>
