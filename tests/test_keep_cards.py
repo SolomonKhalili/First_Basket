@@ -35,3 +35,14 @@ def test_log_card_never_replaces_saved_card(tmp_path):
     by = {c["matchup"]: c for c in r["cards"]}
     assert "from_log" not in by["A1 @ H1"] and by["A1 @ H1"]["earlier"]   # the saved card wins
     assert by["A2 @ H2"]["from_log"] and by["A2 @ H2"]["earlier"]         # rebuilt from the log, tagged
+
+
+def test_newer_rebuilt_card_replaces_older_rebuilt(tmp_path):
+    f = tmp_path / "cards.json"
+    first = _res("Wed", [])
+    first["cards"] = [{"matchup": "A1 @ H1", "from_log": True}]
+    gui.keep_todays_cards(first, f)
+    later = _res("Wed", [])
+    later["cards"] = [{"matchup": "A1 @ H1", "from_log": True, "fanduel": {"X": 500}}]
+    r = gui.keep_todays_cards(later, f)
+    assert r["cards"][0]["fanduel"] == {"X": 500}                   # the newer rebuild (with odds) wins

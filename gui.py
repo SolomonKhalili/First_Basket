@@ -65,6 +65,29 @@ class Collector:
 CARDS_FILE = Path(__file__).parent / "todays_cards.json"
 
 
+def _saved_odds(con, game_id, players) -> dict:
+    """The last FanDuel prices saved for this game before tip-off (odds_log), with value and best deal — so a
+    rebuilt card still shows what the line was. {} if none were saved."""
+    import ev
+    try:
+        last = con.execute("SELECT MAX(logged_at) FROM odds_log WHERE game_id = ?", (str(game_id),)).fetchone()[0]
+        if not last:
+            return {}
+        prices = {r["player_name"]: int(r["american"]) for r in con.execute(
+            "SELECT player_name, american FROM odds_log WHERE game_id = ? AND logged_at = ? AND american IS NOT NULL",
+            (str(game_id), last))}
+    except Exception:  # noqa: BLE001 — no odds table yet
+        return {}
+    if not prices:
+        return {}
+    priced = ev.priced_players([{"name": x["name"], "team": x["team"], "prob": x["prob"]} for x in players], prices)
+    best = priced[0] if priced and ev.is_value(priced[0]["ev"]) else None
+    return {"fanduel": {r["name"]: r["american"] for r in priced} or prices, "fanduel_note": "",
+            "ev": {r["name"]: r["ev"] for r in priced}, "best_book": {r["name"]: "FanDuel" for r in priced},
+            "best_value": ({**{k: best[k] for k in ("name", "team", "prob", "american", "ev")}, "book": "FanDuel"}
+                           if best else None)}
+
+
 def add_logged_cards(result: dict) -> dict:
     """A game that already tipped off gets no new card (the model is pre-game only). Rebuild its card from the
     picks we logged BEFORE tip-off (pick_log), so tapping a live or finished game still shows our predictions."""
@@ -102,6 +125,7 @@ def add_logged_cards(result: dict) -> dict:
                 "first_team": None, "home": home, "away": away,
                 "home_starters": starters(home), "away_starters": starters(away), "injuries": {}, "notes": [],
                 "probs": [[x["name"], x["team"], x["prob"]] for x in players],
+                **_saved_odds(con, g["game_id"], players),
             })
     finally:
         con.close()
@@ -123,9 +147,10 @@ def keep_todays_cards(result: dict, path: Path = CARDS_FILE) -> dict:
             best[k] = c
     old = list(best.values())
     # cards are matched by matchup ("DET @ NO"): the model's own cards carry no game id
-    old_keys = {c.get("matchup") for c in old}
-    # a fresh card replaces that game's saved one; a card rebuilt from the log never replaces a saved (fuller) one
-    fresh = [c for c in result.get("cards", []) if not (c.get("from_log") and c.get("matchup") in old_keys)]
+    real_keys = {c.get("matchup") for c in old if not c.get("from_log")}
+    # a fresh card replaces that game's saved one; a card rebuilt from the log never replaces a real pre-game card,
+    # but does replace an older rebuilt one (it may now carry more, e.g. the saved odds)
+    fresh = [c for c in result.get("cards", []) if not (c.get("from_log") and c.get("matchup") in real_keys)]
     new_keys = {c.get("matchup") for c in fresh}
     kept = [dict(c, earlier=True) for c in old if c.get("matchup") not in new_keys]
     cards = [dict(c, earlier=bool(c.get("from_log"))) for c in fresh] + kept
