@@ -1265,6 +1265,8 @@ def predict_today(first_pass: bool = True, teams: set = frozenset(), ui=None) ->
             "tip": {home_team: show_home, away_team: show_away}, "jumpers": jumpers,
             "tip_record": tip_record,             # each jumper's tips won / tips taken this season
             "first_team": first_team,
+            "book_status": {"FanDuel": book_status(fd_games, home_team, away_team),   # not offered vs not posted vs
+                            "DraftKings": book_status(dk_games, home_team, away_team)},   # couldn't load
             "opening": ev.opening_prices(con, game_date, matchup),   # first price of the day at each book (↓/↑)
             **_team_first_odds(fd_games, home_team, away_team, first_team, dk_games, con, game_date),
             "home": home_team, "away": away_team,
@@ -1451,6 +1453,16 @@ def _team_first_odds(fd_games, home: str, away: str, first_team, dk_games=None, 
             opening.setdefault(book, {}).setdefault(team, a)
     return {"team_first_odds": best, "team_first_book": where, "team_first_books": books, "team_first_open": opening,
             "team_first_ev": {t: first_team[t] * ev.profit_per_dollar(a) - (1 - first_team[t]) for t, a in best.items()}}
+
+
+def book_status(games, home: str, away: str) -> str:
+    """Pure (testable). "ok" = we read the book and it has this game's market (a player missing = not offered);
+    "not_posted" = we read the book but this game's market isn't up yet; "unavailable" = we couldn't read the book."""
+    import fanduel_odds as fd
+    if games is None:
+        return "unavailable"
+    g = fd.game_for(games, home, away)
+    return "ok" if g and g.get("players") else "not_posted"
 
 
 def _fanduel_card(fd_games, home: str, away: str, top5: list, everyone: list = (), dk_games=None) -> dict:

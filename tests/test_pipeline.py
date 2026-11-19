@@ -522,3 +522,12 @@ def test_data_patches_load_once(tmp_path, monkeypatch):
     con.execute("CREATE TABLE lineups (game_id TEXT, team TEXT, player_id TEXT, player_name TEXT, is_starter INT, minutes REAL, PRIMARY KEY (game_id, team, player_id))")
     assert nba.apply_data_patches(con) == 1 and nba.apply_data_patches(con) == 0
     assert con.execute("SELECT scorer_name FROM first_baskets").fetchone() == ("A",)
+
+
+def test_book_status_tells_not_offered_from_not_posted_from_unavailable():
+    import nba
+    games = [{"home_code": "MEM", "away_code": "GS", "players": [{"player": "A"}]}, {"home_code": "MIL", "away_code": "POR", "players": []}]
+    assert nba.book_status(games, "MEM", "GS") == "ok"                 # read fine: a missing player = not offered
+    assert nba.book_status(games, "MIL", "POR") == "not_posted"
+    assert nba.book_status(games, "SA", "LAC") == "not_posted"
+    assert nba.book_status(None, "MEM", "GS") == "unavailable"

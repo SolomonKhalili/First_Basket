@@ -730,6 +730,7 @@ body.bets-mode .dayswitch, body.bets-mode #yestSum, body.bets-mode #dataView { d
 .oa { font-size: 16px; margin-left: 2px; } .oa.dn { color: var(--warn); } .oa.up { color: var(--muted); }
 .spark { width: 100%; height: 22px; } .spark path, .spark line { fill: none; stroke-width: 2; stroke: var(--muted); vector-effect: non-scaling-stroke; }
 .spark.up path { stroke: var(--warn); } .spark.down path { stroke: #60a5fa; }
+.miss { font-size: 10.5px; line-height: 1.2; color: var(--muted); font-weight: 600; display: inline-block; max-width: 64px; } .miss.unavailable { color: var(--warn); }
 </style>
 </head>
 <body>
@@ -1247,13 +1248,22 @@ function teamFirstLine(c) {
    DraftKings "1st Points Scorer" = first FIELD GOAL only (free throws don't count) -> our field-goal chances. */
 const bookView = {};                                       // matchup -> "FanDuel" | "DraftKings" (per device, this visit)
 const fairOdds = (p) => (p >= 0.5 ? -Math.round(100 * p / (1 - p)) : Math.round(100 * (1 - p) / p));
+/* A missing price, in plain words: we read the book and it doesn't offer him / the market isn't up yet / we couldn't read it */
+function missing(c, book) {
+  const s = (c.book_status || {})[book];
+  const [label, why] = s === "ok" ? ["not offered", `${book} isn't offering this bet today`]
+    : s === "not_posted" ? ["not posted yet", `${book} hasn't posted this game's market yet`]
+    : s === "unavailable" ? ["couldn't load", `We couldn't reach ${book} right now — it may still be offered`]
+    : ["–", ""];
+  return `<span class="miss ${s || ""}" title="${why}">${label}</span>`;
+}
 function bookTable(c, i, recLine, shortName) {
   const fg = c.probs_fg || {}, fd = c.fanduel || {}, dk = c.draftkings || {};
   const list = c.picks.map(([n, t, p]) => [n, t, p]);           // our top 5 (FanDuel's rule)
   const max = list.length ? list[0][2] : 1;
   const odds = (book, name, p) => {                              // one book's price, green when it's a good bet
     const a = (book === "FanDuel" ? fd : dk)[name];
-    if (a === undefined) return `<span class="fd none">–</span>`;
+    if (a === undefined) return missing(c, book);
     const ev = p === undefined ? undefined : p * payout(a) - (1 - p), good = ev >= VALUE_MIN;
     return `<span class="fd ${good ? "value" : ""}" title="${book}: ${good ? `good bet — about ${cents(ev)} per $1 over time` : "pays less than it should"}">${american(a)}</span>${moveArrow(c, book, name, a)}`;
   };
@@ -1269,14 +1279,15 @@ function bookTable(c, i, recLine, shortName) {
 }
 /* "First team to score" — same columns as the player table, teams as rows */
 function teamSection(c) {
-  const books = c.team_first_books || {};
-  if (!c.first_team || !Object.keys(books).length) return "";
+  const books = { ...(c.team_first_books || {}) };
+  if (!c.first_team) return "";
+  for (const bk of ["FanDuel", "DraftKings"]) if (!books[bk]) books[bk] = {};    // always both columns
   const fg = c.probs_fg || {}, fgTeam = {};
   for (const [n, t] of (c.probs || [])) if (fg[n] !== undefined) fgTeam[t] = (fgTeam[t] || 0) + fg[n];
   const open = c.team_first_open || {}, deals = [];
   const odds = (book, t, p) => {
     const a = (books[book] || {})[t];
-    if (a === undefined) return "–";
+    if (a === undefined) return missing(c, book);
     const ev = p === undefined ? undefined : p * payout(a) - (1 - p);
     if (ev >= VALUE_MIN) deals.push([book, t, ev]);
     const o = (open[book] || {})[t], mv = o === undefined || o === a ? "" : payout(a) < payout(o)
@@ -2606,7 +2617,8 @@ function oddsCell(matchup, kind, name, book, pts) {
   pts = [...(pts || [])];
   const live = liveNow(matchup, kind, name, book);
   if (live !== undefined && live !== null && (!pts.length || pts[pts.length - 1][1] !== live)) pts.push([new Date().toISOString(), live]);
-  if (!pts.length) return `<div class="oc none"><span class="ob">${book}</span><span class="on">–</span></div>`;
+  if (!pts.length) { const c = (lastResult?.cards || []).find((x) => x.matchup === matchup);
+    return `<div class="oc none"><span class="ob">${book}</span><span class="on">${c ? missing(c, book) : "–"}</span></div>`; }
   const open = pts[0][1], now = pts[pts.length - 1][1], moved = now === open ? 0 : impliedP(now) > impliedP(open) ? -1 : 1;
   const arrow = moved < 0 ? `<b class="oa dn">↓</b>` : moved > 0 ? `<b class="oa up">↑</b>` : `<b class="oa">=</b>`;
   const times = pts.map(([t, a]) => `${american(a)} at ${localTime(t)}`).join("\n");
