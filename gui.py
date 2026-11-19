@@ -11,6 +11,7 @@ Only reachable from this computer (127.0.0.1). Uses the Python standard library 
 """
 import contextlib
 import json
+import sqlite3
 import os
 import sys
 import threading
@@ -318,6 +319,9 @@ def to_json(obj) -> bytes:
 # ──────────────────────────────────────────────
 # JOB: one prediction run at a time, in the background
 # ──────────────────────────────────────────────
+BUSY = Path(__file__).parent / "launcher" / ".app_updating"   # sync_from_cloud.py waits while this exists (fresh)
+
+
 class Job:
     def __init__(self):
         self.lock = threading.Lock()
@@ -342,14 +346,25 @@ class Job:
             nba._SEEN.clear()
             nba._DONE.clear()
             st._FEED_CACHE.clear(); st._SB_CACHE.clear()
-            out = Collector(self._step)
-            nba.predict_today(first_pass=True, teams=teams, ui=out)
+            BUSY.write_text(str(time.time()))     # "busy" sign: the Mac's sync won't swap the database mid-update
+            for attempt in (1, 2):                # ...and if it was swapped anyway, try once more on the new file
+                out = Collector(self._step)
+                try:
+                    nba.predict_today(first_pass=True, teams=teams, ui=out)
+                    break
+                except sqlite3.OperationalError as e:
+                    if attempt == 2 or "readonly" not in str(e):
+                        raise
             self.state["result"] = keep_todays_cards(add_logged_cards(out.result))
             threading.Thread(target=BOARD.refresh, daemon=True).start()   # new picks -> board knows them
         except Exception as e:  # noqa: BLE001 — any failure is shown on the page instead of lost
             traceback.print_exc()
             self.state["error"] = f"{type(e).__name__}: {e}"
         finally:
+            try:
+                BUSY.unlink()
+            except OSError:
+                pass
             self.state.update(running=False, step="", finished_at=time.strftime("%-I:%M %p"))
 
 

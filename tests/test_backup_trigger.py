@@ -33,3 +33,13 @@ def test_full_check_only_every_25_minutes(tmp_path):
     assert due_full_check(1e9, f) is True
     assert due_full_check(1e9 + 60, f) is False            # a minute later: just the quick sync
     assert due_full_check(1e9 + 26 * 60, f) is True
+
+
+def test_sync_waits_while_the_app_is_updating(tmp_path):
+    from sync_from_cloud import app_busy
+    f = tmp_path / "busy"
+    assert app_busy(1e9, f) is False                      # no sign
+    f.write_text(str(1e9 - 60))
+    assert app_busy(1e9, f) is True                       # updating for a minute: wait
+    f.write_text(str(1e9 - 3600))
+    assert app_busy(1e9, f) is False                      # an hour-old sign = left behind by a crash: ignore

@@ -45,8 +45,21 @@ def log(msg: str) -> None:
         pass
 
 
+APP_BUSY = HERE / "launcher" / ".app_updating"     # the Mac app is updating picks: don't swap files under it
+
+
+def app_busy(now: float, path: Path = APP_BUSY, max_age: float = 15 * 60) -> bool:
+    """Pure-ish (testable): the Mac app put up its "busy" sign less than 15 min ago (older = a crash left it behind)."""
+    try:
+        return now - float(path.read_text()) < max_age
+    except (OSError, ValueError):
+        return False
+
+
 def sync() -> list:
     """Download changed files from the cloud. Returns the names of the files that were updated."""
+    if app_busy(time.time()):
+        return []                                    # next minute (swapping the database mid-update crashed the app)
     git("fetch", "-q", "origin", "state")
     changed = []
     for name in FILES:
