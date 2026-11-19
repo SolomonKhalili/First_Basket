@@ -102,7 +102,7 @@ button { font: inherit; cursor: pointer; border: 0; color: inherit; }
   color: var(--text); margin: 0 0 10px; font-weight: 700; display: flex; align-items: center; gap: 10px; }
 .section-title::before { content: ""; width: 4px; height: 16px; border-radius: 2px; background: var(--accent); }
 .board-wrap { margin: 24px 0 4px; }
-.board { display: grid; grid-template-columns: repeat(auto-fill, minmax(232px, 1fr)); gap: 10px; }
+.board { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(345px, 100%), 1fr)); gap: 10px; }
 .tile { text-align: left; border: 1px solid var(--line); border-radius: 14px; position: relative; overflow: hidden;
   padding: 13px 14px 11px; display: grid; gap: 7px; transition: transform .12s ease, box-shadow .2s, border-color .2s;
   background: linear-gradient(105deg, color-mix(in srgb, var(--away-c) 13%, transparent), transparent 40%,
@@ -122,10 +122,12 @@ button { font: inherit; cursor: pointer; border: 0; color: inherit; }
 .tile .teams { display: flex; align-items: center; gap: 7px; font-family: var(--display); font-weight: 700;
   font-size: 21px; letter-spacing: .02em; line-height: 1; }
 .tile .score { margin-left: auto; font-weight: 800; font-size: 24px; white-space: nowrap; }
-@media (max-width: 430px) { .tile .score { font-size: 20px; } .tile .ha { font-size: 11px; padding: 1px 5px; margin-left: 4px; } .tile .teams { gap: 5px; } }
+.tile .ha { font-size: 11px; padding: 1px 5px; margin-left: 4px; }
+@media (max-width: 430px) { .tile .score { font-size: 20px; } .tile .teams { gap: 5px; } }
 .tile .meta { display: flex; align-items: center; gap: 6px; font-size: 12.5px; color: var(--muted); }
 .tile .meta .live-txt { color: var(--live); font-weight: 650; }
-.tile .res { font-size: 12.5px; border-top: 1px dashed var(--line); padding-top: 6px; color: var(--muted); }
+.tile .res { font-size: 12.5px; border-top: 1px dashed var(--line); padding-top: 6px; color: var(--muted); overflow-wrap: anywhere; }
+.tile .res .tag { display: inline-block; white-space: nowrap; margin-top: 2px; }
 .tile .res b { color: var(--text); font-weight: 600; }
 .tag { font-size: 11px; font-weight: 700; border-radius: 6px; padding: 1px 6px; margin-left: 4px; white-space: nowrap; }
 .tag.hit { background: var(--good-soft); color: var(--good); border: 1px solid color-mix(in srgb, var(--good) 55%, transparent); font-weight: 700; animation: pop .5s ease both; }
