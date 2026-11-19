@@ -669,6 +669,12 @@ class Handler(BaseHTTPRequestHandler):
                 self._send(200, to_json(day_cards(y)))
             elif path == "/api/record":
                 self._send(200, to_json(track_record()))
+            elif path == "/api/odds_track":                 # the Odds page: today's price history, both books
+                import ev
+                import nba
+                from datetime import datetime as _dt
+                from zoneinfo import ZoneInfo
+                self._send(200, to_json(ev.odds_track(nba.db(), _dt.now(ZoneInfo("America/New_York")).strftime("%Y%m%d"))))
             elif path == "/api/bets":                       # my bets (kept on the relay, see bets.py)
                 import bets
                 self._send(200, to_json({"user": self._bets_user(), "bets": bets.load(self._bets_user())}))

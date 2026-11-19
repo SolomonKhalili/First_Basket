@@ -146,3 +146,14 @@ def test_cloud_keeps_espn_team_prices_when_a_fresher_snapshot_exists(monkeypatch
     got = {g["home_code"]: g for g in nba._draftkings_prices([{"game_id": "1"}], [])}
     assert got["MEM"]["players"][0]["american"] == 600 and got["MEM"]["team_first"] == {"GS": 105, "MEM": -145}
     assert "MIL" in got                                                       # ESPN fills the game the snapshot lacks
+
+
+def test_espn_never_logs_an_older_price_over_a_newer_live_one():
+    import sqlite3
+    con = sqlite3.connect(":memory:")
+    con.execute(dk.DK_LOG_SCHEMA)
+    con.execute("INSERT INTO dk_odds_log VALUES ('20261119', 'GS @ MEM', '2026-11-19 12:00:00', 'P', 'MEM', 650)")   # live (Mac)
+    g = [{"away_code": "GS", "home_code": "MEM", "players": [{"player": "P", "team": "MEM", "american": 700, "open": 700,
+                                                             "updated": "2026-11-19T16:30Z"}]}]   # ESPN: 11:30 AM NY, older
+    dk.log_espn(con, "20261119", g)
+    assert [a for (a,) in con.execute("SELECT american FROM dk_odds_log WHERE logged_at != '2026-11-19 00:00:00' ORDER BY logged_at")] == [650]

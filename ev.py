@@ -325,3 +325,51 @@ def dk_market_results(con) -> dict:
     n = len(ll_us)
     return {"games": n, "us_closer": us, "book_closer": them, "ties": ties,
             "logloss_us": sum(ll_us) / n if n else None, "logloss_book": sum(ll_them) / n if n else None}
+
+
+def _utc(at, day: str) -> str:
+    """A log time -> UTC ISO for the page (opening stamps -> the start of that New York day)."""
+    from datetime import datetime, timezone
+    from zoneinfo import ZoneInfo
+    ny = ZoneInfo("America/New_York")
+    s = str(at)
+    if s.isdigit():
+        d = datetime.fromtimestamp(int(s) / 1000, timezone.utc)
+    elif s.endswith(" 00:00:00") or s.endswith(" 23:59:59"):
+        d = datetime(int(day[:4]), int(day[4:6]), int(day[6:]), 0 if s.endswith("00:00:00") else 23, 0, tzinfo=ny)
+    else:
+        d = datetime.fromisoformat(s.replace(" ", "T"))
+        d = d.replace(tzinfo=ny) if d.tzinfo is None else d
+    return d.astimezone(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
+
+
+def odds_track(con, day: str) -> dict:
+    """The Odds page: for each game of `day`, every player's (and each team's) price history at FanDuel and DraftKings.
+    -> {"day", "games": [{"matchup", "players": [{"name", "team", "books": {book: [[utc, american], ...]}}],
+                          "teams": [{"team", "books": {...}}]}]}  — points only when the price changed."""
+    games = {}
+
+    def add(kind, m, name, team, book, at, a):
+        g = games.setdefault(m, {"matchup": m, "players": {}, "teams": {}})
+        row = g[kind].setdefault(name, {"name" if kind == "players" else "team": name, "team": team, "books": {}})
+        pts = row["books"].setdefault(book, [])
+        if not pts or pts[-1][1] != a:
+            pts.append([_utc(at, day), int(a)])
+
+    for book, sql in (("FanDuel", "SELECT matchup, player_name, team, logged_at, american FROM odds_log WHERE game_date = ? ORDER BY logged_at"),
+                      ("DraftKings", "SELECT matchup, player_name, team, logged_at, american FROM dk_odds_log WHERE game_date = ? ORDER BY logged_at")):
+        try:
+            for m, name, team, at, a in con.execute(sql, (day,)):
+                add("players", m, name, team or "", book, at, a)
+        except Exception:  # noqa: BLE001 — table not there yet
+            pass
+    try:
+        for m, book, team, at, a in con.execute("SELECT matchup, book, team, logged_at, american FROM team_first_log "
+                                                "WHERE game_date = ? ORDER BY logged_at", (day,)):
+            add("teams", m, team, team, book, at, a)
+    except Exception:  # noqa: BLE001
+        pass
+    out = []
+    for g in games.values():
+        out.append({"matchup": g["matchup"], "players": list(g["players"].values()), "teams": list(g["teams"].values())})
+    return {"day": day, "games": sorted(out, key=lambda g: g["matchup"])}

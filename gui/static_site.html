@@ -288,6 +288,7 @@
     if (path === "/api/yesterday") return reply(bundle.yesterday || { cards: [], games: [], hits: 0, graded: 0 });
     if (path === "/api/data_version") return reply({ version: bundle.version });
     if (path === "/api/results") return reply(bundle.results || {});
+    if (path === "/api/odds_track") return reply(bundle.odds_track || { games: [] });
     if (path === "/api/data") {
       const d = bundle.data[u.searchParams.get("tab") || "picks"];
       return d ? reply({ ...d, version: bundle.version }) : reply({ error: "unknown tab" }, 400);

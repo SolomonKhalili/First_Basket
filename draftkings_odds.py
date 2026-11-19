@@ -310,9 +310,11 @@ def log_espn(con, day: str, games: list) -> int:
             except ValueError:                 # stamps a time hours ahead), and now if it gives none
                 at = now
             at = at.strftime("%Y-%m-%d %H:%M:%S")
-            last = con.execute("SELECT american FROM dk_odds_log WHERE game_date = ? AND matchup = ? AND player_name = ? "
+            last = con.execute("SELECT american, logged_at FROM dk_odds_log WHERE game_date = ? AND matchup = ? AND player_name = ? "
                                "ORDER BY logged_at DESC LIMIT 1", (day, m, r["player"])).fetchone()
-            if not last or last[0] != r["american"]:
+            # ESPN is a few minutes behind DraftKings: if a newer live price (Mac / browsers) is already logged, ESPN's
+            # older one is not a change — logging it made prices look like they flipped back and forth
+            if not last or (last[0] != r["american"] and at > str(last[1])):
                 con.execute("INSERT OR IGNORE INTO dk_odds_log VALUES (?, ?, ?, ?, ?, ?)",
                             (day, m, at, r["player"], r["team"], r["american"]))
         for team, a in (g.get("team_first") or {}).items():             # team to score first, same idea

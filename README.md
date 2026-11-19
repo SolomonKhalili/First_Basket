@@ -55,6 +55,7 @@ password unlocks in their browser. Full details: [`BLUEPRINT.md`](BLUEPRINT.md) 
 - **💰 Tonight's best bets** — every good-value bet across tonight's games, best first (FanDuel judged with the first-points chances, DraftKings with the field-goal chances); **⏰ bet soon** when a good bet's payout is dropping.
 - **💵 My bets** — each login has its own tracker (new accounts get it automatically). Tap a player → **Straight bet** or **Parlay** → pick FanDuel / DraftKings / Other (odds fill in) → amount. Settles itself; separate Straight / Parlays tabs with profit; ✕ deletes. Stored encrypted on the Cloudflare relay, backed up to the database.
 - **Track record** — #1-pick rate **this season / last season / all time**, each graded (Poor → Excellent) with the reason; **🥊 Who guesses better: us or the sportsbooks?** (DraftKings all season, FanDuel since Nov 18); **🤝 Does the sportsbook agree with us?** (do our good bets' prices shorten before tip-off); paper betting.
+- **📈 Odds** — every player's odds at both books today: opened → now, ↓/↑, a little chart of the day, biggest movers first (team to score first too).
 - **📊 Data** — Scorecard, Our picks, Lineups, All games and **📈 Odds moves** (both books: opening → closing, every change with its time, market opened / closed).
 
 ## Quick start
@@ -78,7 +79,7 @@ python3 gui.py                      # the same picks in your web browser (cards,
 
 If you already have the database and `pregame_model.json`, you only need the last two commands.
 
-Run the tests any time: `python3 -m pytest` (250 tests, all in the `tests/` folder).
+Run the tests any time: `python3 -m pytest` (252 tests, all in the `tests/` folder).
 
 ---
 
@@ -223,7 +224,7 @@ NBA/
 ├── train_pregame.py        # retrains pregame_model.json and runs the week-by-week test
 ├── build_features.py       # builds training matrices and player game logs
 ├── picks.py                # pick log + track record (`eval`)
-├── tests/                  # 250 tests (python3 -m pytest)
+├── tests/                  # 252 tests (python3 -m pytest)
 ├── first_basket_data.csv   # every past game: who scored first (auto-regenerated; don't edit by hand)
 ├── my_predictions.xlsx     # open this: Scorecard, Games (our picks vs results), Lineups (expected vs confirmed vs actual)
 ├── nba_first_basket.db     # SQLite database

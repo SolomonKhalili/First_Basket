@@ -153,3 +153,18 @@ def test_us_vs_draftkings_judged_over_the_same_starters():
     con.execute("INSERT INTO dk_odds_log VALUES ('20261101', 'A @ B', '2026-11-01 23:59:59', 'Bench Guy', '', 900)")   # didn't start
     r = ev.dk_market_results(con)
     assert r["games"] == 1 and r["us_closer"] == 1                  # us 20% vs DraftKings 10% (bench player left out)
+
+
+def test_odds_track_history_both_books():
+    import sqlite3
+    import ev
+    con = sqlite3.connect(":memory:")
+    ev.ensure_table(con)
+    con.execute("CREATE TABLE dk_odds_log (game_date TEXT, matchup TEXT, logged_at TEXT, player_name TEXT, team TEXT, american INTEGER)")
+    for at, a in (("2026-11-19T09:00:00", 700), ("2026-11-19T10:00:00", 700), ("2026-11-19T12:00:00", 600)):
+        con.execute("INSERT INTO odds_log (game_id, game_date, logged_at, matchup, player_name, team, american) VALUES ('g','20261119',?,'A @ B','P','B',?)", (at, a))
+    con.execute("INSERT INTO dk_odds_log VALUES ('20261119','A @ B','2026-11-19 00:00:00','P','B',800)")
+    g = ev.odds_track(con, "20261119")["games"][0]
+    p = g["players"][0]
+    assert [a for _, a in p["books"]["FanDuel"]] == [700, 600]                 # only changes are kept
+    assert p["books"]["DraftKings"][0] == ["2026-11-19T05:00:00Z", 800]        # opening = start of the NY day

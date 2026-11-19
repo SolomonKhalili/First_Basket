@@ -105,7 +105,18 @@ def build_bundle(result) -> dict:
         "data": {tab: gui.data_tab(tab) for tab in gui.DATA_TABS},
         "yesterday": _yesterday(gui, now),
         "results": _results(),
+        "odds_track": _odds_track(now),
     }
+
+
+def _odds_track(now) -> dict:
+    """Today's price history for the Odds page (ev.odds_track)."""
+    try:
+        import ev
+        import nba
+        return ev.odds_track(nba.db(), now.strftime("%Y%m%d"))
+    except Exception:  # noqa: BLE001
+        return {"day": "", "games": []}
 
 
 def _results() -> dict:
