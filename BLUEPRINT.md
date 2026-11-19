@@ -1,6 +1,6 @@
 # NBA First Basket Scorer — Project Blueprint
 
-> **Last updated:** 2026-11-17 (two-stage model adopted) · **Owner:** Solomon · **Folder:** `~/Desktop/NBA`
+> **Last updated:** 2026-11-18 (app, private website, live cloud updates, live FanDuel odds) · **Owner:** Solomon · **Folder:** `~/Desktop/NBA`
 >
 > Single source of truth for the project's state: what works, how well, what is known to be wrong, and
 > what comes next. Update it in the same session as any change (checklist in §11). Every number here was
@@ -31,6 +31,12 @@ and — later — compare those odds with sportsbook prices.
   `nba.py eval` and the GUI. Nothing is bet. Stakes (Kelly), closing-line value and a real bet log are still
   **not built**; judge the paper results over a few hundred bets first.
 
+- **Runs by itself, 24/7, free, Mac on or off (2026-11-18, owner's request).** A private, login-protected website
+  (https://solomonkhalili.github.io/first-basket/) for the owner and friends: the cloud (GitHub Actions) re-checks
+  lineups, injuries and odds every 3 minutes from 9 AM to the last tip-off, re-runs the picks and republishes;
+  FanDuel odds on the page refresh every ~30 s through a free Cloudflare relay; results are filed as each game ends;
+  the nightly update (4 AM ET) retrains. A Cloudflare timer keeps the job running; the Mac is only a backup. Details §4a.
+
 **Hard rules (decisions already made).**
 1. Use only the two most recent seasons (2025-26 and 2026-27); rosters and roles change too fast for older data.
 2. Train on **regular-season games only** (2025-26 playoffs excluded).
@@ -41,7 +47,12 @@ and — later — compare those odds with sportsbook prices.
 5. Every lineup is labelled **CONFIRMED / EXPECTED / PROJECTED**; a projected lineup is never shown as official.
 6. Data updates continue from saved data ("save file"); nothing is re-scraped from scratch.
 7. Keep this file current and factual. Never mark something done without verifying it.
-8. Version control (git / GitHub) is out of scope for this project — owner's decision, 2026-11-17.
+8. Don't discuss git with the owner (owner's decision, 2026-11-17). GitHub is used for hosting and automation
+   since 2026-11-18 (private repo SolomonKhalili/First_Basket = code + data; public repo SolomonKhalili/first-basket
+   = the encrypted website + the live job). Commits are made as part of that, not as a topic.
+9. Free services only, **no credit card** anywhere (owner's decision, 2026-11-18). The model, code and data never
+   leave the private repo unencrypted; the public website holds only encrypted results.
+10. Friends' accounts only with the owner's approval; viewers can look, never run the model.
 
 **Environment.** Python 3.14 on macOS. Data from ESPN (via `sportsdataverse`) and NBA.com public JSON feeds.
 SQLite database. Screen output via `rich`. Tests via `pytest`.
@@ -307,11 +318,31 @@ fallback 0.6354 / 0.6323 → NBA.com's listed C in training too 0.6299 / 0.6309.
 | First-shot data + share | `nba.first_shots`, `build_features.first_shot_share` | ✅ Recorded for every game; tested as a model input and not adopted (§7.1) |
 | Early-shot data + share | `nba.early_shots`, `build_features.early_shot_share` | ✅ Each team's first 5 attempts recorded for every game; **used by the model** (stage 2) |
 
-**Tests:** 115 passing — `test_starters.py` (45), `test_pipeline.py` (29: sync, retrain decision, incremental build incl. late-labelled games, label guards, tip-rate rule), `test_display.py` (10), `test_tip_model.py` (8), `test_picks.py` (19), `test_pregame_model.py` (4). The incremental-build test was checked by re-introducing the old zero-games bug: it fails, as it should.
+**Tests:** 182 passing in 15 files (`python3 -m pytest`, 2026-11-18). Earlier breakdown (2026-11-17): 115 passing — `test_starters.py` (45), `test_pipeline.py` (29: sync, retrain decision, incremental build incl. late-labelled games, label guards, tip-rate rule), `test_display.py` (10), `test_tip_model.py` (8), `test_picks.py` (19), `test_pregame_model.py` (4). The incremental-build test was checked by re-introducing the old zero-games bug: it fails, as it should.
+
+### 4a. App, website and automation (2026-11-18)
+
+| Component | File(s) | Status |
+|-----------|---------|--------|
+| Desktop app (GUI) | `gui.py`, `gui/index.html` | ✅ Picks cards, live scoreboard (ESPN), tip-off matchups, EV guide, Data view (Scorecard / Our picks / Lineups / All games with search, season and player filters); tap games to show only those; started games keep the picks made before tip-off ("Picked before tip-off", rebuilt from `pick_log` if needed); exact pick number of the first scorer ("Our #2 pick"); always dark |
+| Live FanDuel odds on the page | `gui/index.html` (`refreshOdds`), `gui.py` `/api/fd/prices`, `fanduel_odds.fetch_prices` | ✅ Read on page open, then every 30 s, from FanDuel's small price feed (~7 KB/game) by market + selection id (`card.fd_market`, set by `nba._fanduel_card`); EV and best deal recomputed in the page; 20 s shared cache; backs off on errors. Prices matched FanDuel exactly in a live check |
+| Accounts (Mac app sharing) | `accounts.py` | ✅ Hashed passwords, owner/viewer; no length rules (owner's choice) |
+| Private website | `publish.py`, `gui/static_site.html`, `site_users.py`, `site_users.json` | ✅ Same page as the app; results encrypted (AES-256-GCM), each friend's password unlocks the key in the browser; remember-me 30 days; view-only. Accounts: `python3 site_users.py add NAME` (solomon, bhass, simon) |
+| Live cloud job | `website_live/live-picks.yml` (runs in the public repo: unlimited free minutes), `publish.py --live` | ✅ Every 3 min from 9 AM: full update + picks; republishes on any change (≤ ~every 6 min: GitHub Pages limit); after the last tip-off files each result as its game ends (`nba.file_finished_games`), then stops; re-reads accounts each check; public log says only "published" / "no change" (details in the private `run.log`) |
+| Nightly update | same job, `kind=once` | ✅ ~4 AM ET: results, CSV, spreadsheet, retraining, republish |
+| Odds relay + timer | `website_live/odds-relay.js`, `website_live/wrangler.jsonc` → Cloudflare Worker `first-basket-odds` (GitHub repo SolomonKhalili/first-basket-odds, auto-deployed) | ✅ Relay live (`first-basket-odds.solomonkhalili.workers.dev/prices`); only the price feed, only for the website. Timer every 10 min starts the live job if nothing is running (needs the `GH_TOKEN` secret, added 2026-11-18). ⏳ First automatic start not yet observed (due 2026-11-19 from 9 AM) |
+| Today's cards memory | `gui.keep_todays_cards`, `todays_cards.json` | ✅ A card stays after tip-off; a card rebuilt from the log never replaces a saved one; matched by matchup |
+| Mac sync + backup | `sync_from_cloud.py`, `launcher/com.firstbasket.sync.plist` | ✅ Every 30 min: downloads the cloud's data into the NBA folder; starts the cloud job if it has gone quiet (only while the Mac is on) |
+| Mac app always on | `launcher/com.firstbasket.app.plist`, Desktop "First Basket Picks.app" | ✅ Starts at login, restarted if it stops |
+| One-time setup scripts | `setup_live_updates.sh`, `setup_odds_relay.sh` | ✅ Both run 2026-11-18 (the relay ended up deployed from the Cloudflare dashboard via GitHub instead) |
+| Old private-repo workflow | `.github/workflows/update-site.yml` | Stands down on its timer (`LIVE_ENABLED=true`); still runs if started by hand; publishes to `gh-pages` |
 
 ---
 
 ## 5. Daily use
+
+**Nothing needs to be run** (2026-11-18): the website and the Mac app update themselves (§4a). Open the website or
+the Desktop app. Add a friend: `python3 site_users.py add NAME` (they type their password). Optional by hand:
 
 ```bash
 cd ~/Desktop/NBA
@@ -321,7 +352,7 @@ python3 nba.py --all        # every game, without asking
 python3 nba.py report       # matchups, injuries, starters
 python3 nba.py eval         # real track record of every logged pick
 python3 nba.py help         # all commands
-python3 -m pytest test_starters.py test_tip_model.py test_display.py test_picks.py test_pipeline.py test_pregame_model.py   # expect 115 passed
+python3 -m pytest           # expect 182 passed
 ```
 
 **When to run.** About **30 minutes before the game's tip-off**: NBA.com has confirmed the lineup (✅), so the
@@ -359,6 +390,19 @@ next run fills in the results.
 **Tip-off**
 - Nobody announces who takes the opening tip; the jumper rule is right about 88% of the time. When the jumper has
   few recorded tips (e.g. a backup centre), his rate is shrunk toward 50% and the call is close to a coin flip.
+
+**Hosting and automation (2026-11-18)**
+- Website delay: odds ~30 s (relay); lineups/injuries/picks ~3–6 min (3-min checks, Pages allows ~10 publishes an
+  hour); scores and first baskets instant (ESPN in the browser).
+- GitHub's own timer in the new public repo had not fired by 9 PM on its first night; the Cloudflare timer (every
+  10 min) and the Mac backup cover it. Confirm on 2026-11-19 that a run starts by itself after 9 AM.
+- `GH_TOKEN` (fine-grained GitHub token, Actions read/write on `first-basket` only) expires on the date chosen at
+  creation; when GitHub emails about it, make a new one and replace the Cloudflare secret. The token was also pasted
+  in chat once; the owner chose to keep it (small scope).
+- NBA.com's `cdn.nba.com` scoreboard refuses cloud servers (403); the daily lineups feed supplies the game id, and a
+  refusal now gives one note per run, not one per game.
+- Cloudflare free plan: 100,000 requests a day (expected use ~2%); over the limit the relay stops until midnight UTC
+  and the page falls back to the cloud's odds. No card on file, so nothing can be charged.
 
 **Data**
 - The old `predictions` table (22 picks, 3/15 = 20.0% on finished games) mixes several older model versions,
@@ -408,6 +452,11 @@ Owner's order: **fix everything first, then build forward.**
    2025-26 + this season. Tested 2026-11-17 for tips only: more tip calls right, but first-basket picks worse —
    not used; `old_tips` kept for a re-test around the All-Star break (§10).
 6. Then the odds layer (§7.3), once `eval` has a few weeks of real results.
+
+**Next (2026-11-18)**
+- Verify on 2026-11-19 that the live job starts by itself (Cloudflare timer / GitHub timer) and the website shows
+  the green "FanDuel odds live" line; confirm tonight's results were filed by the job, not the 4 AM run.
+- Renew `GH_TOKEN` before it expires.
 
 **Done (2026-11-17)**
 - ✅ Keep every pick (`pick_log`, new `eval`).
@@ -468,12 +517,23 @@ NBA/
 ├── pregame_model.json      # active model weights + walk-forward results
 ├── train_pregame.py        # training, walk-forward test, keep-previous check
 ├── build_features.py       # training matrices (incremental) + player game logs
-├── tests/                  # 156 tests in 9 files (python3 -m pytest)
+├── tests/                  # 182 tests in 15 files (python3 -m pytest)
 ├── nba_first_basket.db     # SQLite: games, first_baskets, lineups, official_lineups, first_shots, early_shots, pick_log (+ legacy predictions)
 ├── player_game_logs.pkl    # per-player game logs
 ├── X_train.npy, y_train.npy, groups.npy, game_ids.json, feature_names.json, meta.json   # training matrices
 ├── first_basket_data.csv   # export of all labelled games (13 columns)
 ├── my_predictions.xlsx     # Scorecard tab + Games tab: our picks vs what actually happened
+├── gui.py, gui/            # desktop app server + page (gui/index.html); gui/static_site.html = website login + data layer
+├── accounts.py             # app accounts (owner/viewer)
+├── publish.py              # builds the encrypted website; --live = game-night loop, --once = one update
+├── site_users.py, site_users.json   # website accounts (wrapped keys only, no passwords)
+├── fanduel_odds.py, ev.py  # FanDuel prices (pages + live price feed); EV, value, odds log, paper betting
+├── sync_from_cloud.py      # Mac: download the cloud's data every 30 min + start the cloud job if it went quiet
+├── launcher/               # Mac launch agents, Desktop app launcher, icon
+├── website_live/           # live-picks.yml (public-repo job), odds-relay.js + wrangler.jsonc (Cloudflare), relay_url.txt
+├── setup_live_updates.sh, setup_odds_relay.sh   # one-time setup (both done)
+├── todays_cards.json       # today's picks cards (kept after tip-off)
+├── .github/workflows/update-site.yml   # older private-repo workflow (stands down; manual fallback)
 ├── spreadsheet.py          # tiny .xlsx writer/reader (tabs, frozen header, widths, colours) — no extra package
 ├── requirements.txt        # only what the code uses: sportsdataverse, numpy, pandas, scipy, requests, rich (+ pytest, ruff)
 ├── README.md
@@ -495,6 +555,33 @@ NBA/
 ---
 
 ## 10. Change log (newest first)
+
+### 2026-11-18 — app, private website, fully automatic live updates
+
+**Built (owner's requests, in order):** browser app (`gui.py`) with EV guide, season records, Data view and player
+search; Desktop app with icon; accounts; folder cleanup; FanDuel odds + EV (§7.3). Then the free private website
+(encrypted static site on GitHub Pages; HF Spaces needed a paid plan and Oracle a card — both dropped) and full
+automation:
+- **Live cloud job** moved to the public website repo (unlimited free minutes): checks every 3 min from 9 AM,
+  republishes on change, files results as games end, nightly retrain. Old hourly private workflow stands down.
+- **Live FanDuel odds** every ~30 s: browsers can't read FanDuel from another site (CORS — tested: FanDuel only answers
+  its own origin), so the Mac app passes the request through (`/api/fd/prices`) and the website uses a free
+  Cloudflare Worker. Uses FanDuel's live price feed (~7 KB/game instead of a 680 KB page).
+- **Always on without the Mac:** Cloudflare timer (every 10 min) starts the job if idle (GitHub's timer never fired on
+  the first night). Mac launch agents: sync + backup every 30 min, app always running.
+- **Page fixes:** one large Clear selection button; selected games glow with a "✓ Selected" tag and the rest fade;
+  always dark (phones in light mode showed the light theme); tapping a started game shows its pre-tip-off picks
+  (rebuilt from `pick_log`; cards matched by matchup — the model's cards carry no game id, which first caused
+  duplicates); the first scorer's exact spot ("Our #2 pick", "✗ Our #6 pick") instead of "in our top 3"; NBA.com 403
+  reported once per run.
+- **Data:** results filed only after the day's last tip-off (new results retrain the model; picks must not change
+  mid-evening). Accounts: bhass, simon added.
+- **Verified:** 182 tests pass; full viewer walk-through of a local copy of the website (login, wrong password,
+  remember-me, logout, tapping, EV guide, all Data tabs and filters, phone width, no console errors); public files
+  hold no names, model or code; live odds in the app matched FanDuel exactly and refreshed every 30 s; relay answers
+  only the website; website carries the relay address and FanDuel ids.
+- **Not yet verified:** the Cloudflare timer's first automatic start (2026-11-19); the logged-in website showing the
+  green live-odds line (owner to look).
 
 ### 2026-11-17 — full review and overhaul
 
