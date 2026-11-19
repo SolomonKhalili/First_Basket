@@ -132,7 +132,8 @@ def load_site_users() -> dict:
 # SHOULD WE RUN NOW? (keeps GitHub's free minutes for when it matters)
 # ──────────────────────────────────────────────
 def should_run(kind: str) -> bool:
-    """nightly: always. hourly: only if today has a game that hasn't started yet (picks can still change)."""
+    """nightly: always. hourly/live: if today has a game that hasn't started (picks can still change), a game in
+    progress (its result gets filed when it ends), or a finished game whose result isn't filed yet."""
     if kind == "nightly":
         return True
     import requests
@@ -142,7 +143,22 @@ def should_run(kind: str) -> bool:
                               params={"dates": d}, timeout=20).json().get("events", [])
     except Exception:  # noqa: BLE001 — if ESPN can't be reached, run anyway (the update will report it)
         return True
-    return any(e.get("status", {}).get("type", {}).get("state") == "pre" for e in events)
+    states = {str(e.get("id")): e.get("status", {}).get("type", {}).get("state") for e in events}
+    if any(s in ("pre", "in") for s in states.values()):
+        return True
+    finished = [g for g, s in states.items() if s == "post"]
+    return bool(finished) and bool(set(finished) - filed_games(finished))
+
+
+def filed_games(game_ids) -> set:
+    """Which of these games already have their first basket saved (empty set if the database isn't there)."""
+    import sqlite3
+    try:
+        con = sqlite3.connect(HERE / "nba_first_basket.db")
+        q = ",".join("?" * len(game_ids))
+        return {str(r[0]) for r in con.execute(f"SELECT game_id FROM first_baskets WHERE game_id IN ({q})", list(game_ids))}
+    except sqlite3.Error:
+        return set()
 
 
 # ──────────────────────────────────────────────

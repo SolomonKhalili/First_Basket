@@ -51,3 +51,22 @@ def test_files_results_after_last_tip(monkeypatch, tmp_path):
                                                     _result(450, status=3)], filed=[0, 1, 0])
     assert published == [450, 450]          # the first publish + the one after filing a result
     assert saved == [1]
+
+
+def test_should_run_until_results_are_filed(monkeypatch):
+    import requests
+
+    class R:
+        def __init__(self, states): self.states = states
+        def json(self): return {"events": [{"id": str(i), "status": {"type": {"state": s}}} for i, s in enumerate(self.states)]}
+
+    def run(states, filed):
+        monkeypatch.setattr(requests, "get", lambda *a, **k: R(states))
+        monkeypatch.setattr(publish, "filed_games", lambda ids: set(filed))
+        return publish.should_run("hourly")
+
+    assert run(["pre", "post"], []) is True               # a game still to come
+    assert run(["in", "post"], ["1"]) is True             # a game in progress: file it when it ends
+    assert run(["post", "post"], ["0"]) is True           # one finished game not filed yet
+    assert run(["post", "post"], ["0", "1"]) is False     # everything filed: nothing to do
+    assert run([], []) is False                           # no games today
