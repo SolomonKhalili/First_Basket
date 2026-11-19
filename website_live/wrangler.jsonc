@@ -1,0 +1,8 @@
+{
+  "name": "first-basket-odds",
+  "main": "src/index.js",
+  "compatibility_date": "2026-11-01",
+  "workers_dev": true,
+  // every 10 minutes: make sure the website's cloud job is running (needs the GH_TOKEN secret)
+  "triggers": { "crons": ["*/10 * * * *"] }
+}

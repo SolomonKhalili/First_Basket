@@ -7,7 +7,38 @@ const PRICES = "https://smp.ny.sportsbook.fanduel.com/api/sports/fixedodds/reado
 const SITE = "https://solomonkhalili.github.io";
 const CACHE_SECONDS = 20;
 
+// ── Timer: every 10 minutes (wrangler.jsonc "crons"), make sure the website's cloud job is running ──────────
+// GitHub's own timer can start late, and the Mac backup only works while the Mac is on. With a GitHub key that can
+// only start that one job (secret GH_TOKEN, set in Cloudflare), this starts it whenever nothing is running:
+//   9 AM – midnight ET: the live job (it stops by itself when no games are left)   4–9 AM ET: the nightly update.
+const GH = "https://api.github.com/repos/SolomonKhalili/first-basket/actions/workflows/live-picks.yml";
+async function keepJobRunning(env) {
+  if (!env.GH_TOKEN) return "no GH_TOKEN";
+  const h = { Authorization: `Bearer ${env.GH_TOKEN}`, Accept: "application/vnd.github+json",
+              "User-Agent": "first-basket-odds", "X-GitHub-Api-Version": "2022-11-28" };
+  const r = await fetch(`${GH}/runs?per_page=10`, { headers: h });
+  if (!r.ok) return `GitHub ${r.status}`;
+  const runs = (await r.json()).workflow_runs || [];
+  if (runs.some((x) => ["queued", "in_progress", "waiting", "pending", "requested"].includes(x.status))) return "running";
+  const now = new Date();
+  const et = (d, o) => Number(new Intl.DateTimeFormat("en-US", { timeZone: "America/New_York", hour12: false, ...o }).format(d));
+  const hour = et(now, { hour: "numeric" }) % 24, day = et(now, { day: "numeric" });
+  const last = runs.length ? new Date(Math.max(...runs.map((x) => Date.parse(x.created_at)))) : null;
+  const ageMin = last ? (now - last) / 60000 : Infinity;
+  let kind = null;
+  if (hour >= 9 && ageMin > 25) kind = "live";
+  else if (hour >= 4 && hour < 9 && (!last || et(last, { day: "numeric" }) !== day || et(last, { hour: "numeric" }) % 24 < 4)) kind = "once";
+  if (!kind) return "nothing to do";
+  const d = await fetch(`${GH}/dispatches`, { method: "POST", headers: { ...h, "Content-Type": "application/json" },
+                                              body: JSON.stringify({ ref: "main", inputs: { kind } }) });
+  return d.ok ? `started ${kind}` : `start failed ${d.status}`;
+}
+
 export default {
+  async scheduled(event, env, ctx) {
+    ctx.waitUntil(keepJobRunning(env).then((m) => console.log("timer:", m)));
+  },
+
   async fetch(request, env, ctx) {
     const cors = { "Access-Control-Allow-Origin": SITE, "Vary": "Origin" };
     if (request.method === "OPTIONS") return new Response(null, { status: 204, headers: { ...cors, "Access-Control-Allow-Methods": "GET" } });
