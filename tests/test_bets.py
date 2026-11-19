@@ -60,3 +60,11 @@ def test_results_maps_games_to_first_scorer():
     con.execute("CREATE TABLE first_baskets (game_id TEXT, scorer_player_id TEXT, scorer_name TEXT)")
     con.execute("INSERT INTO first_baskets VALUES ('401910019', '4600663', 'Zach Edey')")
     assert bets.results(con) == {"401910019": ["4600663", "Zach Edey"]}
+
+
+def test_every_username_gets_its_own_slot():
+    assert bets.slot("solomon") == "solomon"
+    odd = ["mike@work", "josé", "a" * 60, "Big!Mike"]
+    slots = [bets.slot(u) for u in odd]
+    assert all(bets.USER_RE.match(s) for s in slots)               # the relay accepts every one
+    assert len(set(slots)) == len(odd)                              # and nobody shares a list

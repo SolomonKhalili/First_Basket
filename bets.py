@@ -28,6 +28,12 @@ OWNER = "solomon"                  # the Mac app without logins is the owner's
 MAX_BETS = 1500
 
 
+def slot(user: str) -> str:
+    """The relay's storage name for an account. Any website username works (they may use any characters but spaces):
+    simple ones are used as they are, anything else becomes "h-" + a fingerprint of the name (static_site.html does the same)."""
+    return user if USER_RE.match(user) else "h-" + hashlib.sha256(user.encode()).hexdigest()[:32]
+
+
 def relay() -> str:
     return RELAY_FILE.read_text().strip().rstrip("/") if RELAY_FILE.exists() else ""
 
@@ -76,7 +82,7 @@ def load(user: str, key: bytes | None = None) -> list:
     import requests
     from publish import data_key
     key = key or data_key()
-    r = requests.get(f"{relay()}/bets", params={"u": user}, timeout=20)
+    r = requests.get(f"{relay()}/bets", params={"u": slot(user)}, timeout=20)
     r.raise_for_status()
     return unseal(r.json(), key)
 
@@ -86,7 +92,7 @@ def save(user: str, bets: list, key: bytes | None = None) -> None:
     from publish import data_key
     key = key or data_key()
     body = {**seal(bets[-MAX_BETS:], key), "w": write_code(key, user)}
-    r = requests.put(f"{relay()}/bets", params={"u": user}, json=body, timeout=20,
+    r = requests.put(f"{relay()}/bets", params={"u": slot(user)}, json=body, timeout=20,
                      headers={"Origin": "http://127.0.0.1:8765"})
     r.raise_for_status()
 
@@ -117,9 +123,7 @@ def backup_all(con, users) -> int:
     key = data_key()
     con.execute("CREATE TABLE IF NOT EXISTS my_bets (user TEXT PRIMARY KEY, bets TEXT, updated TEXT)")
     n = 0
-    for user in users:
-        if not USER_RE.match(user):
-            continue
+    for user in users:                                   # every account, whatever its name
         bets = load(user, key)
         if bets:
             con.execute("INSERT OR REPLACE INTO my_bets VALUES (?, ?, datetime('now'))", (user, json.dumps(bets)))

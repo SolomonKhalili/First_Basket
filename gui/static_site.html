@@ -207,8 +207,13 @@
   }
 
   // ── my bets: this account's own list on the relay, encrypted here with the data key (same as bets.py) ──
+  async function betSlot() {                                        // same as bets.slot: any username works
+    if (/^[a-z0-9_.-]{1,40}$/.test(user)) return user;
+    const d = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(user));
+    return "h-" + [...new Uint8Array(d)].map((b) => b.toString(16).padStart(2, "0")).join("").slice(0, 32);
+  }
   async function betsLoad() {
-    const blob = await (await realFetch(`${window.FB_ODDS_BASE}/bets?u=${encodeURIComponent(user)}`, { cache: "no-store" })).json();
+    const blob = await (await realFetch(`${window.FB_ODDS_BASE}/bets?u=${encodeURIComponent(await betSlot())}`, { cache: "no-store" })).json();
     if (!blob) return [];
     const k = await crypto.subtle.importKey("raw", rawKey, "AES-GCM", false, ["decrypt"]);
     const plain = await crypto.subtle.decrypt({ name: "AES-GCM", iv: b64d(blob.iv) }, k, b64d(blob.ct));
@@ -221,7 +226,7 @@
       new TextEncoder().encode(JSON.stringify({ bets: bets.slice(-1500) }))));
     const digest = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(`first-basket-bets:${b64e(rawKey)}:${user}`));
     const w = [...new Uint8Array(digest)].map((b) => b.toString(16).padStart(2, "0")).join("");
-    const r = await realFetch(`${window.FB_ODDS_BASE}/bets?u=${encodeURIComponent(user)}`, { method: "PUT",
+    const r = await realFetch(`${window.FB_ODDS_BASE}/bets?u=${encodeURIComponent(await betSlot())}`, { method: "PUT",
       headers: { "Content-Type": "application/json" }, body: JSON.stringify({ iv: b64e(iv), ct: b64e(ct), w }) });
     if (!r.ok) throw new Error(`relay ${r.status}`);
   }
