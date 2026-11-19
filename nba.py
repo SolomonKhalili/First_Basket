@@ -1133,7 +1133,7 @@ if __name__ == "__main__":
                     print(f"\n⏳ {left} game(s) still awaiting a confirmed lineup — rechecking in "
                           f"{interval // 60} min (Ctrl-C to stop)")
                     time.sleep(interval)
-                    st._FEED_CACHE.clear()
+                    st._FEED_CACHE.clear(); st._SB_CACHE.clear()
             except KeyboardInterrupt:
                 print("\nStopped.")
         else:

@@ -92,7 +92,7 @@ class Job:
             # Each click is a fresh look: forget what --watch mode remembers between passes
             nba._SEEN.clear()
             nba._DONE.clear()
-            st._FEED_CACHE.clear()
+            st._FEED_CACHE.clear(); st._SB_CACHE.clear()
             out = Collector(self._step)
             nba.predict_today(first_pass=True, teams=teams, ui=out)
             self.state["result"] = out.result

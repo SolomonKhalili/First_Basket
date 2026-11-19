@@ -74,7 +74,7 @@ def run_update() -> dict:
     import gui
     import nba
     import starters as st
-    st._FEED_CACHE.clear()
+    st._FEED_CACHE.clear(); st._SB_CACHE.clear()
     out = gui.Collector(lambda msg: print(f"  … {msg}", flush=True))
     nba.predict_today(first_pass=True, teams=set(), ui=out)
     return out.result

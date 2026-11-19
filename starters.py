@@ -218,13 +218,49 @@ def parse_nba_starters(box: dict, home: str, away: str, id_map: dict) -> Optiona
     return out
 
 
+_SB_CACHE: dict = {}    # "games" -> today's scoreboard games, or None if NBA.com refused (per run; cleared with _FEED_CACHE)
+
+
+def _scoreboard_games():
+    """Today's NBA.com scoreboard, fetched once per run (one retry). A failure is reported ONCE, not once per game."""
+    if "games" not in _SB_CACHE:
+        import time
+        games, err = None, None
+        for attempt in range(2):
+            try:
+                games = _nba_json(NBA_SCOREBOARD)["scoreboard"]["games"]
+                break
+            except Exception as e:  # noqa: BLE001
+                err = e
+                if attempt == 0:
+                    time.sleep(2)
+        if games is None:
+            code = getattr(getattr(err, "response", None), "status_code", None)
+            print(f"  (NBA.com scoreboard unavailable right now{f' ({code})' if code else ''} — "
+                  "using NBA.com's daily lineups and our projection instead)")
+        _SB_CACHE["games"] = games
+    return _SB_CACHE["games"]
+
+
+def _daily_game_id(h: str, a: str) -> Optional[str]:
+    """The game's NBA.com id from the daily lineups feed already downloaded this run (no extra request)."""
+    for feed in _FEED_CACHE.values():
+        for g in (feed or {}).get("games", []):
+            if (g.get("homeTeam", {}).get("teamAbbreviation") == h
+                    and g.get("awayTeam", {}).get("teamAbbreviation") == a and g.get("gameId")):
+                return g["gameId"]
+    return None
+
+
 def nba_confirmed_starters(home: str, away: str, con) -> Optional[dict]:
     """{home: [5], away: [5]} from NBA.com once lineups are posted, else None."""
     try:
         h, a = ESPN_TO_NBA.get(home, home), ESPN_TO_NBA.get(away, away)
-        games = _nba_json(NBA_SCOREBOARD)["scoreboard"]["games"]
-        gid = next((g["gameId"] for g in games
-                    if g["homeTeam"]["teamTricode"] == h and g["awayTeam"]["teamTricode"] == a), None)
+        gid = _daily_game_id(h, a)            # usually known already; the scoreboard is only the backup
+        if not gid:
+            games = _scoreboard_games() or []
+            gid = next((g["gameId"] for g in games
+                        if g["homeTeam"]["teamTricode"] == h and g["awayTeam"]["teamTricode"] == a), None)
         if not gid:
             return None
         try:
