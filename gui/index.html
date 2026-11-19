@@ -770,6 +770,15 @@ body.bets-mode .dayswitch, body.bets-mode #yestSum, body.bets-mode #dataView { d
 .tscroll .bk3 th:first-child, .tscroll .bk3 td:first-child { width: 46%; }
 .tscroll .bk3 th, .tscroll .bk3 td { padding-left: 6px; padding-right: 6px; }
 .bk3 .ourp { font-size: 11px; }
+
+/* real table grid: a line around every cell (owner: numbers looked like they were floating) */
+.book-sec .tscroll { border: 1px solid var(--line) !important; border-radius: 10px; overflow: hidden; margin-top: 6px; }
+.book-sec .bk3 { border-collapse: collapse; width: 100%; }
+.book-sec .bk3 th, .book-sec .bk3 td { border: 1px solid var(--line) !important; padding: 7px 6px !important; vertical-align: middle; }
+.book-sec .bk3 tr > :first-child { border-left: 0 !important; } .book-sec .bk3 tr > :last-child { border-right: 0 !important; }
+.book-sec .bk3 thead tr:first-child th { border-top: 0 !important; } .book-sec .bk3 tbody tr:last-child td { border-bottom: 0 !important; }
+.book-sec .bk3 thead th { background: color-mix(in srgb, var(--surface) 70%, transparent) !important; }
+.book-sec .bk3 tbody tr:nth-child(even) td { background: color-mix(in srgb, var(--surface) 45%, transparent) !important; }
 </style>
 </head>
 <body>
