@@ -216,6 +216,8 @@ def _clock(at) -> str:
     from zoneinfo import ZoneInfo
     if str(at).endswith(" 00:00:00"):
         return "opening"                       # DraftKings' official opening price (from ESPN)
+    if str(at).endswith(" 23:59:59"):
+        return "closing"                       # DraftKings' last price before tip-off (from ESPN, past games)
     try:
         t = datetime.fromtimestamp(int(at) / 1000, timezone.utc) if str(at).isdigit() \
             else datetime.fromisoformat(str(at)).replace(tzinfo=ZoneInfo("America/New_York"))

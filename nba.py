@@ -870,6 +870,11 @@ def sync_data() -> str:
         audit_season(con, key, a, b)
     repair_old_gaps(con)                       # older games still missing a first basket (once a week each)
     fill_first_fg(con)                         # first FIELD GOAL of every game (DraftKings' rule), once each
+    try:                                       # DraftKings' opening + closing odds for past games (ESPN), 300 a run
+        import draftkings_odds as _dk
+        _dk.backfill_history(con)
+    except Exception as e:  # noqa: BLE001 — never block the update over history
+        print(f"  ⚠️ DraftKings history not filled: {e}")
     try:                                       # last season's re-created picks for the "overall" record (once)
         import season_backtest
         season_backtest.fill_last_season(con)

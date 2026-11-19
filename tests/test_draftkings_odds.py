@@ -118,3 +118,17 @@ def test_first_field_goal_skips_free_throws():
     acts = [{"scoringPlay": True, "period": 1, "actionType": "free_throw", "shotType": "Free Throw - 1 of 2", "personId": "1", "teamTricode": "A"},
             {"scoringPlay": True, "period": 1, "actionType": "2pt", "shotType": "Layup", "personId": "2", "teamTricode": "B"}]
     assert nba.first_basket(acts)["personId"] == "1" and nba.first_field_goal(acts)["personId"] == "2"
+
+
+def test_history_backfill_opening_and_closing(monkeypatch):
+    import sqlite3
+    con = sqlite3.connect(":memory:")
+    con.execute("CREATE TABLE games (game_id TEXT, game_date TEXT, home_team TEXT, away_team TEXT)")
+    con.execute("CREATE TABLE first_baskets (game_id TEXT)")
+    con.execute("INSERT INTO games VALUES ('g', '20261101', 'MEM', 'GS')"); con.execute("INSERT INTO first_baskets VALUES ('g')")
+    monkeypatch.setattr(dk, "fetch_via_espn", lambda games, c: [{"players": [{"player": "P", "team": "MEM", "american": 600, "open": 700}],
+                                                                 "team_first": {"MEM": -150}, "team_first_open": {"MEM": -140}}])
+    assert dk.backfill_history(con) == {"games": 1, "with_odds": 1, "left": 0}
+    assert dk.backfill_history(con)["games"] == 0                                 # asked once per game
+    rows = con.execute("SELECT logged_at, american FROM dk_odds_log ORDER BY logged_at").fetchall()
+    assert rows == [("2026-11-01 00:00:00", 700), ("2026-11-01 23:59:59", 600)]

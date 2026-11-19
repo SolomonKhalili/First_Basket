@@ -339,3 +339,36 @@ def log_team_first(con, day: str, matchup: str, book: str, team: str, american: 
     if not last or last[0] != int(american):
         con.execute("INSERT OR IGNORE INTO team_first_log VALUES (?, ?, ?, ?, ?, ?)",
                     (day, matchup, at or _t.strftime("%Y-%m-%d %H:%M:%S"), book, team, int(american)))
+
+
+def backfill_history(con, limit: int = 300) -> dict:
+    """DraftKings' opening and closing first-basket (and team) prices for finished games, from ESPN's feed — it keeps
+    them for every game this season (and some of last season). Stamped "00:00:00" (= opening) and "23:59:59"
+    (= closing, the last price before tip-off). Each game is asked once (table dk_history); `limit` games per run so
+    the live job isn't held up. -> {"games": done this run, "with_odds": ..., "left": ...}"""
+    con.execute(DK_LOG_SCHEMA)
+    con.execute("CREATE TABLE IF NOT EXISTS dk_history (game_id TEXT PRIMARY KEY, players INTEGER)")
+    todo = con.execute("""SELECT g.game_id, g.game_date, g.home_team, g.away_team FROM games g
+                          JOIN first_baskets f USING(game_id)
+                          WHERE g.game_id NOT IN (SELECT game_id FROM dk_history) ORDER BY g.game_date DESC""").fetchall()
+    done = found = 0
+    for gid, day, home, away in todo[:limit]:
+        try:
+            got = fetch_via_espn([{"game_id": gid, "home_team": home, "away_team": away}], con)
+        except Exception:  # noqa: BLE001 — ESPN busy: try this game next run
+            continue
+        g = got[0] if got else {"players": [], "team_first": {}}
+        m, d0, d1 = f"{away} @ {home}", f"{day[:4]}-{day[4:6]}-{day[6:]} 00:00:00", f"{day[:4]}-{day[4:6]}-{day[6:]} 23:59:59"
+        for r in g["players"]:
+            con.execute("INSERT OR IGNORE INTO dk_odds_log VALUES (?, ?, ?, ?, ?, ?)", (day, m, d0, r["player"], r["team"], int(r["open"])))
+            con.execute("INSERT OR IGNORE INTO dk_odds_log VALUES (?, ?, ?, ?, ?, ?)", (day, m, d1, r["player"], r["team"], int(r["american"])))
+        for team, a in (g.get("team_first") or {}).items():
+            con.execute(TEAM_FIRST_SCHEMA)
+            opened = (g.get("team_first_open") or {}).get(team, a)
+            con.execute("INSERT OR IGNORE INTO team_first_log VALUES (?, ?, ?, ?, ?, ?)", (day, m, d0, "DraftKings", team, int(opened)))
+            con.execute("INSERT OR IGNORE INTO team_first_log VALUES (?, ?, ?, ?, ?, ?)", (day, m, d1, "DraftKings", team, int(a)))
+        con.execute("INSERT OR REPLACE INTO dk_history VALUES (?, ?)", (gid, len(g["players"])))
+        con.commit()
+        done += 1
+        found += bool(g["players"])
+    return {"games": done, "with_odds": found, "left": max(0, len(todo) - done)}
