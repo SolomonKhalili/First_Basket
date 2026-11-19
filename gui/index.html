@@ -1311,7 +1311,7 @@ function bookTabs(c) {
   const on = bookView[c.matchup] || "FanDuel";
   return `<div class="btabs bk-tabs" role="tablist">${["FanDuel", "DraftKings"].map((b) =>
     `<button type="button" data-bk="${b}" class="${b === on ? "on" : ""}" role="tab">${b}</button>`).join("")}</div>
-    <div class="ft-note">ℹ️ <b>FanDuel counts free throws</b> as the first basket. <b>DraftKings doesn't</b> — only field goals count. That's why the chances and top 5 can differ between the tabs.</div>`;
+    <div class="ft-note">ℹ️ <b>FanDuel: including free throws.</b> <b>DraftKings: excluding free throws.</b> That's why the chances and top 5 can differ between the tabs.</div>`;
 }
 $("cards").addEventListener("click", (ev) => {             // switch a game between its FanDuel and DraftKings tables
   const b = ev.target.closest("[data-bk]");
@@ -1350,10 +1350,10 @@ function bookSection(c, book, recLine, shortName) {
       <td class="r num">${pctCell(teamP[t])}</td><td class="r num">${ourCell(teamP[t])}</td><td class="r">${bookCell(teamOdds[t], teamP[t])}</td></tr>`).join("");
   const head = (first) => `<thead><tr><th>${first}</th><th class="r">Chance</th><th class="r">Our odds</th><th class="r">${short} odds</th></tr></thead>`;
   return `<div class="book-sec ${isFD ? "is-fd" : "is-dk"}">
-    <div class="book-h">${book} <small>${isFD ? "free throws count" : "only field goals count"}</small></div>
+    <div class="book-h">${book} <small>${isFD ? "including free throws" : "excluding free throws"}</small></div>
     <div class="sub-h">🏀 First basket <small>— top 5</small></div>
     <div class="tscroll"><table class="bk-table bk3">${head("Player")}<tbody>${rows || `<tr><td colspan="4">${missing(c, book)}</td></tr>`}</tbody></table></div>
-    ${teamRows ? `<div class="sub-h">🏀 First team to score${isFD ? "" : " <small>(1st field goal)</small>"}</div>
+    ${teamRows ? `<div class="sub-h">🏀 First team to score <small>(${isFD ? "including" : "excluding"} free throws)</small></div>
     <div class="tscroll"><table class="bk-table bk3">${head("Team")}<tbody>${teamRows}</tbody></table></div>` : ""}
   </div>`;
 }
