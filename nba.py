@@ -1150,6 +1150,8 @@ def predict_today(first_pass: bool = True, teams: set = frozenset(), ui=None) ->
         everyone = [{**info[i], "prob": float(probs[i])} for i in order]       # all 10 starters, for EV
         season_counts = season_first_baskets(con, [p['id'] for p in info], game_date)
         fd_card = _fanduel_card(fd_games, home_team, away_team, top5, everyone, dk_games)
+        first_team = ({home_team: float(probs[:len(home_starters)].sum()),
+                       away_team: float(probs[len(home_starters):].sum())} if pg.get("type") == "two_stage" else None)
         priced = fd_card.pop("_priced", [])
         if priced:                             # save the prices, so EV can be checked later (ev.paper_results)
             ev.log_odds(con, game_id, game_date, matchup, priced)
@@ -1161,8 +1163,8 @@ def predict_today(first_pass: bool = True, teams: set = frozenset(), ui=None) ->
             "probs": [[info[i]['name'], info[i]['team'], float(probs[i])] for i in order],   # all 10, for live odds
             "tip": {home_team: show_home, away_team: show_away}, "jumpers": jumpers,
             "tip_record": tip_record,             # each jumper's tips won / tips taken this season
-            "first_team": ({home_team: float(probs[:len(home_starters)].sum()),
-                            away_team: float(probs[len(home_starters):].sum())} if pg.get("type") == "two_stage" else None),
+            "first_team": first_team,
+            **_team_first_odds(fd_games, home_team, away_team, first_team),
             "home": home_team, "away": away_team,
             "home_starters": home_starters, "away_starters": away_starters,
             "injuries": injuries, "notes": notes,
@@ -1270,6 +1272,17 @@ def _best_prices(books: dict) -> tuple:
             if name not in best or ev.profit_per_dollar(a) > ev.profit_per_dollar(best[name]):
                 best[name], where[name] = a, book
     return best, where
+
+
+def _team_first_odds(fd_games, home: str, away: str, first_team) -> dict:
+    """FanDuel's "Team to Score First" price for each team and its value (EV per $1) at our chance; {} if none."""
+    import fanduel_odds as fd
+    game = fd.game_for(fd_games or [], home, away)
+    prices = {t: a for t, a in ((game or {}).get("team_first") or {}).items() if t in (home, away)}
+    if not prices or not first_team:
+        return {}
+    return {"team_first_odds": prices,
+            "team_first_ev": {t: first_team[t] * ev.profit_per_dollar(a) - (1 - first_team[t]) for t, a in prices.items()}}
 
 
 def _fanduel_card(fd_games, home: str, away: str, top5: list, everyone: list = (), dk_games=None) -> dict:

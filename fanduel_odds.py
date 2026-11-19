@@ -122,6 +122,28 @@ def fetch_first_basket(event_id: str) -> list[dict]:
     return parse_first_basket(_get("event-page", eventId=event_id, tab="popular"))
 
 
+def parse_team_first(event_page: dict) -> dict:
+    """Pure (testable). A game's 1st-quarter tab -> FanDuel's "Team to Score First" prices {ESPN code: american};
+    {} when not offered or closed."""
+    for m in event_page.get("attachments", {}).get("markets", {}).values():
+        if m.get("marketName", "").strip().lower() == "team to score first" and m.get("marketStatus", "OPEN") == "OPEN":
+            out = {}
+            for r in m.get("runners", []):
+                a = (r.get("winRunnerOdds") or {}).get("americanDisplayOdds", {}).get("americanOddsInt")
+                if a is not None and r.get("runnerStatus", "ACTIVE") == "ACTIVE":
+                    out[team_code(r.get("runnerName", ""))] = int(a)
+            return out
+    return {}
+
+
+def fetch_team_first(event_id: str) -> dict:
+    # "Team to Score First" sits on the game's "1st Quarter" tab.
+    try:
+        return parse_team_first(_get("event-page", eventId=event_id, tab="1st-quarter"))
+    except Exception:  # noqa: BLE001 — extra market: never block the first-basket prices
+        return {}
+
+
 def fetch_first_basket_odds(teams=frozenset()) -> list[dict]:
     """Today's games with their First Basket prices. `teams`: ESPN codes to keep (empty = every game)."""
     out = []
@@ -130,7 +152,8 @@ def fetch_first_basket_odds(teams=frozenset()) -> list[dict]:
         if teams and not ({g["home_code"], g["away_code"]} & set(teams)):
             continue
         players = fetch_first_basket(g["event_id"])
-        out.append({**g, "players": players, "margin": margin(players)})
+        time.sleep(SLEEP)
+        out.append({**g, "players": players, "margin": margin(players), "team_first": fetch_team_first(g["event_id"])})
         time.sleep(SLEEP)
     return out
 

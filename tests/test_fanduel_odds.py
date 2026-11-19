@@ -85,3 +85,13 @@ def test_game_for():
     games = [{"home_code": "MIA", "away_code": "MIL"}, {"home_code": "OKC", "away_code": "ATL"}]
     assert fd.game_for(games, "OKC", "ATL") is games[1]
     assert fd.game_for(games, "ATL", "OKC") is None
+
+
+def test_team_to_score_first_prices():
+    import fanduel_odds as fd
+    page = {"attachments": {"markets": {"1": {"marketName": "Team to Score First", "marketStatus": "OPEN", "runners": [
+        {"runnerName": "Golden State Warriors", "winRunnerOdds": {"americanDisplayOdds": {"americanOddsInt": 124}}},
+        {"runnerName": "Memphis Grizzlies", "winRunnerOdds": {"americanDisplayOdds": {"americanOddsInt": -158}}}]}}}}
+    assert fd.parse_team_first(page) == {"GS": 124, "MEM": -158}
+    page["attachments"]["markets"]["1"]["marketStatus"] = "SUSPENDED"
+    assert fd.parse_team_first(page) == {}

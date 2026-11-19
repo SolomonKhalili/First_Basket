@@ -687,6 +687,8 @@ body.bets-mode .dayswitch, body.bets-mode #yestSum, body.bets-mode #dataView { d
 .bet-legs { display: block; margin-top: 3px; font-size: 12.5px; color: var(--muted); }
 .bet-legs .lw { color: var(--good); } .bet-legs .ll { color: var(--bad); text-decoration: line-through; }
 .clv-simple { font-size: 13.5px; color: var(--muted); margin: 4px 0 10px; line-height: 1.5; } .clv-simple b { color: var(--text); }
+.tf-line { margin-top: 8px; font-size: 13px; color: var(--muted); } .tf-line b.g { color: var(--good); }
+.tf-verdict { margin-top: 6px; font-size: 13px; color: var(--muted); padding: 7px 10px; border-radius: 10px; background: var(--surface-2); } .tf-verdict.pos { background: var(--good-soft); color: var(--text); }
 </style>
 </head>
 <body>
@@ -1094,6 +1096,7 @@ function card(c, i) {
     first = `<div class="fact">
       <div class="row"><b>Scores first</b><span class="num">${c.away} ${pct(away, 0)} · ${c.home} ${pct(home, 0)}</span></div>
       <div class="split"><div style="width:${away * 100}%;background:${color(c.away)}"></div><div style="width:${home * 100}%;background:${color(c.home)}"></div></div>
+      ${teamFirstLine(c)}
     </div>`;
   }
   const max = top[2];
@@ -1151,6 +1154,17 @@ function card(c, i) {
   </article>`;
 }
 
+/* FanDuel's "Team to Score First" price vs our chance, in plain words */
+function teamFirstLine(c) {
+  const o = c.team_first_odds, v = c.team_first_ev || {};
+  if (!o || !Object.keys(o).length) return "";
+  const best = [c.away, c.home].filter((t) => v[t] >= VALUE_MIN).sort((a, b) => v[b] - v[a])[0];
+  const price = (t) => o[t] === undefined ? "–" : `<b class="${v[t] >= VALUE_MIN ? "g" : ""}">${american(o[t])}</b>`;
+  return `<div class="tf-line">FanDuel pays: ${esc(c.away)} ${price(c.away)} · ${esc(c.home)} ${price(c.home)}</div>
+    <div class="tf-verdict ${best ? "pos" : ""}">${best
+      ? `💰 <b>Good bet: ${esc(best)} to score first</b> — FanDuel pays more than it should (about ${cents(v[best])} profit per $1 over time).`
+      : `No good bet here — FanDuel pays too little on both teams.`}</div>`;
+}
 function countUp(el) {
   const v = parseFloat(el.dataset.v);
   if (calm || !v) return;
@@ -2085,6 +2099,9 @@ function bestBets() {
       }
       if (best && best.ev >= VALUE_MIN) out.push({ c, name, team, prob, ...best });
     }
+    const tf = c.team_first_odds || {}, tv = c.team_first_ev || {};     // team to score first (FanDuel)
+    for (const t of Object.keys(tf)) if (tv[t] >= VALUE_MIN && c.first_team)
+      out.push({ c, name: `${t} to score first`, team: t, prob: c.first_team[t], book: "FanDuel", american: tf[t], ev: tv[t], teamBet: true });
   }
   return out.sort((a, b) => b.ev - a.ev);
 }
@@ -2111,7 +2128,7 @@ function renderBestBets() {
 $("bestBets").addEventListener("click", (ev) => {
   if (ev.target.closest("#bbMore")) { bbAll = !bbAll; renderBestBets(); return; }
   const b = ev.target.closest("[data-bb]");
-  if (b) { const r = $("bestBets")._rows[+b.dataset.bb]; if (r) openBetFor(r.c, r.name, r.book); }
+  if (b) { const r = $("bestBets")._rows[+b.dataset.bb]; if (r && !r.teamBet) openBetFor(r.c, r.name, r.book); }
 });
 
 /* ── My bets: tap a player on Today's cards -> log the bet; "My bets" shows wins, losses, profit ── */
