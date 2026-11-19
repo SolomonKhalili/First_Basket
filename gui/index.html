@@ -832,6 +832,22 @@ details.oc > summary::before { content: none; }
 details.oc[open] { grid-column: 1 / -1; }
 .otl { max-height: 340px; overflow-y: auto; }
 .otabs { margin-bottom: 6px; }
+/* ── Top boxes, organized: photo + name on top, two equal tiles below ── */
+.hero.hero2 { display: block; padding: 14px 14px 14px; min-height: 0; }
+.hero2 .hero-top { display: flex; align-items: flex-end; gap: 12px; margin: -14px -14px 0; padding: 12px 14px 0 8px;
+  border-bottom: 1px solid color-mix(in srgb, var(--line) 70%, transparent); }
+.hero2 .who { padding-bottom: 12px; flex: 1; min-width: 0; }
+.hero2 .shot { width: 108px; height: 92px; }
+.team-hero.hero2 .shot { height: 92px; padding-bottom: 10px; }
+.tiles-h { font-size: 11px; color: var(--accent); text-transform: uppercase; letter-spacing: .1em; font-weight: 700; margin: 12px 0 8px; }
+.tiles { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+.tile { text-align: center; background: rgba(0,0,0,.28); border: 1px solid var(--line); border-radius: 12px; padding: 10px 8px; }
+.tile.fd { box-shadow: inset 0 3px 0 #3b82f6; } .tile.dk { box-shadow: inset 0 3px 0 #22c55e; }
+.tile .t-bk { font-weight: 800; font-size: 15px; }
+.tile .t-rule { font-size: 13px; color: #c9ced8; margin-top: 1px; }
+.hero2 .tile .pct { font-size: 36px; margin: 6px 0 4px; line-height: 1; }
+.tile .t-odds { font-size: 14px; color: #c9ced8; } .tile .t-odds b { color: #fff; }
+@media (max-width: 520px) { .hero2 .tile .pct { font-size: 32px; } .hero2 .shot { width: 92px; } }
 </style>
 </head>
 <body>
@@ -1313,12 +1329,12 @@ function card(c, i) {
       <div class="verdict"></div>
       <div class="facts tip-top" style="--i:${i}">${tipBlock}</div>
       <div class="sec-title">🏀 First basket prediction</div>
-      <div class="hero">
-        <div class="shot">${topId ? `<img src="${headshot(topId)}" alt="" loading="lazy" onerror="this.remove()">` : ""}<span class="initials">${initials(top[0])}</span></div>
-        <div class="who"><div class="label">Top pick</div><div class="name">${esc(top[0])}</div><div class="team">${logo(top[1], 16)}${esc(top[1])}</div>${heroRec}</div>
-        <div class="big"><div class="hero-our">Our chance</div><div class="hero-pcts"><div><div class="pct num" data-v="${top[2]}">${pct(top[2])}</div><div class="hero-bk">Incl. free throws<small>FanDuel rule</small></div></div>
-          ${(c.probs_fg || {})[top[0]] !== undefined ? `<div><div class="pct num" data-v="${c.probs_fg[top[0]]}">${pct(c.probs_fg[top[0]])}</div><div class="hero-bk">Excl. free throws<small>DraftKings rule</small></div></div>` : ""}</div>
-          <div class="sub num">${[fd[top[0]] !== undefined ? `<span class="book-line">FD odds <b>${american(fd[top[0]])}</b></span>` : "", dk[top[0]] !== undefined ? `<span class="book-line">DK odds <b>${american(dk[top[0]])}</b></span>` : ""].filter(Boolean).join("")}</div></div>
+      <div class="hero hero2">
+        <div class="hero-top">
+          <div class="shot">${topId ? `<img src="${headshot(topId)}" alt="" loading="lazy" onerror="this.remove()">` : ""}<span class="initials">${initials(top[0])}</span></div>
+          <div class="who"><div class="label">Top pick</div><div class="name">${esc(top[0])}</div><div class="team">${logo(top[1], 16)}${esc(top[1])}</div>${heroRec}</div>
+        </div>
+        ${heroTiles(top[2], (c.probs_fg || {})[top[0]], fd[top[0]], dk[top[0]])}
       </div>
       ${bookTabs(c)}
       ${bookSection(c, bookView[c.matchup] || "FanDuel", recLine, shortName)}
@@ -1374,6 +1390,15 @@ $("cards").addEventListener("click", (ev) => {             // switch a game betw
   el.outerHTML = card(cards[i], i).replace('class="card enter"', 'class="card"');
   try { markBetRows(); } catch (e) { /* bets not loaded yet */ }
 });
+/* The two "our chance" tiles in a top box: FanDuel's rule (free throws count) and DraftKings' rule (they don't) */
+function heroTiles(pFd, pDk, oddsFd, oddsDk) {
+  const tile = (cls, book, rule, p, odds, short) => `<div class="tile ${cls}">
+      <div class="t-bk">${book}</div><div class="t-rule">${rule}</div>
+      <div class="pct num"${p !== undefined ? ` data-v="${p}"` : ""}>${p !== undefined ? pct(p) : "–"}</div>
+      <div class="t-odds">${odds !== undefined && odds !== null ? `${short} odds <b class="num">${american(odds)}</b>` : `${short} odds –`}</div></div>`;
+  return `<div class="tiles-h">Our chance to score first</div><div class="tiles">
+    ${tile("fd", "FanDuel", "incl. free throws", pFd, oddsFd, "FD")}${tile("dk", "DraftKings", "excl. free throws", pDk, oddsDk, "DK")}</div>`;
+}
 const TEAM_NAMES = { ATL: "Atlanta Hawks", BOS: "Boston Celtics", BKN: "Brooklyn Nets", CHA: "Charlotte Hornets", CHI: "Chicago Bulls",
   CLE: "Cleveland Cavaliers", DAL: "Dallas Mavericks", DEN: "Denver Nuggets", DET: "Detroit Pistons", GS: "Golden State Warriors", GSW: "Golden State Warriors",
   HOU: "Houston Rockets", IND: "Indiana Pacers", LAC: "LA Clippers", LAL: "Los Angeles Lakers", MEM: "Memphis Grizzlies", MIA: "Miami Heat",
@@ -1387,12 +1412,12 @@ function teamHero(c, fdP, dkP) {
   if (teams.length < 2) return "";
   const top = teams.sort((a, b) => fdP[b] - fdP[a])[0];
   const fdOdds = ((c.team_first_books || {}).FanDuel || {})[top], dkOdds = ((c.team_first_books || {}).DraftKings || {})[top];
-  return `<div class="sec-title" style="margin-top:16px">🏀 First team to score prediction</div><div class="hero team-hero" style="--top-c:${color(top)}">
-      <div class="shot"><img src="${logoUrl(top).replace("w=96&h=96", "w=200&h=200")}" alt="" loading="lazy" onerror="this.remove()"><span class="initials">${esc(top)}</span></div>
-      <div class="who"><div class="label">Top team to score first</div><div class="name">${esc(TEAM_NAMES[top] || top)}</div></div>
-      <div class="big"><div class="hero-our">Our chance</div><div class="hero-pcts"><div><div class="pct num">${pct(fdP[top])}</div><div class="hero-bk">Incl. free throws<small>FanDuel rule</small></div></div>
-        ${dkP[top] !== undefined ? `<div><div class="pct num">${pct(dkP[top])}</div><div class="hero-bk">Excl. free throws<small>DraftKings rule</small></div></div>` : ""}</div>
-        <div class="sub num">${[fdOdds !== undefined ? `<span class="book-line">FD odds <b>${american(fdOdds)}</b></span>` : "", dkOdds !== undefined ? `<span class="book-line">DK odds <b>${american(dkOdds)}</b></span>` : ""].filter(Boolean).join("")}</div></div>
+  return `<div class="sec-title" style="margin-top:16px">🏀 First team to score prediction</div><div class="hero hero2 team-hero" style="--top-c:${color(top)}">
+      <div class="hero-top">
+        <div class="shot"><img src="${logoUrl(top).replace("w=96&h=96", "w=200&h=200")}" alt="" loading="lazy" onerror="this.remove()"><span class="initials">${esc(top)}</span></div>
+        <div class="who"><div class="label">Top team to score first</div><div class="name">${esc(TEAM_NAMES[top] || top)}</div></div>
+      </div>
+      ${heroTiles(fdP[top], dkP[top], fdOdds, dkOdds)}
     </div>
     <div class="small-note team-rule">ℹ️ <b>Team to score first:</b> FanDuel counts free throws. The DraftKings team bet is “1st field goal”, so free throws don’t count — that’s why there are two chances.</div>`;
 }
