@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
-<!-- Keeps the NBA folder up to date with the cloud copy: runs sync_from_cloud.py at login and every 30 minutes.
+<!-- Keeps the NBA folder up to date with the cloud copy: runs sync_from_cloud.py at login and every minute.
      Installed as ~/Library/LaunchAgents/com.firstbasket.sync.plist. To turn it off:
        launchctl bootout gui/$(id -u) ~/Library/LaunchAgents/com.firstbasket.sync.plist -->
 <plist version="1.0">
@@ -22,7 +22,7 @@
   <key>RunAtLoad</key>
   <true/>
   <key>StartInterval</key>
-  <integer>1800</integer>
+  <integer>60</integer>
   <key>StandardOutPath</key>
   <string>/tmp/firstbasket-sync.out</string>
   <key>StandardErrorPath</key>

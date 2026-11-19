@@ -185,6 +185,7 @@ def filed_games(game_ids) -> set:
 # ──────────────────────────────────────────────
 # LIVE MODE: game night, every few minutes
 # ──────────────────────────────────────────────
+SAVE_EVERY = 10 * 60          # data saved for the Mac at most every 10 min, and only when it changed
 PUBLISH_GAP = 6 * 60          # GitHub Pages allows ~10 publishes an hour
 MAX_RUN = 5 * 3600 + 30 * 60  # GitHub stops a job at 6 h; the next scheduled run picks up from here
 FAST = SLOW = 3 * 60          # check lineups, injuries and odds every 3 minutes all day (not just near tip-off)
@@ -295,6 +296,7 @@ def live(out: Path, once: bool = False) -> int:
         say("no website accounts yet — nothing to publish")
         return 0
     started, last_pub, last_save, published_fp, fails = time.time(), 0.0, time.time(), None, 0
+    saved_sig = None
     last_bets = 0.0
     day = datetime.now(ET).strftime("%Y%m%d")          # the NBA day this run looks after
     settings = lambda: json.dumps(load_site_users(), sort_keys=True) + (  # noqa: E731 — accounts + relay address
@@ -393,9 +395,11 @@ def live(out: Path, once: bool = False) -> int:
             save_state()
             say("done — every game is over and filed" if all_done else "done for this run")
             return 0
-        if time.time() - last_save > 1800:
+        db = HERE / "nba_first_basket.db"                # save (for the Mac's copy) once the data changed, at most
+        sig = (db.stat().st_mtime_ns, db.stat().st_size) if db.exists() else None     # every 10 min (GitHub storage)
+        if sig != saved_sig and time.time() - last_save > SAVE_EVERY:
             save_state()
-            last_save = time.time()
+            last_save, saved_sig = time.time(), sig
         if nap(FAST if wait < 100 * 60 else SLOW if wait != float("inf") else 10 * 60):
             save_state()                                 # new code arrived while waiting: hand over now
             (HERE / ".restart").write_text("new code")

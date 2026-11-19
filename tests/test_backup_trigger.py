@@ -25,3 +25,11 @@ def test_nightly_in_the_morning():
 
 def test_quiet_overnight():
     assert backup_action(at(2), at(23) - timedelta(days=1), busy=False) is None
+
+
+def test_full_check_only_every_25_minutes(tmp_path):
+    from sync_from_cloud import due_full_check
+    f = tmp_path / "t"
+    assert due_full_check(1e9, f) is True
+    assert due_full_check(1e9 + 60, f) is False            # a minute later: just the quick sync
+    assert due_full_check(1e9 + 26 * 60, f) is True
