@@ -1353,7 +1353,7 @@ function teamHero(c, fdP, dkP) {
   if (teams.length < 2) return "";
   const top = teams.sort((a, b) => fdP[b] - fdP[a])[0];
   const fdOdds = ((c.team_first_books || {}).FanDuel || {})[top], dkOdds = ((c.team_first_books || {}).DraftKings || {})[top];
-  return `<div class="hero team-hero" style="--top-c:${color(top)}">
+  return `<div class="sec-title" style="margin-top:16px">🏀 First team to score prediction</div><div class="hero team-hero" style="--top-c:${color(top)}">
       <div class="shot"><img src="${logoUrl(top).replace("w=96&h=96", "w=200&h=200")}" alt="" loading="lazy" onerror="this.remove()"><span class="initials">${esc(top)}</span></div>
       <div class="who"><div class="label">Top team to score first</div><div class="name">${esc(TEAM_NAMES[top] || top)}</div></div>
       <div class="big"><div class="hero-our">Our chance</div><div class="hero-pcts"><div><div class="pct num">${pct(fdP[top])}</div><div class="hero-bk">Incl. free throws<small>FanDuel’s rule</small></div></div>
