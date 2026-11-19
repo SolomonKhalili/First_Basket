@@ -341,7 +341,7 @@ def log_team_first(con, day: str, matchup: str, book: str, team: str, american: 
                     (day, matchup, at or _t.strftime("%Y-%m-%d %H:%M:%S"), book, team, int(american)))
 
 
-def backfill_history(con, limit: int = 300) -> dict:
+def backfill_history(con, limit: int = 5000) -> dict:
     """DraftKings' opening and closing first-basket (and team) prices for finished games, from ESPN's feed — it keeps
     them for every game this season (and some of last season). Stamped "00:00:00" (= opening) and "23:59:59"
     (= closing, the last price before tip-off). Each game is asked once (table dk_history); `limit` games per run so
