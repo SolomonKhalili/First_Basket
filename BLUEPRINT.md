@@ -778,6 +778,10 @@ NBA/
   Model files record `early_m`; `_retrain_if_needed` retrains when it doesn't match. Season/last-10 trust re-checked:
   current 30 / 10 still best. (Note: `season_backtest.fill_fg_grades` grades the field-goal model with the
   first-points early setting — re-grade only if those grades are re-run.)
+- **Fixed — website sent people to /login (GitHub 404)**: when a data download failed for a moment (GitHub mid-update),
+  `static_site.html` answered 401 "log in first" and the page jumped to the Mac app's `/login`. Now a failed download
+  keeps the last data and retries (`getEnc`), 401 only for a removed account or no data at all, and the page only goes
+  to `/login` in the Mac app. Checked on the local site copy with data.json blocked: stays on the picks.
 - **Lineup / injury status checked by simulation (owner):** questionable → cleared (off ESPN's report) removes the ⚠️ tag,
   backup line and backup row and shows "✅ Active" on Injuries; expected → confirmed switches the badge, drops the
   "not out yet" note and backups, and Starters lists now show "✅ playing" (projected column: "❌ not starting" if he's

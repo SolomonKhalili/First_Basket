@@ -83,7 +83,14 @@
   // ── locked results: download, unlock, decrypt ──
   async function getEnc(force) {
     if (!force && enc && Date.now() - encAt < 120000) return enc;      // re-check for a newer update every 2 min
-    enc = await (await realFetch(`${DATA_URL}?t=${Date.now()}`, { cache: "no-store" })).json();
+    try {
+      const r = await realFetch(`${DATA_URL}?t=${Date.now()}`, { cache: "no-store" });
+      if (!r.ok) throw new Error(`data ${r.status}`);
+      enc = await r.json();
+    } catch (e) {
+      if (!enc) throw e;                 // nothing yet: the caller shows the error
+      return enc;                        // GitHub mid-update / offline: keep the last data, try again next time
+    }
     encAt = Date.now();
     return enc;
   }
@@ -300,7 +307,10 @@
     if (path === "/api/me") return reply({ user, role: "viewer", logins: true });
     if (path === "/api/predict") return reply({ error: "view-only" }, 403);
     if (path === "/api/bets" || path === "/api/bets/delete") return betsApi(path, init);
-    try { await refresh(false); } catch (e) { return reply({ error: "log in first" }, 401); }
+    try { await refresh(false); }
+    catch (e) {                          // a failed download (e.g. GitHub mid-update) is not a logout: keep the last data
+      if (!bundle || /account removed/.test(String(e))) return reply({ error: "log in first" }, 401);
+    }
     if (path === "/api/status") return reply(bundle.status);
     if (path === "/api/record") return reply(bundle.record);
     if (path === "/api/yesterday") return reply(bundle.yesterday || { cards: [], games: [], hits: 0, graded: 0 });

@@ -1104,7 +1104,10 @@ const announced = new Set();    // games whose first-basket toast was shown
 
 async function getJSON(url, opts) {
   const r = await fetch(url, opts);
-  if (r.status === 401) { location.href = "/login"; throw new Error("logged out"); }
+  if (r.status === 401) {                // the Mac app's own login page; the website has its own login screen
+    if (window.FB_ODDS_BASE === undefined) location.href = "/login";
+    throw new Error("logged out");
+  }
   return r.json();
 }
 
