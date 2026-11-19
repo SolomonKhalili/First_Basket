@@ -1,6 +1,6 @@
 # NBA First Basket Scorer — Project Blueprint
 
-> **Last updated:** 2026-11-18 (app, private website, live cloud updates, live FanDuel odds) · **Owner:** Solomon · **Folder:** `~/Desktop/NBA`
+> **Last updated:** 2026-11-19 (Today / Yesterday views, AWAY / HOME labels, iPhone and desktop layout fixes, paper betting explained) · **Owner:** Solomon · **Folder:** `~/Desktop/NBA`
 >
 > Single source of truth for the project's state: what works, how well, what is known to be wrong, and
 > what comes next. Update it in the same session as any change (checklist in §11). Every number here was
@@ -318,13 +318,13 @@ fallback 0.6354 / 0.6323 → NBA.com's listed C in training too 0.6299 / 0.6309.
 | First-shot data + share | `nba.first_shots`, `build_features.first_shot_share` | ✅ Recorded for every game; tested as a model input and not adopted (§7.1) |
 | Early-shot data + share | `nba.early_shots`, `build_features.early_shot_share` | ✅ Each team's first 5 attempts recorded for every game; **used by the model** (stage 2) |
 
-**Tests:** 187 passing in 16 files (`python3 -m pytest`, 2026-11-18). Earlier breakdown (2026-11-17): 115 passing — `test_starters.py` (45), `test_pipeline.py` (29: sync, retrain decision, incremental build incl. late-labelled games, label guards, tip-rate rule), `test_display.py` (10), `test_tip_model.py` (8), `test_picks.py` (19), `test_pregame_model.py` (4). The incremental-build test was checked by re-introducing the old zero-games bug: it fails, as it should.
+**Tests:** 192 passing in 15 files (`python3 -m pytest`, 2026-11-19). Earlier breakdown (2026-11-17): 115 passing — `test_starters.py` (45), `test_pipeline.py` (29: sync, retrain decision, incremental build incl. late-labelled games, label guards, tip-rate rule), `test_display.py` (10), `test_tip_model.py` (8), `test_picks.py` (19), `test_pregame_model.py` (4). The incremental-build test was checked by re-introducing the old zero-games bug: it fails, as it should.
 
 ### 4a. App, website and automation (2026-11-18)
 
 | Component | File(s) | Status |
 |-----------|---------|--------|
-| Desktop app (GUI) | `gui.py`, `gui/index.html` | ✅ Picks cards, live scoreboard (ESPN), tip-off matchups, EV guide, Data view (Scorecard / Our picks / Lineups / All games with search, season and player filters); tap games to show only those; started games keep the picks made before tip-off ("Picked before tip-off", rebuilt from `pick_log` if needed); exact pick number of the first scorer ("Our #2 pick"); always dark |
+| Desktop app (GUI) | `gui.py`, `gui/index.html` | ✅ Picks cards, live scoreboard (ESPN), tip-off matchups, EV guide, **Yesterday / Today switch** (Yesterday tab on the left: yesterday's game tiles with the picks made before tip-off, last saved FanDuel line, actual first scorer, our rank for him and final score — `gui.day_cards`, `/api/yesterday`; the website gets the same from `publish._yesterday`), AWAY / HOME labels on every tile and card (left = away, right = home), paper betting explained for beginners (stat boxes, "how to read this", what each lost bet would have paid), missed-pick bars and tags in orange, Data view (Scorecard / Our picks / Lineups / All games with search, season and player filters); tap games to show only those; started games keep the picks made before tip-off ("Picked before tip-off", rebuilt from `pick_log` if needed); exact pick number of the first scorer ("Our #2 pick"); always dark |
 | Live FanDuel odds on the page | `gui/index.html` (`refreshOdds`), `gui.py` `/api/fd/prices`, `fanduel_odds.fetch_prices` | ✅ Read on page open, then every 30 s, from FanDuel's small price feed (~7 KB/game) by market + selection id (`card.fd_market`, set by `nba._fanduel_card`); EV and best deal recomputed in the page; 20 s shared cache; backs off on errors. Prices matched FanDuel exactly in a live check |
 | DraftKings odds | `draftkings_odds.py`, `nba._draftkings_prices`, `nba._best_prices`; page `bookCell` | ✅ 2026-11-18 (owner's decision): DraftKings' "1st Points Scorer" (subcategory 16305 — first points incl. free throws, same rule as FanDuel and the model), read from the JSON DraftKings' site loads, one request for every game. Cards show FanDuel + DraftKings; Value and Best deal use the better price and name the book. **DraftKings refuses cloud servers** (GitHub's job gets an HTTP error) **but allows any website to read its feed from a browser** (`Access-Control-Allow-Origin: *`), so the page reads DraftKings straight from each viewer's own phone/computer on open and every 30 s (`refreshDK` in gui/index.html) — no Mac, no server. Verified 2026-11-18 10:07 PM (both open games, ★ and best deal from DraftKings). A Mac → cloud fallback (`draftkings_odds.py --push`, branch `dk-prices`) was tried and removed (owner: nothing may depend on the Mac); the cloud still uses a pushed snapshot if one is ever under 10 min old. Paper betting / `odds_log` stay FanDuel-only. Live check: all 30 starters matched (accents included); prices differ by book (Dončić FD +330 / DK +365). DraftKings refuses requests without browser-style headers; the owner accepted that it may block or change this |
 | Accounts (Mac app sharing) | `accounts.py` | ✅ Hashed passwords, owner/viewer; no length rules (owner's choice) |
@@ -523,13 +523,14 @@ NBA/
 ├── pregame_model.json      # active model weights + walk-forward results
 ├── train_pregame.py        # training, walk-forward test, keep-previous check
 ├── build_features.py       # training matrices (incremental) + player game logs
-├── tests/                  # 187 tests in 16 files (python3 -m pytest)
+├── tests/                  # 192 tests in 15 files (python3 -m pytest)
 ├── nba_first_basket.db     # SQLite: games, first_baskets, lineups, official_lineups, first_shots, early_shots, pick_log (+ legacy predictions)
 ├── player_game_logs.pkl    # per-player game logs
 ├── X_train.npy, y_train.npy, groups.npy, game_ids.json, feature_names.json, meta.json   # training matrices
 ├── first_basket_data.csv   # export of all labelled games (13 columns)
 ├── my_predictions.xlsx     # Scorecard tab + Games tab: our picks vs what actually happened
 ├── gui.py, gui/            # desktop app server + page (gui/index.html); gui/static_site.html = website login + data layer
+├── iphone_check.py         # iPhone-style screenshots (WebKit) of the Today and Yesterday views → iphone_shots/
 ├── accounts.py             # app accounts (owner/viewer)
 ├── publish.py              # builds the encrypted website; --live = game-night loop, --once = one update
 ├── site_users.py, site_users.json   # website accounts (wrapped keys only, no passwords)
@@ -562,6 +563,21 @@ NBA/
 ---
 
 ## 10. Change log (newest first)
+
+### 2026-11-19 (overnight) — Yesterday view, home/away labels, layout fixes
+
+- **Today / Yesterday switch** (`gui.day_cards`, `/api/yesterday`, `publish._yesterday`): every game we picked
+  yesterday, rebuilt from `pick_log` (picks made before tip-off, last saved FanDuel line), with who scored first
+  (from `first_baskets`, or ESPN's play-by-play if not filed yet), our rank for him and ESPN's final score.
+  Yesterday gets the same tile grid, section header and "our pick" line as Today; Yesterday tab on the left.
+- **AWAY / HOME labels** on every tile and card, bigger and brighter; hint line "left team = away, right = home".
+- **Colours:** missed-pick bars and tags orange instead of grey; green / yellow result bars share the orange one's border.
+- **Paper betting explained for beginners:** what it is, three stat boxes ($1 bets / won / paid back), a fold-out
+  "New to betting? How to read this", and for each lost bet what it would have paid.
+- **Layout:** scores stay on one line on iPhones; wider desktop tiles so names, scores and pick tags aren't cut off.
+  New `iphone_check.py` takes WebKit iPhone screenshots (Today + Yesterday) to check this.
+- Data line shows the year ("through 11/18/2026").
+- **Verified:** 192 tests pass (2026-11-19).
 
 ### 2026-11-18 (night) — DraftKings logging, saved lines, timer fixed
 
@@ -1093,3 +1109,4 @@ lineups, and the tip-off feature was broken.
 3. Update §2 (data counts) and §3 (new results — walk-forward only, never in-sample).
 4. Update §6: remove verified assumptions, add new limitations.
 5. Update "Last updated" at the top. Run the test command in §5 and record the count.
+6. Update `README.md` whenever anything a user sees or runs changed (features, files, commands, test count) — same session, never later.
