@@ -783,6 +783,8 @@ body.bets-mode .dayswitch, body.bets-mode #yestSum, body.bets-mode #dataView { d
 .bk3 .chance { font-size: 15px; } .bk3 .our { color: var(--muted); font-weight: 600; }
 .book-sec { margin-top: 8px; }
 .ft-note { margin: 8px 2px 0; font-size: 12.5px; color: var(--muted); line-height: 1.45; } .ft-note b { color: var(--text); }
+.hero-bk { font-size: 12px; color: var(--muted); font-weight: 700; margin-top: -2px; } .hero-bk small { font-weight: 400; }
+.hero-dk { font-size: 26px; font-weight: 800; color: #86efac; margin-top: 6px; line-height: 1; }
 </style>
 </head>
 <body>
@@ -1263,7 +1265,9 @@ function card(c, i) {
       <div class="hero">
         <div class="shot">${topId ? `<img src="${headshot(topId)}" alt="" loading="lazy" onerror="this.remove()">` : ""}<span class="initials">${initials(top[0])}</span></div>
         <div class="who"><div class="label">Top pick</div><div class="name">${esc(top[0])}</div><div class="team">${logo(top[1], 16)}${esc(top[1])}</div>${heroRec}</div>
-        <div class="big"><div class="pct num" data-v="${top[2]}">${pct(top[2])}</div><div class="sub num">fair ${american(top[3])}${topFd}</div></div>
+        <div class="big"><div class="pct num" data-v="${top[2]}">${pct(top[2])}</div><div class="hero-bk">FanDuel <small>incl. free throws</small></div>
+          ${(c.probs_fg || {})[top[0]] !== undefined ? `<div class="hero-dk num">${pct(c.probs_fg[top[0]])}</div><div class="hero-bk">DraftKings <small>excl. free throws</small></div>` : ""}
+          <div class="sub num">${[fd[top[0]] !== undefined ? `FD odds <b>${american(fd[top[0]])}</b>` : "", dk[top[0]] !== undefined ? `DK odds <b>${american(dk[top[0]])}</b>` : ""].filter(Boolean).join(" · ")}</div></div>
       </div>
       ${valueLine}
       ${bookTabs(c)}
