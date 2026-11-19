@@ -129,7 +129,7 @@ button { font: inherit; cursor: pointer; border: 0; color: inherit; }
 .tag { font-size: 11px; font-weight: 700; border-radius: 6px; padding: 1px 6px; margin-left: 4px; white-space: nowrap; }
 .tag.hit { background: var(--good-soft); color: var(--good); animation: pop .5s ease both; }
 .tag.top3 { background: var(--warn-soft); color: var(--warn); }
-.tag.miss { background: var(--surface-2); color: var(--muted); }
+.tag.miss { background: color-mix(in srgb, var(--accent) 22%, var(--surface)); color: var(--accent); border: 1px solid color-mix(in srgb, var(--accent) 55%, transparent); font-weight: 700; }
 .dot { width: 10px; height: 10px; border-radius: 50%; display: inline-block; flex: none; }
 .hint { color: var(--muted); font-size: 13px; margin-top: 10px; }
 #boardHint { display: flex; align-items: center; flex-wrap: wrap; gap: 8px 12px; }
@@ -186,7 +186,8 @@ button { font: inherit; cursor: pointer; border: 0; color: inherit; }
 .verdict.on { display: block; animation: pop .45s ease both; }
 .verdict.hit { background: var(--good-soft); color: var(--good); }
 .verdict.top3 { background: var(--warn-soft); color: var(--warn); }
-.verdict.miss { background: var(--surface-2); color: var(--muted); }
+.verdict.miss { background: color-mix(in srgb, var(--accent) 18%, var(--surface)); color: var(--text); border: 1.5px solid var(--accent); border-left-width: 5px; }
+.verdict.miss b { color: var(--accent); }
 .verdict.wait { background: var(--surface-2); color: var(--muted); font-weight: 500; }
 
 .hero { display: flex; align-items: flex-end; gap: 14px; padding: 12px 16px 0 10px; border-radius: 16px; min-height: 104px;
@@ -559,6 +560,8 @@ th .short { display: none; }
 .dayswitch button.on { background: var(--accent); color: #fff; }
 .yest-sum { margin: 12px 0 0; padding: 12px 14px; background: var(--surface); border: 1px solid var(--line); border-radius: 14px; font-size: 14px; }
 .yest-sum b { color: var(--text); }
+.yest-board { margin-top: 12px; }
+.tile.past { cursor: default; }
 .fd.best { box-shadow: inset 0 0 0 2px var(--gold); font-weight: 800; }
 .fd.best:not(.value) { color: var(--text); }
 .fd.worse { opacity: .4; }
@@ -620,6 +623,7 @@ th .short { display: none; }
     <button id="dayYest" role="tab">Yesterday</button><button id="dayToday" class="on" role="tab">Today</button>
   </div>
   <div class="yest-sum" id="yestSum" hidden></div>
+  <div class="board yest-board" id="yestBoard" hidden></div>
   <div class="board-wrap" id="boardWrap">
     <div class="section-title"><span>Tonight</span><span id="boardUpdated" style="font-weight:400;text-transform:none;letter-spacing:0"></span></div>
     <div class="board" id="board">
@@ -752,7 +756,7 @@ function tile(g) {
     res = `<div class="res">${live ? "Waiting for the first basket · " : ""}Our pick: <b>${esc(g.our_pick.name)}</b> <span class="num">${pct(g.our_pick.prob, 0)}</span>${fbTxt}</div>`;
   }
   const op = g.our_pick;
-  if (op && pre && (op.away_jumper || op.home_jumper)) {      // who jumps for each team (from our latest pick)
+  if (op && (pre || g.past) && (op.away_jumper || op.home_jumper)) {      // who jumps for each team (from our latest pick)
     const last = (n) => {                      // surname, skipping suffixes: 'Wendell Carter Jr.' -> 'Carter'
       if (!n) return "?";
       const w = n.split(" ").filter((x) => !/^(jr|sr|ii|iii|iv|v)\.?$/i.test(x));
@@ -763,7 +767,7 @@ function tile(g) {
     res += `<div class="res tipline" title="Tip: ${esc(op.away_jumper || "not known")} vs ${esc(op.home_jumper || "not known")}; (won/taken) = opening tips this season">Tip: ${
       favHome ? last(op.away_jumper) : `<b>${last(op.away_jumper)}</b>`}${won("away_jumper")} vs ${favHome ? `<b>${last(op.home_jumper)}</b>` : last(op.home_jumper)}${won("home_jumper")}</div>`;
   }
-  return `<button class="tile pickable ${live ? "live" : ""}" data-id="${esc(g.game_id)}"
+  return `<button class="tile ${g.past ? "past" : "pickable"} ${live ? "live" : ""}" data-id="${esc(g.game_id)}"
       style="--away-c:${color(g.away_team)};--home-c:${color(g.home_team)}"
       aria-pressed="${selected.has(g.game_id)}" title="Tap to show only the games you pick (tap again to remove)">
     <div class="teams">${logo(g.away_team, 26)}${esc(g.away_team)} <span class="at">@</span> ${logo(g.home_team, 26)}${esc(g.home_team)}${score}</div>
@@ -1011,7 +1015,7 @@ function updateCardsLive() {
       const r = g.result || "miss";
       const text = { hit: `✓ ${esc(g.first_basket.name)} scored first — our top pick!`,
                      top3: `🏀 ${esc(g.first_basket.name)} scored first — ${g.rank ? `our #${g.rank} pick` : "in our top 3"}`,
-                     miss: `🏀 ${esc(g.first_basket.name)} scored first${g.rank ? ` — our #${g.rank} pick` : ""}` }[r];
+                     miss: `🏀 <b>${esc(g.first_basket.name)}</b> scored first${g.rank ? ` — our <b>#${g.rank}</b> pick` : " — <b>not in our picks</b>"}` }[r];
       if (v.dataset.k !== r + g.first_basket.name) { v.className = `verdict on ${r}`; v.innerHTML = text; v.dataset.k = r + g.first_basket.name; }
       const row = [...el.querySelectorAll("tbody tr")].find((t) => normName(t.dataset.name) === normName(g.first_basket.name));
       if (row) {                                   // green row + say it in words
@@ -1227,7 +1231,7 @@ let viewDay = "today", yest = null;
 function setDayButtons() {
   $("dayToday").classList.toggle("on", viewDay === "today"); $("dayYest").classList.toggle("on", viewDay === "yesterday");
   for (const id of ["boardWrap", "fdLive", "filterNote"]) if ($(id)) $(id).hidden = viewDay === "yesterday" || (id === "filterNote" && !selected.size);
-  $("yestSum").hidden = viewDay !== "yesterday";
+  $("yestSum").hidden = $("yestBoard").hidden = viewDay !== "yesterday";
 }
 async function showYesterday() {
   viewDay = "yesterday"; setDayButtons();
@@ -1239,6 +1243,14 @@ async function showYesterday() {
     ? `<b>${esc(yest.date)}</b> · our #1 pick scored first in <b>${yest.hits} of ${yest.graded}</b> games (random ≈ 10%)`
     : `<b>${esc(yest.date || "Yesterday")}</b> · no finished games to show`;
   for (const c of yest.cards) { const g = games[c.matchup] || {}; if (g.away_score) c.start = `${g.detail || "Final"} ${g.away_score}–${g.home_score}`; applySavedDK(c); }
+  $("yestBoard").innerHTML = yest.cards.map((c) => {          // same tiles as Today, finished games
+    const g = games[c.matchup] || {}, top = c.picks[0] || [], j = c.jumpers || {};
+    const r = g.rank === 1 ? "hit" : g.rank && g.rank <= 3 ? "top3" : g.first_basket ? "miss" : null;
+    return tile({ past: true, game_id: g.game_id || c.matchup, away_team: c.away, home_team: c.home,
+      status: g.away_score != null ? 3 : 1, away_score: g.away_score ?? "", home_score: g.home_score ?? "", start: "", start_utc: "",
+      first_basket: g.first_basket ? { name: g.first_basket } : null, result: r, rank: g.rank,
+      our_pick: { name: top[0], prob: top[2], away_jumper: j[c.away], home_jumper: j[c.home], tip_home: c.tip?.[c.home] } });
+  }).join("");
   $("cards").innerHTML = yest.cards.length ? yest.cards.map(card).join("").replaceAll('class="card enter"', 'class="card"')
     : `<div class="empty">No picks were made yesterday.</div>`;
   document.querySelectorAll("#cards .card").forEach((el, i) => {
@@ -1248,7 +1260,7 @@ async function showYesterday() {
     const hit = g.rank === 1;
     v.className = `verdict on ${hit ? "hit" : g.rank && g.rank <= 3 ? "top3" : "miss"}`;
     v.innerHTML = hit ? `✓ ${esc(g.first_basket)} scored first — our top pick!`
-      : `🏀 ${esc(g.first_basket)} scored first${g.rank ? ` — our #${g.rank} pick` : " — not in our picks"}`;
+      : `🏀 <b>${esc(g.first_basket)}</b> scored first${g.rank ? ` — our <b>#${g.rank}</b> pick` : " — <b>not in our picks</b>"}`;
     const row = [...el.querySelectorAll("tbody tr")].find((t) => normName(t.dataset.name) === normName(g.first_basket));
     if (row) { row.classList.add("scored"); row.querySelector(".pn")?.insertAdjacentHTML("beforeend", `<span class="fb-tag">🏀 Scored first</span>`); }
   });
