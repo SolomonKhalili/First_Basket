@@ -231,6 +231,22 @@
     if (!r.ok) throw new Error(`relay ${r.status}`);
   }
   function betClean(b) {                                            // same rules as bets.clean
+    if (b.type === "parlay") {
+      const legs = b.legs || [], odds = (v) => { const a = Math.round(+v);
+        if (!(a >= 100 || a <= -100)) throw new Error("odds look wrong (use American odds like +600 or -110)"); return a; };
+      if (legs.length < 2 || legs.length > 12) throw new Error("a parlay needs 2 to 12 players");
+      const s = (v, n = 60) => String(v || "").slice(0, n);
+      const clean = legs.map((l) => {
+        if (!l.player || !/^\d{8}$/.test(l.day || "")) throw new Error("missing player or day");
+        return { day: s(l.day, 8), game_id: s(l.game_id, 20), away: s(l.away, 5), home: s(l.home, 5), player: s(l.player),
+                 player_id: s(l.player_id, 20), team: s(l.team, 5), american: odds(l.american) };
+      });
+      if (new Set(clean.map((l) => l.game_id || l.away + l.home)).size !== clean.length) throw new Error("one player per game in a parlay");
+      const stake = Math.round(+b.stake * 100) / 100;
+      if (!(stake > 0 && stake <= 100000)) throw new Error("amount must be more than $0");
+      return { id: s(b.id, 40) || String(Date.now()), at: +b.at || Date.now(), type: "parlay",
+               day: clean.map((l) => l.day).sort()[0], legs: clean, book: s(b.book, 20) || "FanDuel", american: odds(b.american), stake };
+    }
     const american = Math.round(+b.american), stake = Math.round(+b.stake * 100) / 100;
     if (!(american >= 100 || american <= -100)) throw new Error("odds look wrong (use American odds like +600 or -110)");
     if (!(stake > 0 && stake <= 100000)) throw new Error("amount must be more than $0");
@@ -251,7 +267,8 @@
       await betsSave(bets);
       return reply({ user, bets });
     } catch (e) {
-      return reply({ error: /odds|amount|missing/.test(e.message) ? e.message : "couldn't save right now — try again" }, /odds|amount|missing/.test(e.message) ? 400 : 502);
+      const mine = /odds|amount|missing|parlay/.test(e.message);
+      return reply({ error: mine ? e.message : "couldn't save right now — try again" }, mine ? 400 : 502);
     }
   }
 

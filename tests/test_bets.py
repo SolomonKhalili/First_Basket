@@ -68,3 +68,14 @@ def test_every_username_gets_its_own_slot():
     slots = [bets.slot(u) for u in odd]
     assert all(bets.USER_RE.match(s) for s in slots)               # the relay accepts every one
     assert len(set(slots)) == len(odd)                              # and nobody shares a list
+
+
+def test_parlay_shape_and_rules():
+    leg = lambda g, p: {"day": "20261119", "game_id": g, "away": "GS", "home": "MEM", "player": p, "american": 600}  # noqa: E731
+    b = bets.clean({"type": "parlay", "legs": [leg("1", "A"), leg("2", "B")], "american": 4800, "stake": "5", "book": "DraftKings"})
+    assert b["type"] == "parlay" and len(b["legs"]) == 2 and b["american"] == 4800 and b["stake"] == 5.0
+    for bad in ({"legs": [leg("1", "A")]},                                  # one leg is a straight bet
+                {"legs": [leg("1", "A"), leg("1", "B")]},                   # two players from the same game
+                {"legs": [leg("1", "A"), leg("2", "B")], "stake": 0}):
+        with pytest.raises(ValueError):
+            bets.clean({"type": "parlay", "american": 4800, "stake": 5, **bad})

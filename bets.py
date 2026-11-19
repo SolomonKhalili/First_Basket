@@ -58,8 +58,43 @@ def unseal(blob, key: bytes) -> list:
     return json.loads(plain).get("bets", [])
 
 
+def _odds(v) -> int:
+    try:
+        a = int(round(float(v)))
+    except (TypeError, ValueError):
+        raise ValueError("odds and amount must be numbers") from None
+    if not (a >= 100 or a <= -100):
+        raise ValueError("odds look wrong (use American odds like +600 or -110)")
+    return a
+
+
 def clean(b: dict) -> dict:
-    """Pure (testable). A bet as sent by the page -> the stored shape; ValueError if it doesn't make sense."""
+    """Pure (testable). A bet as sent by the page -> the stored shape; ValueError if it doesn't make sense.
+    Straight bet: one player. Parlay ("type": "parlay"): 2-12 legs (each a player in a different game), one
+    combined price and one amount; it wins only if every leg's player scores first."""
+    if b.get("type") == "parlay":
+        legs = b.get("legs") or []
+        if not 2 <= len(legs) <= 12:
+            raise ValueError("a parlay needs 2 to 12 players")
+        s = lambda d, k, n=60: str(d.get(k) or "")[:n]  # noqa: E731
+        clean_legs = []
+        for leg in legs:
+            if not s(leg, "player") or not re.fullmatch(r"\d{8}", s(leg, "day", 8)):
+                raise ValueError("missing player or day")
+            clean_legs.append({"day": s(leg, "day", 8), "game_id": s(leg, "game_id", 20), "away": s(leg, "away", 5),
+                               "home": s(leg, "home", 5), "player": s(leg, "player"), "player_id": s(leg, "player_id", 20),
+                               "team": s(leg, "team", 5), "american": _odds(leg.get("american"))})
+        if len({(x["game_id"] or x["away"] + x["home"]) for x in clean_legs}) != len(clean_legs):
+            raise ValueError("one player per game in a parlay")
+        try:
+            stake = round(float(b["stake"]), 2)
+        except (KeyError, TypeError, ValueError):
+            raise ValueError("odds and amount must be numbers") from None
+        if not (0 < stake <= 100_000):
+            raise ValueError("amount must be more than $0")
+        return {"id": s(b, "id", 40) or f"{int(time.time() * 1000)}", "at": int(b.get("at") or time.time() * 1000),
+                "type": "parlay", "day": min(x["day"] for x in clean_legs), "legs": clean_legs,
+                "book": s(b, "book", 20) or "FanDuel", "american": _odds(b.get("american")), "stake": stake}
     try:
         american, stake = int(round(float(b["american"]))), round(float(b["stake"]), 2)
     except (KeyError, TypeError, ValueError):

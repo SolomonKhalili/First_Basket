@@ -613,6 +613,7 @@ body.bets-mode .dayswitch, body.bets-mode #yestSum, body.bets-mode #dataView { d
 .betdlg { border: 0; padding: 0; border-radius: 20px; width: min(420px, calc(100vw - 24px)); background: var(--surface); color: var(--text);
   box-shadow: 0 24px 60px rgba(0,0,0,.5); }
 .betdlg::backdrop { background: rgba(0,0,0,.55); }
+.betdlg { max-height: calc(100dvh - 24px); overflow-y: auto; -webkit-overflow-scrolling: touch; }
 .betdlg form { padding: 20px; display: grid; gap: 12px; }
 .betdlg h3 { margin: 0; font-size: 20px; }
 .betdlg .bsub { color: var(--muted); font-size: 13.5px; margin-top: -6px; }
@@ -668,6 +669,23 @@ body.bets-mode .dayswitch, body.bets-mode #yestSum, body.bets-mode #dataView { d
   background: var(--surface-2); border: 1px solid var(--line); font-size: 13px; color: var(--muted); }
 .rec-overall .big { font-size: 20px; font-weight: 800; color: var(--text); min-width: 62px; text-align: center; }
 .rec-overall b { color: var(--text); }
+
+.btabs { display: grid; grid-template-columns: 1fr 1fr; gap: 4px; padding: 4px; background: var(--surface-2); border: 1px solid var(--line); border-radius: 12px; }
+.btabs button { border: 0; background: none; color: var(--muted); font: inherit; font-weight: 700; padding: 9px; border-radius: 9px; cursor: pointer; }
+.btabs button.on { background: var(--accent); color: #fff; }
+.pslip { position: fixed; left: 50%; transform: translateX(-50%); bottom: max(14px, env(safe-area-inset-bottom)); z-index: 900;
+  width: min(560px, calc(100vw - 24px)); display: flex; align-items: center; gap: 10px; padding: 10px 12px; border-radius: 16px;
+  background: var(--surface); border: 1.5px solid var(--accent); box-shadow: 0 12px 34px rgba(0,0,0,.45); font-size: 14px; }
+.pslip[hidden] { display: none; }
+.pslip .ptxt { flex: 1; min-width: 0; } .pslip .ptxt b { display: block; } .pslip .ptxt small { color: var(--muted); display: block; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.pslip .btn { padding: 9px 14px; white-space: nowrap; }
+.pslip .pclear { background: none; border: 0; color: var(--muted); font-size: 18px; cursor: pointer; padding: 4px 6px; }
+.plegs { display: grid; gap: 6px; }
+.pleg { display: flex; align-items: center; gap: 10px; padding: 9px 10px; border-radius: 11px; background: var(--surface-2); font-size: 14px; }
+.pleg span { flex: 1; min-width: 0; } .pleg small { color: var(--muted); display: block; }
+.pleg button { background: none; border: 0; color: var(--muted); font-size: 16px; cursor: pointer; }
+.bet-legs { display: block; margin-top: 3px; font-size: 12.5px; color: var(--muted); }
+.bet-legs .lw { color: var(--good); } .bet-legs .ll { color: var(--bad); text-decoration: line-through; }
 </style>
 </head>
 <body>
@@ -725,8 +743,9 @@ body.bets-mode .dayswitch, body.bets-mode #yestSum, body.bets-mode #dataView { d
       <button class="back" id="betsBack">← Back to picks</button>
       <h2>💵 My bets</h2>
     </div>
+    <div class="dtabs" id="betTabs" role="tablist" style="margin-bottom:12px"><button class="dtab on" data-tab="straight" role="tab">Straight bets</button><button class="dtab" data-tab="parlay" role="tab">Parlays</button></div>
     <div class="bets-stats" id="betsStats"></div>
-    <div class="bets-how" id="betsHow">To add a bet: on <b>Today</b>'s picks, <b>tap the player</b> you bet on and type how much you bet. It settles by itself once someone scores the game's first basket.</div>
+    <div class="bets-how" id="betsHow">To add a bet: on <b>Today</b>'s picks, <b>tap the player</b> you bet on. Choose <b>Straight bet</b> (one player) or <b>Parlay</b> (add players from different games, then save the slip at the bottom). Bets settle by themselves once the first baskets are scored.</div>
     <div class="bet-list" id="betList"><div class="dempty">Loading…</div></div>
   </section>
 
@@ -784,13 +803,29 @@ body.bets-mode .dayswitch, body.bets-mode #yestSum, body.bets-mode #dataView { d
   <form id="betForm" method="dialog">
     <h3 id="betTitle">I bet on …</h3>
     <div class="bsub" id="betSub"></div>
+    <div class="btabs" id="betModes" role="tablist"><button type="button" data-mode="straight" class="on" role="tab">Straight bet</button><button type="button" data-mode="parlay" role="tab">Parlay</button></div>
     <div class="bbooks-wrap"><div class="blabel">Where did you bet? <span>(tap one — the odds fill in)</span></div>
       <div class="bbooks" id="betBooks" role="radiogroup" aria-label="Sportsbook"></div></div>
     <label>Odds <span class="blabel-note">(change it if your ticket says something different)</span><input id="betOdds" inputmode="numeric" placeholder="+600" autocomplete="off"></label>
-    <label>How much did you bet? ($)<input id="betStake" inputmode="decimal" placeholder="10" autocomplete="off"></label>
+    <label id="betStakeWrap">How much did you bet? ($)<input id="betStake" inputmode="decimal" placeholder="10" autocomplete="off"></label>
     <div class="win" id="betWin"></div>
     <div class="berr" id="betErr" role="alert"></div>
     <div class="brow"><button type="button" class="btn secondary" id="betCancel">Cancel</button><button type="submit" class="btn" id="betSave">Save bet</button></div>
+  </form>
+</dialog>
+<div class="pslip" id="pSlip" hidden></div>
+<dialog class="betdlg" id="parlayDlg" aria-labelledby="parlayTitle">
+  <form id="parlayForm" method="dialog">
+    <h3 id="parlayTitle">🎟 Your parlay</h3>
+    <div class="bsub">Wins only if <b>every</b> player scores his game's first basket.</div>
+    <div class="bbooks-wrap"><div class="blabel">Where did you place it? <span>(the legs re-price at that book)</span></div>
+      <div class="bbooks" id="pBooks" role="radiogroup" aria-label="Sportsbook"></div></div>
+    <div class="plegs" id="pLegs"></div>
+    <label>Parlay odds <span class="blabel-note">(worked out from the legs — change it to what your ticket says)</span><input id="pOdds" inputmode="numeric" autocomplete="off"></label>
+    <label>How much did you bet? ($)<input id="pStake" inputmode="decimal" placeholder="5" autocomplete="off"></label>
+    <div class="win" id="pWin"></div>
+    <div class="berr" id="pErr" role="alert"></div>
+    <div class="brow"><button type="button" class="btn secondary" id="pCancel">Keep adding</button><button type="submit" class="btn" id="pSave">Save parlay</button></div>
   </form>
 </dialog>
 <dialog class="learn" id="learn" aria-labelledby="learnTitle">
@@ -2068,7 +2103,20 @@ async function loadBets() {
   myBets = r.bets || [];
   return myBets;
 }
+function legState(l) {                  // one player, one game -> {state, scorer}
+  const fb = (betResults || {})[l.game_id];
+  let scorer = fb ? { id: fb[0], name: fb[1] } : null;
+  if (!scorer) { const g = board.find((x) => String(x.game_id) === String(l.game_id)); if (g && g.first_basket) scorer = g.first_basket; }
+  if (!scorer) return { state: "wait" };
+  const won = (l.player_id && String(scorer.id) === String(l.player_id)) || normName(scorer.name) === normName(l.player);
+  return { state: won ? "won" : "lost", scorer: scorer.name };
+}
 function settle(b) {                    // -> {state: "won" | "lost" | "wait", profit}
+  if (b.type === "parlay") {            // every leg must win; one miss loses it
+    const legs = b.legs.map(legState);
+    const state = legs.some((x) => x.state === "lost") ? "lost" : legs.every((x) => x.state === "won") ? "won" : "wait";
+    return { state, legs, profit: state === "won" ? b.stake * payout(b.american) : state === "lost" ? -b.stake : 0 };
+  }
   const fb = (betResults || {})[b.game_id];
   let scorer = fb ? { id: fb[0], name: fb[1] } : null;
   if (!scorer) { const g = board.find((x) => String(x.game_id) === String(b.game_id)); if (g && g.first_basket) scorer = g.first_basket; }
@@ -2081,14 +2129,18 @@ function markBetRows() {                // "💵 $10" next to players you bet on
   if (!myBets || viewDay !== "today") return;
   const today = etDay();
   document.querySelectorAll("#cards .card").forEach((el) => {
-    for (const b of myBets.filter((x) => x.day === today && x.home === el.dataset.home && x.away === el.dataset.away)) {
+    for (const b of myBets.flatMap((x) => x.type === "parlay" ? x.legs.map((l) => ({ ...l, stake: x.stake, book: x.book, parlay: true })) : [x])
+                          .filter((x) => x.day === today && x.home === el.dataset.home && x.away === el.dataset.away)) {
       const row = [...el.querySelectorAll("tbody tr")].find((t) => normName(t.dataset.name) === normName(b.player));
-      row?.querySelector(".nm")?.insertAdjacentHTML("beforeend", `<span class="bet-mark" title="You bet $${b.stake} at ${american(b.american)} (${esc(b.book)})">💵 $${+b.stake}</span>`);
+      row?.querySelector(".nm")?.insertAdjacentHTML("beforeend", b.parlay ? `<span class="bet-mark" title="In your $${b.stake} parlay">🎟 parlay</span>`
+        : `<span class="bet-mark" title="You bet $${b.stake} at ${american(b.american)} (${esc(b.book)})">💵 $${+b.stake}</span>`);
     }
   });
 }
+let betTab = "straight";
 function renderBets() {
-  const list = [...(myBets || [])].sort((a, b) => (b.day + b.at).localeCompare(a.day + a.at) || b.at - a.at);
+  document.querySelectorAll("#betTabs .dtab").forEach((x) => x.classList.toggle("on", x.dataset.tab === betTab));
+  const list = [...(myBets || [])].filter((b) => (b.type === "parlay") === (betTab === "parlay")).sort((a, b) => (b.day + b.at).localeCompare(a.day + a.at) || b.at - a.at);
   const done = list.map((b) => ({ b, s: settle(b) }));
   const settled = done.filter((x) => x.s.state !== "wait");
   const won = settled.filter((x) => x.s.state === "won").length;
@@ -2099,10 +2151,23 @@ function renderBets() {
     <div><b>${won} / ${settled.length}</b><span>Bets won</span></div>
     <div><b>$${staked.toFixed(2)}</b><span>Money bet (settled)</span></div>
     <div><b class="${profit > 0 ? "pos" : profit < 0 ? "neg" : ""}">${staked ? `${profit >= 0 ? "+" : "−"}${Math.abs(profit / staked * 100).toFixed(0)}%` : "–"}</b><span>Return${waiting.length ? ` · ${waiting.length} waiting` : ""}</span></div>`;
-  if (!list.length) { $("betList").innerHTML = `<div class="dempty">No bets yet.</div>`; return; }
+  if (!list.length) { $("betList").innerHTML = `<div class="dempty">No ${betTab === "parlay" ? "parlays" : "straight bets"} yet.</div>`; return; }
   let html = "", lastDay = "";
   for (const { b, s } of done) {
     if (b.day !== lastDay) { html += `<div class="bet-day">${esc(dayLabel(b.day))}</div>`; lastDay = b.day; }
+    if (b.type === "parlay") {
+      const legs = b.legs.map((l, i) => { const st = s.legs[i].state;
+        return `<span class="${st === "won" ? "lw" : st === "lost" ? "ll" : ""}">${st === "won" ? "✓ " : st === "lost" ? "✗ " : ""}${esc(l.player)}</span>`; }).join(" · ");
+      const done = s.legs.filter((x) => x.state === "won").length;
+      const pout = s.state === "won" ? `Won ${money(s.profit)}<small>every leg hit 🏀</small>`
+        : s.state === "lost" ? `Lost ${money(s.profit)}<small>a leg missed</small>`
+        : `Waiting<small>${done} of ${b.legs.length} hit · wins ${money(b.stake * payout(b.american))}</small>`;
+      html += `<div class="bet-row ${s.state}">
+        <div class="who"><b>${b.legs.length}-leg parlay</b><small>${esc(b.book)} ${american(b.american)} · $${(+b.stake).toFixed(2)}</small><span class="bet-legs">${legs}</span></div>
+        <div class="out">${pout}</div>
+        <button class="del" data-del="${esc(b.id)}" title="Delete this parlay" aria-label="Delete this parlay">✕</button></div>`;
+      continue;
+    }
     const out = s.state === "won" ? `Won ${money(s.profit)}<small>${esc(b.player.split(" ").slice(-1)[0])} scored first 🏀</small>`
       : s.state === "lost" ? `Lost ${money(s.profit)}<small>${esc(s.scorer || "someone else")} scored first</small>`
       : `Waiting<small>wins ${money(b.stake * payout(b.american))}</small>`;
@@ -2116,6 +2181,7 @@ function renderBets() {
 async function openBets() {
   closeData();
   document.body.classList.add("bets-mode");
+  $("pSlip").hidden = true;
   $("betsView").hidden = false;
   if (location.hash !== "#bets") history.replaceState(null, "", "#bets");
   window.scrollTo(0, 0);
@@ -2127,6 +2193,7 @@ async function openBets() {
 }
 function closeBets() {
   document.body.classList.remove("bets-mode");
+  setTimeout(renderSlip, 0);
   $("betsView").hidden = true;
   if (location.hash === "#bets") history.replaceState(null, "", location.pathname);
   markBetRows();
@@ -2158,8 +2225,9 @@ function openBetFor(c, name, bookWanted) {
   $("betStake").value = "";
   $("betErr").textContent = "";
   betWinLine();
+  setBetMode(betMode);
   $("betDlg").showModal();
-  setTimeout(() => $("betStake").focus(), 50);
+  if (betMode === "straight") setTimeout(() => $("betStake").focus(), 50);
 }
 function pickBook(book) {                     // the three book buttons: each shows its price; tapping one fills the odds
   betDraft.book = book;
@@ -2178,10 +2246,99 @@ $("betBooks").addEventListener("click", (ev) => { const b = ev.target.closest("[
 $("betOdds").addEventListener("input", betWinLine);
 $("betStake").addEventListener("input", betWinLine);
 $("betCancel").addEventListener("click", () => $("betDlg").close());
+/* ── Parlay slip: legs added from the bet form, saved together ── */
+let betMode = "straight", parlay = { legs: [] };
+try { parlay = JSON.parse(localStorage.getItem("fb-parlay") || "null") || parlay; } catch (e) { /* private mode */ }
+const decOdds = (a) => 1 + payout(a);
+function parlayOdds(legs) {             // combined American odds from the legs' prices
+  const d = legs.reduce((x, l) => x * decOdds(l.american), 1);
+  return d >= 2 ? Math.round((d - 1) * 100) : Math.round(-100 / (d - 1));
+}
+function saveSlip() { try { localStorage.setItem("fb-parlay", JSON.stringify(parlay)); } catch (e) { /* ignore */ } renderSlip(); }
+function renderSlip() {
+  parlay.legs = parlay.legs.filter((l) => l.day === etDay());          // yesterday's unsaved slip expires
+  const n = parlay.legs.length;
+  $("pSlip").hidden = !n || !document.body || document.body.classList.contains("bets-mode");
+  if (!n) return;
+  $("pSlip").innerHTML = `<span class="ptxt"><b>🎟 Parlay · ${n} leg${n === 1 ? "" : "s"}${n > 1 ? ` · ${american(parlayOdds(parlay.legs))}` : ""}</b>
+    <small>${parlay.legs.map((l) => esc(l.player)).join(" · ")}${n === 1 ? " — add a player from another game" : ""}</small></span>
+    ${n > 1 ? `<button class="btn" id="pReview">Review &amp; save</button>` : ""}<button class="pclear" id="pClear" title="Clear the parlay" aria-label="Clear the parlay">✕</button>`;
+}
+function setBetMode(m) {
+  betMode = m;
+  document.querySelectorAll("#betModes button").forEach((x) => x.classList.toggle("on", x.dataset.mode === m));
+  $("betStakeWrap").hidden = $("betWin").hidden = m === "parlay";
+  $("betSave").textContent = m === "parlay" ? "Add to parlay" : "Save bet";
+  $("betErr").textContent = "";
+}
+$("betModes").addEventListener("click", (ev) => { const b = ev.target.closest("[data-mode]"); if (b) setBetMode(b.dataset.mode); });
+function pickParlayBook(book) {         // re-price every leg at one book (a parlay is placed at one sportsbook)
+  parlay.book = book;
+  for (const l of parlay.legs) { const a = l.prices?.[book]; if (a !== undefined && a !== null) { l.american = a; l.book = book; } }
+  saveSlip(); openParlay();
+}
+function openParlay() {
+  const book = parlay.book || (parlay.legs.every((l) => l.prices?.FanDuel != null) ? "FanDuel" : "DraftKings");
+  const total = (b) => parlay.legs.every((l) => l.prices?.[b] != null) ? american(parlayOdds(parlay.legs.map((l) => ({ american: l.prices[b] })))) : "–";
+  $("pBooks").innerHTML = ["FanDuel", "DraftKings", "Other"].map((b) => `<button type="button" class="bbook ${b === book ? "on" : ""}" data-pbook="${b}">${b}<small>${b === "Other" ? "type odds" : total(b)}</small></button>`).join("");
+  if (!parlay.book && book !== "Other") { parlay.book = book; for (const l of parlay.legs) if (l.prices?.[book] != null) { l.american = l.prices[book]; l.book = book; } }
+  $("pLegs").innerHTML = parlay.legs.map((l, i) => `<div class="pleg"><span><b>${esc(l.player)}</b><small>${esc(l.away)} @ ${esc(l.home)} · ${esc(l.book)} ${american(l.american)}</small></span>
+    <button type="button" data-rm="${i}" aria-label="Remove ${esc(l.player)}">✕</button></div>`).join("");
+  $("pOdds").value = parlay.legs.length > 1 ? american(parlayOdds(parlay.legs)) : "";
+  $("pErr").textContent = ""; pWinLine();
+  if (!$("parlayDlg").open) $("parlayDlg").showModal();
+}
+function pWinLine() {
+  const a = Math.round(+String($("pOdds").value).replace(/[^\d.-]/g, "")), s = +$("pStake").value;
+  $("pWin").innerHTML = (a >= 100 || a <= -100) && s > 0 ? `If every leg hits you win <b>${money(s * payout(a))}</b> (plus your $${s.toFixed(2)} back).` : "";
+}
+$("pBooks").addEventListener("click", (ev) => { const b = ev.target.closest("[data-pbook]"); if (!b) return;
+  if (b.dataset.pbook === "Other") { parlay.book = "Other"; saveSlip(); openParlay(); $("pOdds").value = ""; $("pOdds").focus(); }
+  else pickParlayBook(b.dataset.pbook); });
+$("pOdds").addEventListener("input", pWinLine); $("pStake").addEventListener("input", pWinLine);
+$("pCancel").addEventListener("click", () => $("parlayDlg").close());
+$("pLegs").addEventListener("click", (ev) => {
+  const i = ev.target.closest("[data-rm]")?.dataset.rm;
+  if (i === undefined) return;
+  parlay.legs.splice(+i, 1); saveSlip();
+  if (parlay.legs.length < 2) $("parlayDlg").close(); else openParlay();
+});
+document.addEventListener("click", (ev) => {
+  if (ev.target.closest("#pReview")) openParlay();
+  if (ev.target.closest("#pClear") && confirm("Clear this parlay?")) { parlay = { legs: [] }; saveSlip(); }
+});
+$("parlayForm").addEventListener("submit", async (ev) => {
+  ev.preventDefault();
+  const odds = Math.round(+String($("pOdds").value).replace(/[^\d.-]/g, "")), stake = +$("pStake").value;
+  if (!(odds >= 100 || odds <= -100)) { $("pErr").textContent = "Type the parlay odds like +4800."; return; }
+  if (!(stake > 0)) { $("pErr").textContent = "Type how much you bet, like 5."; return; }
+  $("pSave").disabled = true; $("pSave").textContent = "Saving…";
+  try {
+    const books = [...new Set(parlay.legs.map((l) => l.book))];
+    const r = await getJSON("/api/bets", { method: "POST", headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ type: "parlay", id: `${Date.now()}-${Math.random().toString(36).slice(2, 7)}`, at: Date.now(),
+                             legs: parlay.legs.map(({ prices, ...l }) => l), book: parlay.book || (books.length === 1 ? books[0] : "Other"), american: odds, stake }) });
+    if (r.error) throw new Error(r.error);
+    myBets = r.bets; parlay = { legs: [] }; saveSlip();
+    $("parlayDlg").close(); markBetRows();
+    toast(`🎟 Saved: $${stake.toFixed(2)} parlay at ${american(odds)}. See it under <b>My bets → Parlays</b>.`);
+  } catch (e) { $("pErr").textContent = e.message || "Couldn't save — try again."; }
+  finally { $("pSave").disabled = false; $("pSave").textContent = "Save parlay"; }
+});
 $("betForm").addEventListener("submit", async (ev) => {
   ev.preventDefault();
   const odds = Math.round(+String($("betOdds").value).replace(/[^\d.-]/g, "")), stake = +$("betStake").value;
   if (!(odds >= 100 || odds <= -100)) { $("betErr").textContent = "Type the odds like +600 (or -110)."; return; }
+  if (betMode === "parlay") {           // add this player as a leg (one per game)
+    const leg = { day: betDraft.day, game_id: betDraft.game_id, away: betDraft.away, home: betDraft.home, player: betDraft.player,
+                  player_id: betDraft.player_id, team: betDraft.team, book: betDraft.book || "FanDuel", american: odds,
+                  prices: { FanDuel: betDraft.prices?.FanDuel ?? null, DraftKings: betDraft.prices?.DraftKings ?? null } };
+    const same = parlay.legs.findIndex((l) => (l.game_id || l.away + l.home) === (leg.game_id || leg.away + leg.home));
+    if (same >= 0) parlay.legs[same] = leg; else parlay.legs.push(leg);
+    saveSlip(); $("betDlg").close();
+    toast(same >= 0 ? `🎟 Swapped in ${esc(leg.player)} for that game.` : parlay.legs.length < 2 ? `🎟 Added ${esc(leg.player)} — now tap a player in another game.` : `🎟 Added ${esc(leg.player)} — ${parlay.legs.length} legs. Tap <b>Review &amp; save</b> at the bottom when done.`);
+    return;
+  }
   if (!(stake > 0)) { $("betErr").textContent = "Type how much you bet, like 10."; return; }
   $("betSave").disabled = true; $("betSave").textContent = "Saving…";
   try {
@@ -2205,7 +2362,7 @@ $("betList").addEventListener("click", async (ev) => {
   const id = ev.target.closest("[data-del]")?.dataset.del;
   if (!id) return;
   const b = (myBets || []).find((x) => x.id === id);
-  if (!b || !confirm(`Delete your $${b.stake} bet on ${b.player}?`)) return;
+  if (!b || !confirm(b.type === "parlay" ? `Delete your $${b.stake} ${b.legs.length}-leg parlay?` : `Delete your $${b.stake} bet on ${b.player}?`)) return;
   try {
     const r = await getJSON("/api/bets/delete", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ id }) });
     if (r.error) throw new Error(r.error);
@@ -2213,6 +2370,8 @@ $("betList").addEventListener("click", async (ev) => {
   } catch (e) { toast("Couldn't delete right now — try again.", "bad"); }
 });
 $("betsBtn").addEventListener("click", openBets);
+$("betTabs").addEventListener("click", (ev) => { const b = ev.target.closest("[data-tab]"); if (b) { betTab = b.dataset.tab; renderBets(); } });
+renderSlip();
 $("betsBack").addEventListener("click", closeBets);
 $("dataBtn").addEventListener("click", () => { if (!$("betsView").hidden) closeBets(); });
 if (location.hash === "#bets") openBets();
