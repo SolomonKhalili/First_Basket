@@ -138,6 +138,10 @@ def push_snapshot() -> str:
 DK_LOG_SCHEMA = """CREATE TABLE IF NOT EXISTS dk_odds_log (
     game_date TEXT, matchup TEXT, logged_at TEXT, player_name TEXT, team TEXT, american INTEGER,
     PRIMARY KEY (game_date, matchup, logged_at, player_name))"""
+# The Odds tracker's DraftKings source (owner, 2026-11-19): ESPN's copy only — one steady source the cloud reads every
+# 3 min all day, even when nobody has the site open. dk_odds_log mixes ESPN, the Mac and viewers' browsers (prices can
+# differ by state), which made prices look like they flipped; the cards keep using the browsers' live prices.
+DK_ESPN_SCHEMA = DK_LOG_SCHEMA.replace("dk_odds_log", "dk_espn_log")
 RECENT_MIN = 45                          # a browser-read line counts as current for this long
 
 
@@ -296,7 +300,7 @@ def log_espn(con, day: str, games: list) -> int:
     (stamped 00:00:00 = "opening") and each price at the time ESPN says it changed. Returns rows added."""
     from datetime import datetime
     from zoneinfo import ZoneInfo
-    con.execute(DK_LOG_SCHEMA)
+    con.execute(DK_LOG_SCHEMA); con.execute(DK_ESPN_SCHEMA)
     before = con.total_changes
     d0 = f"{day[:4]}-{day[4:6]}-{day[6:]} 00:00:00"
     for g in games:
@@ -317,6 +321,14 @@ def log_espn(con, day: str, games: list) -> int:
             if not last or (last[0] != r["american"] and at > str(last[1])):
                 con.execute("INSERT OR IGNORE INTO dk_odds_log VALUES (?, ?, ?, ?, ?, ?)",
                             (day, m, at, r["player"], r["team"], r["american"]))
+            # ESPN-only log (Odds tracker): opening price + every change ESPN shows, nothing from other sources
+            con.execute("INSERT OR IGNORE INTO dk_espn_log VALUES (?, ?, ?, ?, ?, ?)",
+                        (day, m, d0, r["player"], r["team"], int(r["open"])))
+            last_e = con.execute("SELECT american FROM dk_espn_log WHERE game_date = ? AND matchup = ? AND player_name = ? "
+                                 "ORDER BY logged_at DESC LIMIT 1", (day, m, r["player"])).fetchone()
+            if not last_e or last_e[0] != r["american"]:
+                con.execute("INSERT OR IGNORE INTO dk_espn_log VALUES (?, ?, ?, ?, ?, ?)",
+                            (day, m, max(at, d0), r["player"], r["team"], r["american"]))
         for team, a in (g.get("team_first") or {}).items():             # team to score first, same idea
             log_team_first(con, day, m, "DraftKings", team, a, opened=(g.get("team_first_open") or {}).get(team), at=None)
     con.commit()

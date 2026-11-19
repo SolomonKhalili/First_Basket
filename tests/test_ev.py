@@ -168,3 +168,19 @@ def test_odds_track_history_both_books():
     p = g["players"][0]
     assert [a for _, a in p["books"]["FanDuel"]] == [700, 600]                 # only changes are kept
     assert p["books"]["DraftKings"][0] == ["2026-11-19T05:00:00Z", 800]        # opening = start of the NY day
+
+
+def test_odds_tracker_uses_espn_only_for_draftkings():
+    """DraftKings in the Odds tracker comes from ESPN's copy only (one steady source); browser prices are ignored."""
+    import sqlite3
+    import draftkings_odds as dk
+    con = sqlite3.connect(":memory:")
+    games = [{"away_code": "GS", "home_code": "MEM",
+              "players": [{"player": "A", "team": "MEM", "american": 600, "open": 610, "updated": "2026-11-19T20:00:00Z"}]}]
+    dk.log_espn(con, "20261119", games)
+    games[0]["players"][0].update(american=620, updated="2026-11-19T20:10:00Z")
+    dk.log_espn(con, "20261119", games)
+    dk.log_espn(con, "20261119", games)                    # unchanged: nothing new
+    con.execute("INSERT INTO dk_odds_log VALUES ('20261119', 'GS @ MEM', '2026-11-19 15:05:00', 'A', 'MEM', 999)")
+    pts = ev.odds_track(con, "20261119")["games"][0]["players"][0]["books"]["DraftKings"]
+    assert [a for _, a in pts] == [610, 600, 620]

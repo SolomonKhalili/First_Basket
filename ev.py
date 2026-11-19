@@ -252,7 +252,12 @@ def odds_moves(con) -> list:
     times changed]. "closed" = the last price saved (before tip-off once the game has started). Both books' logs."""
     ensure_table(con)
     seen = {}
-    for book, table in (("FanDuel", "odds_log"), ("DraftKings", "dk_odds_log"), ("team", "team_first_log")):
+    espn_games = set()
+    try:
+        espn_games = set(con.execute("SELECT DISTINCT game_date, matchup FROM dk_espn_log").fetchall())
+    except Exception:  # noqa: BLE001
+        pass
+    for book, table in (("FanDuel", "odds_log"), ("DraftKings", "dk_odds_log"), ("DraftKings", "dk_espn_log"), ("team", "team_first_log")):
         try:
             q = con.execute(f"SELECT game_date, matchup, player_name, american, logged_at FROM {table} ORDER BY logged_at") \
                 if book != "team" else con.execute(
@@ -261,6 +266,8 @@ def odds_moves(con) -> list:
         except Exception:  # noqa: BLE001 — table not there yet
             continue
         for d, m, name, a, at, *bk in q:
+            if book == "DraftKings" and ((d, m) in espn_games) != (table == "dk_espn_log"):
+                continue                         # one DraftKings source per game: ESPN's copy when it has one
             r = seen.setdefault((d, m, name, bk[0] if bk else book), [a, a, 0, [(at, a)]])
             if a != r[1]:
                 r[2] += 1
@@ -274,7 +281,7 @@ def odds_moves(con) -> list:
     except Exception:  # noqa: BLE001
         pass
     for (d, m, name, book), (first, last, changes, steps) in seen.items():
-        if book == "DraftKings":                               # only prices that held (see steady)
+        if book == "DraftKings" and (d, m) not in espn_games:  # older games, mixed log: only prices that held
             steps = steady(steps, d); last = steps[-1][1]; changes = len(steps) - 1
         opened_at, closed_at = times.get((d, m, book), (None, None))
         moved = ("same" if first == last else
@@ -385,11 +392,19 @@ def odds_track(con, day: str) -> dict:
             pts.append([when, int(a)])
         pts.sort(key=lambda p: p[0])                                  # two spellings may interleave in time
 
+    espn_games = set()                   # games the ESPN-only DraftKings log covers (see draftkings_odds.DK_ESPN_SCHEMA)
+    try:
+        espn_games = {m for (m,) in con.execute("SELECT DISTINCT matchup FROM dk_espn_log WHERE game_date = ?", (day,))}
+    except Exception:  # noqa: BLE001 — table not there yet
+        pass
     for book, sql in (("FanDuel", "SELECT matchup, player_name, team, logged_at, american FROM odds_log WHERE game_date = ? ORDER BY logged_at"),
-                      ("DraftKings", "SELECT matchup, player_name, team, logged_at, american FROM dk_odds_log WHERE game_date = ? ORDER BY logged_at")):
+                      ("DraftKings", "SELECT matchup, player_name, team, logged_at, american FROM dk_odds_log WHERE game_date = ? ORDER BY logged_at"),
+                      ("DraftKings-ESPN", "SELECT matchup, player_name, team, logged_at, american FROM dk_espn_log WHERE game_date = ? ORDER BY logged_at")):
         try:
             for m, name, team, at, a in con.execute(sql, (day,)):
-                add("players", m, name, team or "", book, at, a)
+                if book == "DraftKings" and m in espn_games:
+                    continue                     # this game: ESPN's steady copy instead of the mixed log
+                add("players", m, name, team or "", "DraftKings" if book == "DraftKings-ESPN" else book, at, a)
         except Exception:  # noqa: BLE001 — table not there yet
             pass
     try:
@@ -402,7 +417,7 @@ def odds_track(con, day: str) -> dict:
     for g in games.values():
         for kind in ("players", "teams"):                      # DraftKings: only prices that held (see steady)
             for row in g[kind].values():
-                if "DraftKings" in row["books"]:
+                if "DraftKings" in row["books"] and g["matchup"] not in espn_games:     # older games: mixed log, smoothed
                     row["books"]["DraftKings"] = [list(x) for x in steady([tuple(x) for x in row["books"]["DraftKings"]], day)]
         out.append({"matchup": g["matchup"], "players": list(g["players"].values()), "teams": list(g["teams"].values())})
     return {"day": day, "games": sorted(out, key=lambda g: g["matchup"])}

@@ -778,6 +778,10 @@ NBA/
   Model files record `early_m`; `_retrain_if_needed` retrains when it doesn't match. Season/last-10 trust re-checked:
   current 30 / 10 still best. (Note: `season_backtest.fill_fg_grades` grades the field-goal model with the
   first-points early setting — re-grade only if those grades are re-run.)
+- **Owner's rule — DraftKings sources (2026-11-19):** prediction cards show the viewer's browser's live DraftKings
+  prices (every 30 s; the Mac app's server on the Mac); the **Odds tracker uses ESPN's copy only** — new table
+  `dk_espn_log` (opening + every ESPN change, written by `draftkings_odds.log_espn`, filled by the cloud every 3 min
+  even with the site closed). Games logged before this use the smoothed mixed log (below).
 - **Fixed — DraftKings "changes" were mostly noise** (`ev.steady`): DraftKings prices arrive from the Mac, ESPN's copy
   (minutes behind) and viewers' browsers (prices can differ by state), so the raw log flipped back and forth (Boozer
   620 ↔ 630, 118 "changes" on 11/19). The Odds tracker and the Data odds tab now count a DraftKings price only if it
