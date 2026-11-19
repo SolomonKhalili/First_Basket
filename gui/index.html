@@ -626,6 +626,10 @@ const TEAM_COLOR = {
 };
 const LINEUP = { CONFIRMED: "Confirmed lineup", EXPECTED: "Expected lineup", PROJECTED: "Projected lineup" };
 const RESULT = { hit: "✓ Our pick", top3: "In our top 3", miss: "✗ Missed" };
+/* the scorer's exact spot on our list: "✓ Our #1 pick", "Our #2 pick", "✗ Our #7 pick", "✗ Not in our picks" */
+const rankLabel = (g) => g.result === "hit" ? "✓ Our #1 pick"
+  : g.rank ? `${g.result === "miss" ? "✗ " : ""}Our #${g.rank} pick`
+  : g.result === "miss" ? "✗ Not in our picks" : RESULT[g.result];
 const $ = (id) => document.getElementById(id);
 const esc = (s) => String(s ?? "").replace(/[&<>"']/g, (c) => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
 const color = (t) => TEAM_COLOR[t] || "var(--muted)";
@@ -675,7 +679,7 @@ function tile(g) {
   let res = "";
   if (g.first_basket) {
     const r = g.result;
-    res = `<div class="res">🏀 First: <b>${esc(g.first_basket.name)}</b>${r ? `<span class="tag ${r}">${RESULT[r]}</span>` : ""}
+    res = `<div class="res">🏀 First: <b>${esc(g.first_basket.name)}</b>${r ? `<span class="tag ${r}">${rankLabel(g)}</span>` : ""}
       ${r && r !== "hit" && g.our_pick ? `<br>we had ${esc(g.our_pick.name)}` : ""}</div>`;
   } else if (g.our_pick) {
     const fb = g.records?.name?.fb;                  // his first baskets / games this season
@@ -776,7 +780,7 @@ async function refreshBoard(first = false) {
       announced.add(g.game_id);
       if (first) continue;
       const msg = g.result === "hit" ? `✓ <b>${esc(g.first_basket.name)}</b> scored first — our pick!`
-        : `🏀 <b>${esc(g.first_basket.name)}</b> scored first`;
+        : `🏀 <b>${esc(g.first_basket.name)}</b> scored first${g.rank ? ` — our #${g.rank} pick` : ""}`;
       toast(`${msg}<small>${esc(g.away_team)} @ ${esc(g.home_team)}${g.our_pick && g.result !== "hit" ? ` · we had ${esc(g.our_pick.name)}` : ""}</small>`,
             g.result === "hit" ? "hit" : "");
     }
@@ -924,8 +928,8 @@ function updateCardsLive() {
     if (g.first_basket) {
       const r = g.result || "miss";
       const text = { hit: `✓ ${esc(g.first_basket.name)} scored first — our top pick!`,
-                     top3: `🏀 ${esc(g.first_basket.name)} scored first — in our top 3`,
-                     miss: `🏀 ${esc(g.first_basket.name)} scored first` }[r];
+                     top3: `🏀 ${esc(g.first_basket.name)} scored first — ${g.rank ? `our #${g.rank} pick` : "in our top 3"}`,
+                     miss: `🏀 ${esc(g.first_basket.name)} scored first${g.rank ? ` — our #${g.rank} pick` : ""}` }[r];
       if (v.dataset.k !== r + g.first_basket.name) { v.className = `verdict on ${r}`; v.innerHTML = text; v.dataset.k = r + g.first_basket.name; }
       const row = [...el.querySelectorAll("tbody tr")].find((t) => t.dataset.name === g.first_basket.name);
       if (row) row.classList.add("scored");

@@ -205,8 +205,9 @@ def latest_picks(con, game_ids) -> dict:
                                     home_jumper, away_jumper, tip_home
                              FROM pick_log WHERE game_id = ? ORDER BY id DESC LIMIT 1""", (gid,)).fetchone()
         if row:
-            top3 = [p["name"] for p in json.loads(row[4])[:3]]
-            out[gid] = {"id": str(row[0]), "name": row[1], "team": row[2], "prob": row[3], "top3": top3,
+            ranked = [p["name"] for p in json.loads(row[4])]          # every starter, most likely first
+            out[gid] = {"id": str(row[0]), "name": row[1], "team": row[2], "prob": row[3], "top3": ranked[:3],
+                        "ranked": ranked,
                         "home_jumper": row[5], "away_jumper": row[6], "tip_home": row[7]}
     return out
 
@@ -219,6 +220,18 @@ def result_of(first: dict, pick: dict):
         return "hit"
     from starters import norm_name
     return "top3" if norm_name(first["name"]) in {norm_name(n) for n in pick["top3"]} else "miss"
+
+
+def rank_of(first: dict, pick: dict):
+    """Where the first scorer was on our list: 1 = our pick, 2 = our #2, … None = not on it (or unknown)."""
+    if not first or not pick:
+        return None
+    if first["id"] == pick["id"]:
+        return 1
+    from starters import norm_name
+    names = [norm_name(n) for n in pick.get("ranked") or pick.get("top3") or []]
+    who = norm_name(first["name"])
+    return names.index(who) + 1 if who in names else None
 
 
 class LiveBoard:
@@ -257,6 +270,7 @@ class LiveBoard:
                     g["records"] = {k: recs.get(op.get(k) or "") for k in ("name", "away_jumper", "home_jumper")}
                 g["first_basket"] = self.first_basket(g["game_id"]) if g["status"] != 1 else None
                 g["result"] = result_of(g["first_basket"], g["our_pick"])
+                g["rank"] = rank_of(g["first_basket"], g["our_pick"])
             self.data = {"date": date.today().strftime("%A, %B %-d"), "games": games,
                          "updated": time.strftime("%-I:%M %p")}
 

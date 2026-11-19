@@ -166,3 +166,13 @@ def test_data_version_changes_when_a_file_is_updated(tmp_path, monkeypatch):
     later = os.stat(tmp_path / "my_predictions.xlsx").st_mtime + 60
     os.utime(tmp_path / "my_predictions.xlsx", (later, later))           # the spreadsheet gets re-saved
     assert gui.data_version() != v1
+
+
+def test_rank_of_gives_exact_spot():
+    pick = {"id": "1", "name": "Bam Adebayo", "top3": ["Bam Adebayo", "Giannis Antetokounmpo", "Tyler Herro"],
+            "ranked": ["Bam Adebayo", "Giannis Antetokounmpo", "Tyler Herro", "Anthony Davis", "Luka Dončić"]}
+    assert gui.rank_of({"id": "1", "name": "Bam Adebayo"}, pick) == 1
+    assert gui.rank_of({"id": "9", "name": "Giannis Antetokounmpo"}, pick) == 2
+    assert gui.rank_of({"id": "8", "name": "Luka Doncic"}, pick) == 5          # accents ignored
+    assert gui.rank_of({"id": "7", "name": "Bench Guy"}, pick) is None
+    assert gui.rank_of(None, pick) is None

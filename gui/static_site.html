@@ -197,6 +197,8 @@
           const op = g.our_pick;
           g.result = !op ? null : fb.id === String(op.id) ? "hit"
             : (op.top3 || []).some((n) => norm(n) === norm(fb.name)) ? "top3" : "miss";
+          const at = !op ? -1 : fb.id === String(op.id) ? 0 : (op.ranked || op.top3 || []).findIndex((n) => norm(n) === norm(fb.name));
+          g.rank = at >= 0 ? at + 1 : null;
         }
       }
     }
