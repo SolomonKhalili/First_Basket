@@ -1442,20 +1442,28 @@ function injuryBlock(c) {
   return `<details class="inj-sec"><summary>🩹 Injuries <small>${n ? `${n} player${n === 1 ? "" : "s"} listed` : "none listed"}${c.label === "CONFIRMED" ? " · lineup confirmed" : ""}</small></summary>
     ${team(c.away)}${team(c.home)}</details>`;
 }
-/* Search by any team name: "knicks", "new york", "ny knicks", "sixers", "cavs"... -> the team codes the data uses */
-const TEAM_EXTRA = { PHI: "sixers 76ers philly", CLE: "cavs", DAL: "mavs", MIN: "wolves twolves", POR: "blazers rip city", GS: "dubs warriors golden state gsw",
-  NO: "pels nola", NY: "nyk", OKC: "okc", SA: "sas", UTAH: "utah", WSH: "wizards dc", LAL: "la lakers", LAC: "la clippers clips", BKN: "nets brooklyn", MEM: "grizz",
-  DET: "pistons", TOR: "raps", SAC: "kings", PHX: "suns", CHA: "hornets", ORL: "magic", IND: "pacers", DEN: "nuggets", MIA: "heat", HOU: "rockets",
-  ATL: "hawks", BOS: "celtics celts", CHI: "bulls", MIL: "bucks" };
-function teamsFor(q) {
-  q = String(q || "").trim().toLowerCase();
+/* Search by any team name: "knicks", "ny", "nyk", "new york", "new york knicks", "sixers", "cavs"... -> the team code */
+const TEAM_ALIASES = {
+  ATL: "atl|atlanta|hawks|atlanta hawks", BOS: "bos|boston|celtics|celts|boston celtics", BKN: "bkn|brk|bk|brooklyn|nets|brooklyn nets",
+  CHA: "cha|cho|charlotte|hornets|charlotte hornets", CHI: "chi|chicago|bulls|chicago bulls", CLE: "cle|cleveland|cavaliers|cavs|cleveland cavaliers|cleveland cavs",
+  DAL: "dal|dallas|mavericks|mavs|dallas mavericks|dallas mavs", DEN: "den|denver|nuggets|nugs|denver nuggets", DET: "det|detroit|pistons|detroit pistons",
+  GS: "gs|gsw|golden state|warriors|dubs|golden state warriors", HOU: "hou|houston|rockets|houston rockets", IND: "ind|indiana|pacers|indiana pacers",
+  LAC: "lac|clippers|clips|la clippers|los angeles clippers", LAL: "lal|lakers|la lakers|los angeles lakers", MEM: "mem|memphis|grizzlies|grizz|memphis grizzlies",
+  MIA: "mia|miami|heat|miami heat", MIL: "mil|milwaukee|bucks|milwaukee bucks", MIN: "min|minnesota|timberwolves|wolves|twolves|minnesota timberwolves",
+  NO: "no|nop|nola|new orleans|pelicans|pels|new orleans pelicans", NY: "ny|nyk|new york|knicks|ny knicks|new york knicks",
+  OKC: "okc|oklahoma|oklahoma city|thunder|okc thunder|oklahoma city thunder", ORL: "orl|orlando|magic|orlando magic",
+  PHI: "phi|philadelphia|philly|sixers|76ers|philadelphia 76ers|philadelphia sixers", PHX: "phx|pho|phoenix|suns|phoenix suns",
+  POR: "por|portland|trail blazers|blazers|trailblazers|portland trail blazers", SAC: "sac|sacramento|kings|sacramento kings",
+  SA: "sa|sas|san antonio|spurs|san antonio spurs", TOR: "tor|toronto|raptors|raps|toronto raptors", UTAH: "utah|uta|utah jazz|jazz",
+  WSH: "wsh|was|washington|wizards|wiz|washington wizards" };
+const ALIAS_TO_TEAM = {};
+for (const [code, list] of Object.entries(TEAM_ALIASES)) for (const a of list.split("|")) ALIAS_TO_TEAM[a] = code;
+function teamsFor(q) {                       // an exact team name/nickname/code -> [code]; else partial names (3+ letters)
+  q = String(q || "").trim().toLowerCase().replace(/\s+/g, " ");
+  if (!q) return [];
+  if (ALIAS_TO_TEAM[q]) return [ALIAS_TO_TEAM[q]];
   if (q.length < 3) return [];
-  const out = new Set();
-  for (const [code, full] of Object.entries(TEAM_NAMES)) {
-    const words = `${full} ${TEAM_EXTRA[code] || ""}`.toLowerCase();
-    if (words.includes(q) || words.split(" ").some((w) => w.length > 2 && q.includes(w) && q.split(" ").includes(w))) out.add(code);
-  }
-  return [...out];
+  return Object.entries(TEAM_ALIASES).filter(([, list]) => list.split("|").some((a) => a.length > 3 && a.startsWith(q))).map(([c]) => c);
 }
 const TEAM_NAMES = { ATL: "Atlanta Hawks", BOS: "Boston Celtics", BKN: "Brooklyn Nets", CHA: "Charlotte Hornets", CHI: "Chicago Bulls",
   CLE: "Cleveland Cavaliers", DAL: "Dallas Mavericks", DEN: "Denver Nuggets", DET: "Detroit Pistons", GS: "Golden State Warriors", GSW: "Golden State Warriors",
@@ -2348,8 +2356,8 @@ function filteredRows() {
   let rows = d.rows.filter((r) => {
     if (season && seasonOf(r[0]) !== season) return false;           // the first column is the date
     if (!playerFilter(d, r)) return false;
-    if (q && !r.some((v) => String(v ?? "").toLowerCase().includes(q))
-        && !(qTeams.length && r.some((v) => qTeams.some((code) => new RegExp(`\\b${code}\\b`).test(String(v ?? "")))))) return false;
+    const hasTeam = qTeams.length && r.some((v) => qTeams.some((code) => new RegExp(`\\b${code}\\b`).test(String(v ?? ""))));
+    if (q && (ALIAS_TO_TEAM[q.trim().replace(/\s+/g, " ")] ? !hasTeam : (!r.some((v) => String(v ?? "").toLowerCase().includes(q)) && !hasTeam))) return false;
     if (teamRe && !r.some((v) => teamRe.test(String(v ?? "")))) return false;
     if (result && ri >= 0) {
       const v = r[ri];
@@ -2438,6 +2446,7 @@ function playerRoles() { return DROLES[dstate.tab] || null; }
 let knownPlayers = [];
 function playerQuery() {                       // the main search, when what's typed is (part of) a player's name
   const q = pnorm($("dq").value);
+  if (ALIAS_TO_TEAM[q]) return "";               // an exact team name ("cha", "heat", "knicks") is a team, not a player
   return q.length >= 3 && knownPlayers.some((n) => n.includes(q)) ? q : "";
 }
 
