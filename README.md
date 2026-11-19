@@ -65,7 +65,7 @@ python3 gui.py                      # the same picks in your web browser (cards,
 
 If you already have the database and `pregame_model.json`, you only need the last two commands.
 
-Run the tests any time: `python3 -m pytest` (186 tests, all in the `tests/` folder).
+Run the tests any time: `python3 -m pytest` (187 tests, all in the `tests/` folder).
 
 ---
 
@@ -158,7 +158,7 @@ With 198 games the margin of error is about ±5.5 points, so this is not statist
 | NBA.com daily lineups feed (`stats.nba.com/js/data/leaders/00_daily_lineups_YYYYMMDD.json`) | Expected/confirmed starters (appears during the game day) | Free |
 | NBA.com live box score (`cdn.nba.com/static/json/liveData/...`) | Confirmed starters (backup) | Free |
 | FanDuel sportsbook feed (public, no login) | First Basket prices; live price feed every ~30 s | Free |
-| DraftKings sportsbook feed (public, no login) | "1st Points Scorer" prices, every 3 min; best price across both books | Free |
+| DraftKings sportsbook feed (public, no login) | "1st Points Scorer" prices, every 3 min (sent by this Mac: DraftKings refuses cloud servers); best price across both books | Free |
 | GitHub (Actions + Pages) | Cloud updates and the private website | Free |
 | Cloudflare Workers (free plan) | Live-odds relay + the timer that keeps the cloud job on | Free, no card |
 
