@@ -280,6 +280,14 @@ th.r, td.r { text-align: right; }
 .paper { border-top: 1px solid var(--line); margin-top: 14px; padding-top: 12px; }
 .paper .big { font-size: 22px; font-weight: 800; }
 .paper .big.pos { color: var(--good); } .paper .big.neg { color: var(--bad); }
+.paper-stats { display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px; margin: 8px 0 10px; }
+.paper-stats div { background: var(--surface-2); border: 1px solid var(--line); border-radius: 10px; padding: 7px 8px; text-align: center; }
+.paper-stats b { display: block; font-size: 16px; }
+.paper-stats span { font-size: 11.5px; color: var(--muted); }
+.paper-learn { background: var(--surface-2); border: 1px solid var(--line); border-radius: 10px; padding: 8px 10px; font-size: 13px; }
+.paper-learn summary { cursor: pointer; font-weight: 700; color: var(--accent); }
+.paper-learn ul { margin: 8px 0 0; padding-left: 18px; display: grid; gap: 6px; color: var(--muted); }
+.paper-learn b { color: var(--text); }
 @media (max-width: 520px) {
   .bar, .player small { display: none; }
   table { font-size: 13.5px; }
@@ -1306,17 +1314,34 @@ const homeAway = (m) => {                        // 'MEM @ CLE' -> 'MEM (away) a
 };
 function paperBlock(p) {
   if (!p) return "";
-  if (!p.bets) return `<div class="paper"><div class="section-title">💰 Paper betting (pretend money)</div>
-    <div class="hint" style="margin:0">We pretend to bet $1 on every good deal and keep score after the games, to see if the “good deals” really pay off. No results yet: check back after tonight's games.</div></div>`;
+  const intro = `<div class="hint" style="margin:0 0 10px">A <b>scoreboard for our model</b>. Every time it finds a “good deal” on FanDuel, we pretend to bet <b>$1</b> and check after the game. No real money: it shows whether following the model would make or lose money.</div>`;
+  if (!p.bets) return `<div class="paper"><div class="section-title">💰 Paper betting (pretend money)</div>${intro}
+    <div class="hint" style="margin:0">No results yet: check back after tonight's games.</div></div>`;
   const back = p.bets + p.profit;            // what came back from the $1 stakes
   const lucky = p.profit - p.expected_profit;
-  return `<div class="paper"><div class="section-title">💰 Paper betting (pretend money)</div>
-    <div class="hint" style="margin:0 0 8px">Whenever our model thinks FanDuel's price on a player is <b>too generous</b> (a “good deal”), we pretend to bet <b>$1</b> on him, then check after the game. This tests whether the model can actually beat the sportsbook.</div>
-    <div class="big num ${p.profit > 0 ? "pos" : "neg"}">${money(p.profit)}</div>
-    <div class="hint num" style="margin:2px 0 8px">${p.bets} bets × $1 = <b>$${p.bets}</b> spent · ${p.wins} won · <b>$${back.toFixed(2)}</b> came back → ${p.profit >= 0 ? "up" : "down"} <b>${money(p.profit)}</b><br>
-      The model expected about <b>${money(p.expected_profit)}</b>${p.bets < 100 ? ` — ${Math.abs(lucky) > 3 ? (lucky > 0 ? "we've been lucky so far" : "we've been unlucky so far") + ", " : ""}too few bets yet to judge (long shots win rarely but pay a lot)` : ""}.</div>
+  const ex = p.rows.find((b) => b.american > 0) || { american: 1000 };
+  const win = ex.american / 100;              // profit on $1 at +N odds
+  const verdict = p.bets < 100
+    ? `${Math.abs(lucky) > 3 ? (lucky > 0 ? "So far we're <b>ahead of what the model expected</b>: mostly luck from a long shot or two coming in." : "So far we're <b>behind what the model expected</b>: long shots have been missing.") + " " : ""}Long shots win rarely but pay a lot, so it takes <b>about 100 bets</b> before this number really means something (${p.bets} so far).`
+    : (p.profit > 0 ? "After 100+ bets we're still ahead: a real sign the model finds good deals." : "After 100+ bets we're behind: the model's “good deals” aren't paying off yet.");
+  return `<div class="paper"><div class="section-title">💰 Paper betting (pretend money)</div>${intro}
+    <div class="big num ${p.profit > 0 ? "pos" : "neg"}">${money(p.profit)} <small class="hint" style="font-size:13px;font-weight:500">pretend ${p.profit >= 0 ? "profit" : "loss"} so far</small></div>
+    <div class="paper-stats num">
+      <div><b>${p.bets}</b><span>$1 bets</span></div>
+      <div><b>${p.wins}</b><span>won</span></div>
+      <div><b>$${back.toFixed(2)}</b><span>paid back</span></div>
+    </div>
+    <details class="paper-learn" open><summary>New to betting? How to read this</summary>
+      <ul>
+        <li><b>The odds</b> (like <b>${american(ex.american)}</b>) say what a $1 bet wins: <b>${american(ex.american)}</b> pays <b>$${win.toFixed(2)}</b> profit, plus your $1 back. Bigger number = less likely, but pays more.</li>
+        <li><b>A “good deal”</b> is a player FanDuel pays too much for: our model thinks he scores first more often than FanDuel's odds suggest.</li>
+        <li><b>✓ won</b> = he scored the first basket; <b>✗ lost $1</b> = someone else did.</li>
+        <li><b>The model expected ${money(p.expected_profit)}</b> from these ${p.bets} bets (its own guess at the average result). ${verdict}</li>
+      </ul>
+    </details>
+    <div class="hint" style="margin:10px 0 4px">Latest pretend bets:</div>
     <ul class="recent">${p.rows.map((b) => `<li><span class="${b.won ? "ok" : "no"}">${b.won ? "✓" : "✗"}</span>
-      <span>${esc(b.player)} ${american(b.american)} <small>${homeAway(b.matchup)} · ${b.won ? `won ${money(b.profit)}` : "lost $1"}</small></span></li>`).join("")}</ul></div>`;
+      <span>${esc(b.player)} at ${american(b.american)} <small>${homeAway(b.matchup)}<br>${b.won ? `<b style="color:var(--good)">won ${money(b.profit)}</b>` : `lost $1 (would have won $${(b.american > 0 ? b.american / 100 : 100 / -b.american).toFixed(2)})`}</small></span></li>`).join("")}</ul></div>`;
 }
 
 async function renderRecord() {
