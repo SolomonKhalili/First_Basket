@@ -1154,8 +1154,8 @@ function card(c, i) {
   };
   const bv = c.best_value;
   const valueLine = !fdOn || !Object.keys(fd).length ? ""
-    : bv ? `<div class="value-line pos">💰 <b>Best deal:</b> ${esc(bv.name)} at <b class="g">${american(bv.american)}</b>${bv.book ? ` on <b>${esc(bv.book)}</b>` : ""}, about <b class="g">${cents(bv.ev)}</b> for every $1 in the long run <button class="whats" data-learn="0">What's this?</button></div>`
-         : `<div class="value-line">💰 No good deals in this game: FanDuel's prizes are all too small. <button class="whats" data-learn="0">What's this?</button></div>`;
+    : bv ? `<div class="value-line pos">💰 <b>Best value:</b> ${esc(bv.name)} at <b class="g">${american(bv.american)}</b>${bv.book ? ` on <b>${esc(bv.book)}</b>` : ""}. ${bv.name === top[0] ? "He's also our top pick" : `<b>Not our top pick</b> (${pct(bv.prob, 0)} chance)`}, but the payout is bigger than his chance is worth — about <b class="g">${cents(bv.ev)}</b> per $1 over many bets. <button class="whats" data-learn="0">What's this?</button></div>`
+         : `<div class="value-line">💰 No value in this game: every payout is too small for the player's chance. <button class="whats" data-learn="0">What's this?</button></div>`;
   // Tip-off head-to-head: away jumper on the left, home on the right (same sides as "Scores first")
   const j = c.jumpers || {};
   const pAway = c.tip[c.away], pHome = c.tip[c.home];
@@ -1279,14 +1279,14 @@ function bookTable(c, i, recLine, shortName) {
     const a = (book === "FanDuel" ? fd : dk)[name];
     if (a === undefined) return missing(c, book);
     const ev = p === undefined ? undefined : p * payout(a) - (1 - p), good = ev >= VALUE_MIN;
-    return `<span class="px ${good ? "good" : ""}" title="${book}: ${good ? `good bet — about ${cents(ev)} per $1 over time` : "pays less than it should"}">${american(a)}</span>`;
+    return `<span class="px ${good ? "good" : ""}" title="${book}: ${good ? `value — pays more than his chance is worth (about ${cents(ev)} per $1 over many bets)` : "pays less than his chance is worth"}">${american(a)}</span>`;
   };
   const rows = list.map(([name, team, p], r) => `<tr data-name="${esc(name)}" class="${r === 0 ? "pick1" : r === 1 ? "pick2" : ""}">
       <td><div class="player">${logo(team, 18)}<span class="pn"><span class="nm"><span class="nfull">${esc(name)}</span><span class="nshort">${esc(shortName(name))}</span></span><span class="sub2"><span class="tc">${esc(team)} · </span>${recLine(name)}</span></span> <small class="tcode">${esc(team)}</small></div></td>
       <td class="r num bk-fd">${pct(p)}</td><td class="r bk-fd">${odds("FanDuel", name, p)}</td>
       <td class="r num bk-dk">${fg[name] === undefined ? "–" : pct(fg[name])}</td><td class="r bk-dk">${odds("DraftKings", name, fg[name])}</td></tr>`).join("");
   return `<div class="team-sec"><div class="fact-title">🏀 First basket</div>
-    <div class="bk-rule">FanDuel counts free throws · DraftKings only field goals. <b class="g">Green</b> = good bet.</div>
+    <div class="bk-rule">FanDuel counts free throws · DraftKings only field goals. <b class="g">Green</b> = value: pays more than the chance is worth (not "most likely").</div>
     <div class="tscroll ${c.fd_closed ? "fd-closed" : ""}"><table class="bk-table" style="--i:${i}">
       <thead><tr><th rowspan="2">Player</th><th colspan="2" class="bk-fd bk-head">FanDuel</th><th colspan="2" class="bk-dk bk-head">DraftKings</th></tr>
         <tr><th class="r bk-fd">Chance</th><th class="r bk-fd">Odds</th><th class="r bk-dk">Chance</th><th class="r bk-dk">Odds</th></tr></thead>
@@ -1316,8 +1316,8 @@ function teamSection(c) {
       <tbody>${row(c.away)}${row(c.home)}</tbody></table></div>`;
   const best = deals.sort((x, y) => y[2] - x[2])[0];
   return `<div class="team-sec"><div class="fact-title">🏀 First team to score</div>${table}
-    <div class="tf-verdict ${best ? "pos" : ""}">${best ? `💰 <b>Good bet: ${esc(best[1])} on ${esc(best[0])}</b> — it pays more than it should (about ${cents(best[2])} per $1 over time).`
-      : "No good team bet here — both books pay too little."}</div></div>`;
+    <div class="tf-verdict ${best ? "pos" : ""}">${best ? `💰 <b>Value: ${esc(best[1])} on ${esc(best[0])}</b>. ${(c.first_team[best[1]] || 0) < 0.5 ? `<b>Less likely to score first</b> (${pct(c.first_team[best[1]], 0)})` : `Favored to score first (${pct(c.first_team[best[1]], 0)})`}, but the payout is bigger than it should be — about ${cents(best[2])} per $1 over many bets.`
+      : "No value here — both books pay too little for each team's chance."}</div></div>`;
 }
 function countUp(el) {
   const v = parseFloat(el.dataset.v);
@@ -2304,15 +2304,15 @@ function renderBestBets() {
   if (!anyOdds) { el.hidden = true; return; }
   el.hidden = false;
   const shown = bbAll ? list : list.slice(0, 5);
-  el.innerHTML = `<div class="bb-head"><h3>💰 Tonight's best bets</h3><span>${list.length ? `${list.length} good deal${list.length === 1 ? "" : "s"} · odds update live` : "odds update live"}</span></div>
-    <div class="bb-why">Where the sportsbook <b>pays more than the player's real chance is worth</b>. Most still lose on any one night — the profit comes over many bets. <button class="whats" data-learn="0">How does this work?</button></div>
+  el.innerHTML = `<div class="bb-head"><h3>💰 Tonight's best value</h3><span>${list.length ? `${list.length} value bet${list.length === 1 ? "" : "s"} · odds update live` : "odds update live"}</span></div>
+    <div class="bb-why">Not "who's most likely" — these are bets where the sportsbook <b>pays more than the chance is worth</b>. Most are underdogs and lose on any one night; the profit comes over many bets. <button class="whats" data-learn="0">How does this work?</button></div>
     ${list.length ? `<div class="bb-list">${shown.map((r, i) => `<button type="button" class="bb-row" data-bb="${i}" title="Tap to log this bet">
         <span class="bb-rank">${i + 1}</span>
         <span class="bb-who"><b>${esc(r.name)}${!r.teamBet && priceMove(r.c, r.book, r.name, r.american) < 0 ? `<span class="bb-soon" title="${esc(r.book)} opened at ${american(((r.c.opening || {})[r.book] || {})[r.name])} — the payout keeps dropping, so this deal is shrinking">⏰ bet soon</span>` : ""}</b><small>${esc(r.team)} · ${esc(r.c.away)} @ ${esc(r.c.home)} · ${esc(cardStart(r.c))} · ${pct(r.prob, 0)} chance</small></span>
         <span class="bb-odds">${esc(r.book)}<b>${american(r.american)}</b></span>
         <span class="bb-ev"><b>${cents(r.ev)}</b><small>per $1</small></span></button>`).join("")}</div>
       ${list.length > 5 ? `<button class="bb-more" id="bbMore">${bbAll ? "Show top 5" : `Show all ${list.length}`}</button>` : ""}`
-    : `<div class="bb-none">No good deals right now — every price is too small for the chance. This changes as odds move.</div>`}`;
+    : `<div class="bb-none">No value right now — every payout is too small for the chance. This changes as odds move.</div>`}`;
   el._rows = shown;
 }
 $("bestBets").addEventListener("click", (ev) => {
