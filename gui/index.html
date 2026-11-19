@@ -174,6 +174,9 @@ button { font: inherit; cursor: pointer; border: 0; color: inherit; }
 .head-meta { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
 .head-meta .status { margin-left: auto; }
 .at { color: var(--muted); font-weight: 400; }
+.ha { display: inline-block; margin-left: 4px; padding: 1px 5px; border-radius: 5px; border: 1px solid var(--line); font-family: var(--body, inherit); font-size: 10px; font-weight: 600; letter-spacing: .04em; text-transform: uppercase; color: var(--muted); vertical-align: middle; }
+.tm .ha { display: block; width: max-content; margin: 2px 0 0; }
+.tm.home .ha { margin-left: auto; }
 .status { color: var(--muted); font-size: 13px; margin-left: auto; display: inline-flex; align-items: center; gap: 6px; white-space: nowrap; }
 .status.is-live { color: var(--live); font-weight: 650; }
 .badge { font-size: 12px; font-weight: 650; border-radius: 999px; padding: 3px 10px; white-space: nowrap; }
@@ -774,7 +777,7 @@ function tile(g) {
   return `<button class="tile ${g.past ? "past" : "pickable"} ${live ? "live" : ""}" data-id="${esc(g.game_id)}"
       style="--away-c:${color(g.away_team)};--home-c:${color(g.home_team)}"
       aria-pressed="${selected.has(g.game_id)}" title="Tap to show only the games you pick (tap again to remove)">
-    <div class="teams">${logo(g.away_team, 26)}${esc(g.away_team)} <span class="at">@</span> ${logo(g.home_team, 26)}${esc(g.home_team)}${score}</div>
+    <div class="teams">${logo(g.away_team, 26)}${esc(g.away_team)}<span class="ha">away</span> <span class="at">@</span> ${logo(g.home_team, 26)}${esc(g.home_team)}<span class="ha">home</span>${score}</div>
     <div class="meta">${meta}</div>${res}</button>`;
 }
 
@@ -956,9 +959,9 @@ function card(c, i) {
       data-home="${esc(c.home)}" data-away="${esc(c.away)}">
     <div class="card-head">
       <div class="mu">
-        <div class="tm away">${logo(c.away, 44)}<span>${esc(c.away)}</span></div>
+        <div class="tm away">${logo(c.away, 44)}<span>${esc(c.away)}<small class="ha">away</small></span></div>
         <span class="at">@</span>
-        <div class="tm home"><span>${esc(c.home)}</span>${logo(c.home, 44)}</div>
+        <div class="tm home"><span>${esc(c.home)}<small class="ha">home</small></span>${logo(c.home, 44)}</div>
       </div>
       <div class="head-meta">
         <span class="badge ${esc(c.label)}">${LINEUP[c.label] || esc(c.label)}</span>
