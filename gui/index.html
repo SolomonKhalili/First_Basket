@@ -686,6 +686,7 @@ body.bets-mode .dayswitch, body.bets-mode #yestSum, body.bets-mode #dataView { d
 .pleg button { background: none; border: 0; color: var(--muted); font-size: 16px; cursor: pointer; }
 .bet-legs { display: block; margin-top: 3px; font-size: 12.5px; color: var(--muted); }
 .bet-legs .lw { color: var(--good); } .bet-legs .ll { color: var(--bad); text-decoration: line-through; }
+.clv-simple { font-size: 13.5px; color: var(--muted); margin: 4px 0 10px; line-height: 1.5; } .clv-simple b { color: var(--text); }
 </style>
 </head>
 <body>
@@ -1467,25 +1468,21 @@ const homeAway = (m) => {                        // 'MEM @ CLE' -> 'MEM (away) a
 /* Closing line value: did FanDuel's price for our good-deal picks get shorter before tip-off? (ev.clv_results) */
 function clvBlock(c) {
   if (!c || !c.picks) return "";
-  const moved = c.shorter + c.longer, a = c.all_players || {};
-  const pctS = (x) => `${x >= 0 ? "+" : "−"}${Math.abs(x * 100).toFixed(1)}%`;
-  const good = c.avg_clv > (a.avg_clv || 0) && c.beat_rate > 0.5;
-  const verdict = moved < 30 ? `<b>Too early to tell</b> — only ${moved} price moves so far; this means something after ~100.`
-    : good ? `<b>Good sign</b> — the market keeps moving toward our picks, which usually means the value is real.`
-    : `<b>Not yet</b> — the market isn't moving toward our picks more than it does for everyone.`;
-  return `<div class="paper"><div class="section-title">📈 Closing line value</div>
-    <div class="paper-stats">
-      <div><b>${moved ? Math.round(c.shorter / moved * 100) : 0}%</b><span>of our good deals got shorter</span></div>
-      <div><b class="${c.avg_clv > 0 ? "pos" : ""}">${pctS(c.avg_clv)}</b><span>market moved our way</span></div>
-      <div><b>${pctS(a.avg_clv || 0)}</b><span>all players (yardstick)</span></div>
+  const moved = c.shorter + c.longer;
+  if (!moved) return "";
+  const good = c.shorter > c.longer;
+  const verdict = moved < 100
+    ? `${good ? "👍 Looking good so far" : "🤷 Not looking good so far"} — but it's early (${moved} so far). We'll know for sure after about 100.`
+    : good ? "👍 Yes — the sportsbook keeps agreeing with us. That's a strong sign our good bets are real."
+    : "👎 No — the sportsbook isn't agreeing with us more than usual.";
+  return `<div class="paper"><div class="section-title">🤝 Does the sportsbook agree with us?</div>
+    <p class="clv-simple">When we say a player is a <b>good bet</b>, does FanDuel <b>lower his payout</b> before the game starts?
+      If yes, it means they decided we were right.</p>
+    <div class="paper-stats" style="grid-template-columns:1fr 1fr">
+      <div><b class="pos">${c.shorter} times</b><span>👍 they lowered it</span></div>
+      <div><b>${c.longer} times</b><span>👎 they raised it</span></div>
     </div>
-    <div class="verdict-line ${moved < 30 ? "ok" : good ? "good" : "warn"}">${verdict}</div>
-    <details class="paper-learn"><summary>What is this?</summary><ul>
-      <li>When the model calls a player a <b>good deal</b>, we note FanDuel's price. Right before tip-off we check it again.</li>
-      <li>If the price got <b>shorter</b> (say +1000 → +700), the sportsbook moved toward our view — sharp money agreed with us.</li>
-      <li>Bettors who regularly beat the closing price tend to win long-term, and this shows up in <b>weeks</b>, not the hundreds of games results take.</li>
-      <li>So far: ${c.picks} good-deal picks, ${c.shorter} got shorter, ${c.longer} got longer, ${c.picks - moved} didn't move.</li>
-    </ul></details></div>`;
+    <div class="verdict-line ${moved < 100 ? "ok" : good ? "good" : "warn"}">${verdict}</div></div>`;
 }
 function paperBlock(p) {
   if (!p) return "";
