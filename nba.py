@@ -820,6 +820,8 @@ def predict_today(first_pass: bool = True, teams: set = frozenset(), ui=None) ->
         groups = st.player_groups(con, date.today().strftime("%Y%m%d"), roster_pos)
     pending, any_projected = 0, False
     early_index = bf.build_early_shot_index(con)        # each player's share of his team's first 5 shots
+    import context_features as cf
+    ctx = cf.Context(con)                               # tonight's opponent: by position + head-to-head
     fd_games = _fanduel_prices(pre_games, warn, ui)          # FanDuel "First Basket" prices (None if unreachable)
     dk_games = _draftkings_prices(pre_games, warn, ui)       # DraftKings "1st Points Scorer" (None if unreachable)
 
@@ -924,6 +926,11 @@ def predict_today(first_pass: bool = True, teams: set = frozenset(), ui=None) ->
             is_home = 1 if p['team'] == home_team else 0
             pstats = bf.compute_player_season_stats(p['player_id'], game_date, p['team'], player_logs)
             pstats['early_shot_share'], pstats['early_shot_count'] = bf.early_shot_share(early_index, p['player_id'], game_date)
+            # tonight's opponent (context_features): his position tonight (NBA.com's lineup slot, else his usual one)
+            opp = away_team if is_home else home_team
+            grp = st.position_group(p.get('position')) or (groups or {}).get(st.norm_name(p['name']))
+            pstats['opp_pos_share'] = ctx.opp_pos_share(opp, grp, game_date.replace('-', ''))
+            pstats['vs_opp_rate'] = ctx.vs_opp_rate(p['player_id'], opp, game_date.replace('-', ''))
             rows.append(pm.build_row(pstats, home_team_stats if is_home else away_team_stats, is_home,
                                      tip_win_prob=tip_home if is_home else tip_away))
             info.append({'id': p['player_id'], 'name': p['name'], 'team': p['team']})

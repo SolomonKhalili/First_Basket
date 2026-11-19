@@ -519,6 +519,7 @@ NBA/
 ├── tip_model.py            # P(team wins the opening tip), point-in-time
 ├── picks.py                # pick log + track-record summary
 ├── pregame_model.py        # feature row, two-stage probabilities, fair odds
+├── context_features.py     # opponent-by-position + head-to-head inputs (point-in-time)
 ├── pregame_model.json      # active model weights + walk-forward results
 ├── train_pregame.py        # training, walk-forward test, keep-previous check
 ├── build_features.py       # training matrices (incremental) + player game logs
@@ -561,6 +562,20 @@ NBA/
 ---
 
 ## 10. Change log (newest first)
+
+### 2026-11-18 (late) — accuracy pass: two new model inputs adopted
+
+Tested everything on the list the honest way (week by week, only earlier games; L2 chosen on 2025-26):
+- **Adopted — opponent by position + head-to-head** (`context_features.py`, step 2): `experiments/combined_test.py`
+  log-loss 2026-27 2.2392 → **2.2365**, Jan–Apr 2026 2.2763 → **2.2727** (both better); top pick 19.2% → **21.7%** and
+  15.1% → 14.9%. Retrained model: walk-forward 203 games **21.7% / 2.2364** (was 19.2% / 2.2393). Both weights came out
+  small and negative (−0.07): corrections next to the season rate rather than strong signals — **re-check 2026-12-08**.
+- **Not changed — tip-off jumper rule**: names the actual jumper 95.6% (2026-27) / 92.6% (Jan–Apr) against box-score
+  starters; no variant beat it in both periods (`experiments/jumper_rules_test.py`).
+- **Not testable yet — blend with sportsbook odds** (`experiments/market_blend_test.py`): odds saved since 11-18 only;
+  decide with 150+ finished games (~2026-12-20). Log-loss decides.
+- Live track record: 8 logged games (too few). `pytest.ini` now limits tests to `tests/` (experiments were being
+  imported as tests). 187 tests.
 
 ### 2026-11-18 — app, private website, fully automatic live updates
 

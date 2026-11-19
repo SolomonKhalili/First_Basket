@@ -12,7 +12,8 @@ import numpy as np
 
 FEATURES = ["is_home", "fb_rate_shrunk", "L10_fb_shrunk", "shot_attempts_per36",
             "true_shooting", "minutes_per_game", "points_per_game", "team_tipoff_win_pct",
-            "tip_win_prob", "early_shot_shrunk"]
+            "tip_win_prob", "early_shot_shrunk", "opp_pos_share", "vs_opp_rate"]
+# opp_pos_share / vs_opp_rate (adopted 2026-11-18): tonight's opponent — see context_features.py for the tests.
 HOME, TIP = FEATURES.index("is_home"), FEATURES.index("tip_win_prob")
 PLAYER_FEATURES = [f for f in FEATURES if f not in ("is_home", "team_tipoff_win_pct", "tip_win_prob")]
 PLAYER_IDX = [FEATURES.index(f) for f in PLAYER_FEATURES]
@@ -49,6 +50,8 @@ def build_row(p: dict, t: dict, is_home: int, tip_win_prob: float = 0.5) -> list
         t.get("team_tipoff_win_pct", 0.5),
         float(tip_win_prob),
         shrunk(p.get("early_shot_share", 0.0), p.get("early_shot_count", 0), M_EARLY, EARLY_PRIOR),
+        float(p.get("opp_pos_share", 0.4)),     # context_features.Context.opp_pos_share
+        float(p.get("vs_opp_rate", PRIOR)),     # context_features.Context.vs_opp_rate
     ]
     return row
 
@@ -72,7 +75,8 @@ def two_stage(team: dict, w, mu, sd, R: np.ndarray) -> np.ndarray:
     """R = one game's 10 feature rows (FEATURES order) -> P(each starter scores first), sums to 1."""
     home = R[:, HOME] > 0.5
     ph = float(home_scores_first(team, R[home, TIP][0] if home.any() else 0.5))
-    s = ((R[:, PLAYER_IDX] - np.asarray(mu)) / np.asarray(sd)) @ np.asarray(w)
+    idx = PLAYER_IDX[:len(w)]                     # an older model file with fewer inputs ignores the newer ones
+    s = ((R[:, idx] - np.asarray(mu)) / np.asarray(sd)) @ np.asarray(w)
     out = np.zeros(len(R))
     for side, p_team in ((home, ph), (~home, 1 - ph)):
         if side.any():
@@ -85,6 +89,7 @@ def probabilities(model: dict, rows: list) -> np.ndarray:
     R = np.array(rows, dtype=float)
     if model.get("type") == "two_stage":
         return two_stage(model["team"], model["w"], model["mu"], model["sd"], R)
+    R = R[:, :len(model["mu"])]
     Z = (R - np.array(model["mu"])) / np.array(model["sd"])          # older one-stage model files
     s = Z @ np.array(model["w"])
     e = np.exp(s - s.max())

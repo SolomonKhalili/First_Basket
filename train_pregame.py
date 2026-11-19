@@ -52,19 +52,30 @@ if len(gids) != len(g) or set(g.tolist()) != {10}:
 dates = [info[gid][0] for gid in gids]
 
 # ── Model rows (tip-off chance once per game: that game's starters + NBA.com's listed C, earlier games only) ──
+import build_features as bf
+import context_features as cf
+ctx = cf.Context(con)                            # opponent-by-position + head-to-head, point-in-time
 rows = []
 for k, gid in enumerate(gids):
     d, home, away = info[gid]
+    s = bf.stored_starters(gid, home, away)
+    order = (s[home] + s[away])[:10] if s else []   # the matrix row order (build_features: home, then away)
+    n_home = len(s[home]) if s else 5
     p_home, p_away = tm.team_win_probs(con, home, away, d, tm.starters_for_game(con, gid, home),
                                        tm.starters_for_game(con, gid, away),
                                        st.listed_center(con, d, home), st.listed_center(con, d, away))
-    for r in X[10 * k:10 * k + 10]:
+    for j, r in enumerate(X[10 * k:10 * k + 10]):
         is_home = int(r[J["is_home"]])
         p = {"first_basket_rate": r[J["first_basket_rate"]], "L10_first_basket_rate": r[J["L10_first_basket_rate"]],
              "games_played": r[J["player_games_played"]], "shot_attempts_per36": r[J["shot_attempts_per36"]],
              "true_shooting_pct": r[J["true_shooting_pct"]], "minutes_per_game": r[J["minutes_per_game"]],
              "points_per_game": r[J["points_per_game"]],
              "early_shot_share": r[J["early_shot_share"]], "early_shot_count": r[J["early_shot_count"]]}
+        if j < len(order):
+            pl = order[j]
+            team, opp = (home, away) if j < n_home else (away, home)
+            p["opp_pos_share"] = ctx.opp_pos_share(opp, ctx.group_that_night(d, team, pl["name"]), d)
+            p["vs_opp_rate"] = ctx.vs_opp_rate(pl["player_id"], opp, d)
         rows.append(pm.build_row(p, {"team_tipoff_win_pct": r[J["team_tipoff_win_pct"]]}, is_home,
                                  tip_win_prob=p_home if is_home else p_away))
 M = np.array(rows).reshape(len(gids), 10, -1)   # games x starters x features
