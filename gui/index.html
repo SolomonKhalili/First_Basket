@@ -1480,6 +1480,22 @@ const homeAway = (m) => {                        // 'MEM @ CLE' -> 'MEM (away) a
   return h ? `${esc(a)} <i>(away)</i> at ${esc(h)} <i>(home)</i>` : esc(m);
 };
 /* Closing line value: did FanDuel's price for our good-deal picks get shorter before tip-off? (ev.clv_results) */
+/* Who guesses better, us or FanDuel? (ev.market_results) — plain words only */
+function marketBlock(m) {
+  if (!m || !m.games) return "";
+  const lead = m.us_closer > m.fanduel_closer ? "us" : m.fanduel_closer > m.us_closer ? "fd" : "tie";
+  const verdict = m.games < 100
+    ? `${lead === "us" ? "👍 We're ahead so far" : lead === "fd" ? "🤏 FanDuel is a little ahead so far" : "🤝 Tied so far"} — but it's early (${m.games} games). We'll know for sure after about 100.`
+    : lead === "us" ? "👍 We guess better than FanDuel — that's what makes our good bets real."
+    : "👎 FanDuel guesses better than us — treat our \"good bets\" with caution.";
+  return `<div class="paper"><div class="section-title">🥊 Who guesses better: us or FanDuel?</div>
+    <p class="clv-simple">FanDuel's prices are its guess at who scores first. After each game we check <b>who gave the real first scorer the better chance</b>.</p>
+    <div class="paper-stats" style="grid-template-columns:1fr 1fr">
+      <div><b class="${lead === "us" ? "pos" : ""}">${m.us_closer} games</b><span>🏀 we were closer</span></div>
+      <div><b>${m.fanduel_closer} games</b><span>🏦 FanDuel was closer</span></div>
+    </div>
+    <div class="verdict-line ${m.games < 100 ? "ok" : lead === "us" ? "good" : "warn"}">${verdict}</div></div>`;
+}
 function clvBlock(c) {
   if (!c || !c.picks) return "";
   const moved = c.shorter + c.longer;
@@ -1571,6 +1587,7 @@ async function renderRecord() {
       <ul class="recent">${r.recent.map((g) => `<li>
         <span class="${g.hit ? "ok" : "no"}">${g.hit ? "✓" : "✗"}</span>
         <span>${esc(g.pick)} <small>${esc(g.matchup)} · scored: ${esc(g.actual)}</small></span></li>`).join("")}</ul>
+      ${marketBlock(r.market)}
       ${clvBlock(r.clv)}
       ${paperBlock(r.paper)}`;
     const ring = $("ring"), target = rate * 100;      // fill the ring

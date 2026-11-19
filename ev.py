@@ -160,3 +160,34 @@ def clv_results(con, min_ev: float = VALUE_MIN) -> dict:
             value.append(c)
             rows_out.append({"game_id": gid, "player": first[3], "picked": first[1], "closed": close, "clv": c})
     return {**summary(value), "all_players": summary(everyone), "rows": rows_out}
+
+
+def market_results(con) -> dict:
+    """Who guesses better, the model or FanDuel? For each finished game, the last FanDuel board before tip-off: FanDuel's
+    chance for each player = its price's implied chance, scaled so the listed players add up to 100% (the book's cut
+    removed). Whoever gave the actual first scorer the higher chance "was closer" that game. Also the average log-loss
+    of each (lower = better) for games where the scorer was on FanDuel's board."""
+    import math
+    ensure_table(con)
+    rows = con.execute(
+        """SELECT o.game_id, o.player_id, o.prob, o.american, f.scorer_player_id
+           FROM odds_log o
+           JOIN (SELECT game_id, MAX(logged_at) AS last FROM odds_log GROUP BY game_id) l
+             ON l.game_id = o.game_id AND l.last = o.logged_at
+           JOIN first_baskets f ON f.game_id = o.game_id""").fetchall()
+    games = {}
+    for gid, pid, prob, american, scorer in rows:
+        games.setdefault(gid, {"scorer": str(scorer), "rows": []})["rows"].append((str(pid), prob, american))
+    us = them = ties = 0
+    ll_us, ll_them = [], []
+    for g in games.values():
+        total = sum(implied(a) for _, _, a in g["rows"])
+        hit = next((r for r in g["rows"] if r[0] == g["scorer"]), None)
+        if not hit or not total:
+            continue                                   # scorer not on FanDuel's board: can't compare this game
+        p_us, p_them = hit[1], implied(hit[2]) / total
+        us += p_us > p_them; them += p_them > p_us; ties += p_us == p_them
+        ll_us.append(-math.log(max(p_us, 1e-9))); ll_them.append(-math.log(max(p_them, 1e-9)))
+    n = len(ll_us)
+    return {"games": n, "us_closer": us, "fanduel_closer": them, "ties": ties,
+            "logloss_us": sum(ll_us) / n if n else None, "logloss_fanduel": sum(ll_them) / n if n else None}

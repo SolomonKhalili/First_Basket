@@ -95,3 +95,17 @@ def test_closing_line_value():
     r = ev.clv_results(con)
     assert r["picks"] == 1 and r["shorter"] == 1 and abs(r["avg_clv"] - (ev.implied(700) / ev.implied(1000) - 1)) < 1e-9
     assert r["all_players"]["picks"] == 2
+
+
+def test_who_guesses_better():
+    import sqlite3
+    import ev
+    con = sqlite3.connect(":memory:")
+    ev.ensure_table(con)
+    con.execute("CREATE TABLE first_baskets (game_id TEXT, scorer_player_id TEXT, scorer_name TEXT)")
+    con.execute("INSERT INTO first_baskets VALUES ('g', '1', 'A')")
+    for pid, prob, american in (("1", 0.30, 400), ("2", 0.70, 100)):   # FanDuel: A 20/(20+50)=28.6% < our 30%
+        con.execute("INSERT INTO odds_log (game_id, game_date, logged_at, player_id, prob, american) VALUES ('g','d','t',?,?,?)",
+                    (pid, prob, american))
+    r = ev.market_results(con)
+    assert r["games"] == 1 and r["us_closer"] == 1 and r["fanduel_closer"] == 0
