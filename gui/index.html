@@ -2300,6 +2300,7 @@ async function loadTab(tab, fresh = false) {
 
 function openData(tab = dstate.tab) {
   if (typeof closeViews === "function") closeViews();   // 🩹 Injuries / 👥 Starters pages
+  if (!$("oddsView").hidden) closeOdds();
   dstate.tab = tab;
   document.body.classList.add("data-mode");
   $("dataView").hidden = false;
