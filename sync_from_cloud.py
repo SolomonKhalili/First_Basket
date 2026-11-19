@@ -68,6 +68,7 @@ def sync() -> list:
 # this Mac starts the cloud update itself. The cloud still does the work; this only presses its Run button.
 # ──────────────────────────────────────────────
 REPO = "SolomonKhalili/First_Basket"
+LIVE_REPO = "SolomonKhalili/first-basket"         # the public website repo, where the live job runs
 STALE_MIN = 70                        # hourly updates: start one if the last run is older than this
 
 
@@ -98,13 +99,21 @@ def nudge_cloud() -> None:
             raise RuntimeError(r.stderr.strip()[:200])
         return r.stdout
 
-    runs = json.loads(gh("run", "list", "-w", "update-site.yml", "-L", "5", "--json", "createdAt,status"))
+    repo, wf, kinds = REPO, "update-site.yml", {"hourly": "hourly", "nightly": "nightly"}
+    try:                                              # the live job (public website repo), once it's set up
+        runs = json.loads(subprocess.run(["gh", "run", "list", "-R", LIVE_REPO, "-w", "live-picks.yml", "-L", "5",
+                                          "--json", "createdAt,status"], capture_output=True, text=True,
+                                         timeout=60, check=True).stdout)
+        repo, wf, kinds = LIVE_REPO, "live-picks.yml", {"hourly": "live", "nightly": "once"}
+    except (subprocess.CalledProcessError, ValueError):
+        runs = json.loads(gh("run", "list", "-w", "update-site.yml", "-L", "5", "--json", "createdAt,status"))
     busy = any(r["status"] in ("queued", "in_progress", "waiting", "pending", "requested") for r in runs)
     last = max((datetime.fromisoformat(r["createdAt"].replace("Z", "+00:00")).astimezone(et) for r in runs),
                default=None)
     kind = backup_action(datetime.now(et), last, busy)
     if kind:
-        gh("workflow", "run", "update-site.yml", "-f", f"kind={kind}")
+        subprocess.run(["gh", "workflow", "run", wf, "-R", repo, "-f", f"kind={kinds[kind]}"], check=True,
+                       capture_output=True, timeout=60)
         log(f"backup: the cloud hadn't updated since {last.strftime('%-I:%M %p') if last else 'ever'} — "
             f"started a {kind} cloud update")
     else:

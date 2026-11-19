@@ -92,7 +92,7 @@
     const el = document.getElementById("fb-fresh");
     if (!bundle) return;
     const t = new Date(bundle.published);
-    el.textContent = `Picks updated ${t.toLocaleString([], { weekday: "short", hour: "numeric", minute: "2-digit" })} · refresh hourly on game days`;
+    el.textContent = `Picks updated ${t.toLocaleString([], { weekday: "short", hour: "numeric", minute: "2-digit" })} · live: odds & lineups re-checked every few minutes before tip-off`;
     el.hidden = false;
   }
 

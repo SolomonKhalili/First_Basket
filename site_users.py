@@ -60,9 +60,12 @@ def upload_and_rebuild(message: str) -> None:
         subprocess.run(["git", "commit", "-m", message, "--only", "site_users.json"], cwd=here, check=True,
                        capture_output=True)
         subprocess.run(["git", "push", "-q", "origin", "HEAD:main"], cwd=here, check=True, capture_output=True)
-        subprocess.run(["gh", "workflow", "run", "update-site.yml", "-R", REPO, "-f", "kind=publish"], cwd=here,
-                       check=True, capture_output=True)
-        print("Uploaded. The website rebuilds in ~3 minutes.")
+        live = subprocess.run(["gh", "workflow", "run", "live-picks.yml", "-R", "SolomonKhalili/first-basket",
+                               "-f", "kind=live"], cwd=here, capture_output=True)
+        if live.returncode != 0:                      # live job not set up yet: the older one-off rebuild
+            subprocess.run(["gh", "workflow", "run", "update-site.yml", "-R", REPO, "-f", "kind=publish"], cwd=here,
+                           check=True, capture_output=True)
+        print("Uploaded. The website picks it up within ~5 minutes (up to 15 on a quiet afternoon).")
     except (subprocess.CalledProcessError, FileNotFoundError) as e:
         err = getattr(e, "stderr", b"") or b""
         print(f"Saved here, but couldn't upload automatically ({err.decode(errors='replace').strip()[:200]}).")

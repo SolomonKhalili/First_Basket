@@ -4,6 +4,12 @@ Builds the free, password-protected website (run on a schedule by GitHub — .gi
     python3 publish.py --out site_out             # update everything, then write the encrypted website
     python3 publish.py --out site_out --no-update # just repackage what's already in the database
     python3 publish.py --should-run nightly|hourly # exit 0 if an update is worth running now (saves free minutes)
+    python3 publish.py --live --out site_out      # game night: keep updating until every game has tipped off
+
+Live mode (run by the public website repo's workflow, which has unlimited free minutes): every few minutes it
+re-checks FanDuel's odds, NBA.com's lineups (Expected -> Confirmed) and injuries, re-runs the picks and republishes
+the moment anything changes (at most every ~6 minutes — GitHub Pages' limit is about 10 publishes an hour). It
+stops once every game has tipped off. Its public log only says "updated" / "no change": details go to a private log.
 
 What it publishes: ONLY results — tonight's picks (chances, fair odds, FanDuel prices, value), the scoreboard, the
 track record and the four Data tabs. Never the model, the training data or the code that makes picks.
@@ -75,6 +81,7 @@ def run_update() -> dict:
     import nba
     import starters as st
     st._FEED_CACHE.clear(); st._SB_CACHE.clear()
+    nba._SEEN.clear(); nba._DONE.clear()          # every pass is a full fresh look (odds and lineups move)
     out = gui.Collector(lambda msg: print(f"  … {msg}", flush=True))
     nba.predict_today(first_pass=True, teams=set(), ui=out)
     return gui.keep_todays_cards(gui.add_logged_cards(out.result))
@@ -135,6 +142,137 @@ def should_run(kind: str) -> bool:
     return any(e.get("status", {}).get("type", {}).get("state") == "pre" for e in events)
 
 
+# ──────────────────────────────────────────────
+# LIVE MODE: game night, every few minutes
+# ──────────────────────────────────────────────
+PUBLISH_GAP = 6 * 60          # GitHub Pages allows ~10 publishes an hour
+MAX_RUN = 5 * 3600 + 30 * 60  # GitHub stops a job at 6 h; the next scheduled run picks up from here
+FAST, SLOW = 3 * 60, 15 * 60  # check every 3 min when a tip-off is near (lineups get confirmed ~30 min before)
+STATE_FILES = ["nba_first_basket.db", "first_basket_data.csv", "my_predictions.xlsx", "pregame_model.json",
+               "X_train.npy", "y_train.npy", "groups.npy", "game_ids.json", "meta.json", "feature_names.json",
+               "player_game_logs.pkl", "todays_cards.json", "run.log"]
+
+
+def fingerprint(result) -> str:
+    """What viewers would see change: each card's picks, chances, lineup status, tip, FanDuel prices + skipped games."""
+    import hashlib
+    keep = ("matchup", "label", "picks", "fanduel", "best_value", "tip", "jumpers", "home_starters", "away_starters",
+            "injuries")
+    view = [{k: c.get(k) for k in keep} for c in (result or {}).get("cards", [])]
+    view.append(sorted(x.get("matchup", "") + x.get("reason", "") for x in (result or {}).get("skipped", [])))
+    return hashlib.sha256(json.dumps(view, sort_keys=True, default=_jsonable).encode()).hexdigest()
+
+
+def seconds_to_next_tip(result) -> float:
+    """Seconds until the next game that hasn't started tips off (inf if none)."""
+    now = datetime.now(ET).timestamp()
+    tips = [datetime.fromisoformat(str(g["start_utc"]).replace("Z", "+00:00")).timestamp()
+            for g in (result or {}).get("schedule", []) if g.get("status") == 1 and g.get("start_utc")]
+    return min(tips) - now if tips else float("inf")
+
+
+def _git(*args, cwd) -> None:
+    import subprocess
+    subprocess.run(["git", *args], cwd=cwd, check=True, capture_output=True, timeout=180)
+
+
+def push_dir(folder: Path, remote: str, branch: str, message: str) -> None:
+    """Replace `branch` on `remote` with exactly this folder (one commit, no growing history)."""
+    import shutil
+    shutil.rmtree(folder / ".git", ignore_errors=True)
+    who = ["-c", "user.name=First Basket bot", "-c", "user.email=bot@users.noreply.github.com"]
+    _git("init", "-q", "-b", branch, cwd=folder)
+    _git(*who, "add", "-A", cwd=folder)
+    _git(*who, "commit", "-q", "-m", message, cwd=folder)
+    _git("push", "-q", "--force", remote, f"HEAD:{branch}", cwd=folder)
+
+
+def publish_site(out: Path, result) -> None:
+    build_site(encrypt_bundle(build_bundle(result), data_key()), load_site_users(), out)
+    remote = os.environ.get("SITE_REMOTE")
+    if remote:
+        push_dir(out, remote, os.environ.get("SITE_BRANCH", "gh-pages"), f"Picks {datetime.now(ET):%Y-%m-%d %H:%M}")
+
+
+def save_state() -> None:
+    """Keep the data for the next run (the private repo's "state" branch)."""
+    import shutil
+    remote = os.environ.get("STATE_REMOTE")
+    if not remote:
+        return
+    folder = HERE / ".state_out"
+    shutil.rmtree(folder, ignore_errors=True)
+    folder.mkdir()
+    for f in STATE_FILES:
+        if (HERE / f).exists():
+            shutil.copy2(HERE / f, folder / f)
+    push_dir(folder, remote, "state", f"Saved data {datetime.now(ET):%Y-%m-%d %H:%M}")
+
+
+def live(out: Path, once: bool = False) -> int:
+    """Update -> publish if anything changed -> wait -> again, until every game has tipped off."""
+    import traceback
+    public = sys.stdout                                   # the public log: one short line per check, no details
+    logf = HERE / "run.log"
+    if logf.exists() and logf.stat().st_size > 2_000_000:   # keep the private log small
+        logf.write_text("\n".join(logf.read_text(errors="replace").splitlines()[-5000:]) + "\n")
+    log = open(logf, "a", buffering=1)                    # everything else: private (saved with the data)
+    sys.stdout = sys.stderr = log
+    say = lambda msg: print(f"{datetime.now(ET):%-I:%M %p}  {msg}", file=public, flush=True)  # noqa: E731
+    if not load_site_users():
+        say("no website accounts yet — nothing to publish")
+        return 0
+    started, last_pub, last_save, published_fp, fails = time.time(), 0.0, time.time(), None, 0
+    users_seen = json.dumps(load_site_users(), sort_keys=True)
+    while True:
+        print(f"\n=== check {datetime.now(ET):%Y-%m-%d %H:%M:%S} ===")
+        if os.environ.get("STATE_REMOTE"):               # accounts added/removed since the run started
+            try:
+                _git("fetch", "-q", "--depth", "1", os.environ["STATE_REMOTE"], "main", cwd=HERE)
+                _git("checkout", "FETCH_HEAD", "--", "site_users.json", cwd=HERE)
+            except Exception:  # noqa: BLE001
+                traceback.print_exc()
+        users_now = json.dumps(load_site_users(), sort_keys=True)
+        if users_now != users_seen:
+            users_seen, published_fp = users_now, None    # publish straight away with the new account list
+        try:
+            result = run_update()
+            fails = 0
+        except Exception:  # noqa: BLE001
+            traceback.print_exc()
+            fails += 1
+            say("check failed — trying again shortly")
+            if fails >= 3:
+                save_state()
+                return 1
+            time.sleep(FAST)
+            continue
+        fp = fingerprint(result)
+        due = time.time() - last_pub >= PUBLISH_GAP
+        if published_fp is None or (fp != published_fp and due) or time.time() - last_pub >= 1800:
+            try:
+                publish_site(out, result)
+                published_fp, last_pub = fp, time.time()
+                say(f"published ({len(result.get('cards', []))} games)")
+            except Exception:  # noqa: BLE001
+                traceback.print_exc()
+                say("publish failed — trying again next check")
+        else:
+            say("no change" if fp == published_fp else "changed — publishing at the next check")
+        wait = seconds_to_next_tip(result)
+        if once or wait == float("inf") or time.time() - started > MAX_RUN:
+            if fp != published_fp:
+                publish_site(out, result)
+                say("published final update")
+            save_state()
+            say("done — every game has tipped off" if wait == float("inf") else "done for this run")
+            return 0
+        if time.time() - last_save > 1800:
+            save_state()
+            last_save = time.time()
+        time.sleep(FAST if wait < 100 * 60 else SLOW)
+
+
 def main(argv) -> int:
     if "--should-run" in argv:
         kind = argv[argv.index("--should-run") + 1]
@@ -142,6 +280,8 @@ def main(argv) -> int:
         print(f"should run ({kind}): {'yes' if ok else 'no — no upcoming games today'}")
         return 0 if ok else 3
     out = Path(argv[argv.index("--out") + 1]) if "--out" in argv else HERE / "site_out"
+    if "--live" in argv or "--once" in argv:
+        return live(out, once="--once" in argv)
     users = load_site_users()
     result = None
     if "--no-update" not in argv:
