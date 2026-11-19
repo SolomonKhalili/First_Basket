@@ -304,11 +304,12 @@ def log_espn(con, day: str, games: list) -> int:
         for r in g["players"]:
             con.execute("INSERT OR IGNORE INTO dk_odds_log VALUES (?, ?, ?, ?, ?, ?)",
                         (day, m, d0, r["player"], r["team"], int(r["open"])))
-            try:
-                at = datetime.fromisoformat(r["updated"].replace("Z", "+00:00")).astimezone(ZoneInfo("America/New_York"))
-                at = at.strftime("%Y-%m-%d %H:%M:%S")
-            except ValueError:
-                continue
+            now = datetime.now(ZoneInfo("America/New_York"))
+            try:                               # ESPN's "updated" time — but never later than now (ESPN sometimes
+                at = min(datetime.fromisoformat(r["updated"].replace("Z", "+00:00")).astimezone(now.tzinfo), now)
+            except ValueError:                 # stamps a time hours ahead), and now if it gives none
+                at = now
+            at = at.strftime("%Y-%m-%d %H:%M:%S")
             last = con.execute("SELECT american FROM dk_odds_log WHERE game_date = ? AND matchup = ? AND player_name = ? "
                                "ORDER BY logged_at DESC LIMIT 1", (day, m, r["player"])).fetchone()
             if not last or last[0] != r["american"]:
