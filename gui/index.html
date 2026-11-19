@@ -863,8 +863,8 @@ function card(c, i) {
   }
   const topRec = rec(top[0]);
   const heroRec = topRec ? `<div class="rec-hero">🏀 First basket in <b>${topRec[0]} of ${topRec[1]}</b> games this season</div>` : "";
-  const fd = c.fanduel;
-  const fdOn = fd !== undefined && fd !== null;
+  const fd = c.fanduel || {};
+  const fdOn = (c.fanduel !== undefined && c.fanduel !== null) || Object.keys(c.draftkings || {}).length > 0;   // either book
   const dk = c.draftkings || {};
   const dkOn = Object.keys(dk).length > 0;
   const bookCell = (prices, book, name, fair) => {
@@ -1077,6 +1077,28 @@ function matchRows(rows, players) {          // our names -> price (names first,
   }
   return out;
 }
+/* DraftKings lines are only ever read by the browser (DraftKings refuses the cloud), so the browser keeps the last
+   line it saw for each game, for the day. After tip-off the card shows that saved line next to FanDuel's. */
+const DK_SAVE = "fb-dk-lines";
+function savedDK() {
+  try { const d = JSON.parse(localStorage.getItem(DK_SAVE) || "{}"); return d.date === (lastResult?.date || "") ? d.games || {} : {}; }
+  catch (e) { return {}; }
+}
+function saveDK(games) {
+  try {
+    const keep = savedDK();
+    for (const g of games || []) if (g.home && g.away && g.rows.length) keep[`${g.away}@${g.home}`] = g.rows;   // open markets only
+    localStorage.setItem(DK_SAVE, JSON.stringify({ date: lastResult?.date || "", games: keep }));
+  } catch (e) { /* private browsing: just this visit */ }
+}
+function applySavedDK(c) {                   // a started game: its last saved DraftKings line
+  if (isPre(c) || (c.draftkings && Object.keys(c.draftkings).length)) return;
+  const rows = savedDK()[`${c.away}@${c.home}`];
+  if (!rows) return;
+  c.draftkings = matchRows(rows, c.probs || c.picks.map(([n, t]) => [n, t]));
+  if (Object.keys(c.draftkings).length) recompute(c);
+}
+
 function recompute(c) {                      // value at the better of the two books, for every starter
   const players = c.probs || c.picks.map(([n, t, p]) => [n, t, p]);
   const best = {}, book = {};
@@ -1135,6 +1157,7 @@ async function refreshDK() {
     const r = await fetch(DK_URL, { cache: "no-store", credentials: "omit" });
     if (!r.ok) throw new Error(`dk ${r.status}`);
     dkState.games = parseDK(await r.json()); dkState.at = new Date(); dkState.fails = 0;
+    saveDK(dkState.games);
     return true;
   } catch (e) { dkState.fails++; return false; }
 }
@@ -1175,7 +1198,7 @@ function renderResult(res) {
   setTimeout(applyCardFilter, 0);                            // keep showing only the tapped games
   if (!res) return;
   lastResult = res;
-  for (const c of res.cards) fdApply(c);                     // keep the live odds on freshly drawn cards
+  for (const c of res.cards) { fdApply(c); applySavedDK(c); }   // live odds; started games keep their saved DK line
   if (res.date) $("date").textContent = res.date;
   $("cards").innerHTML = res.cards.length ? res.cards.map(card).join("")
     : `<div class="empty">No picks to show right now — see “Not predicted” for why.</div>`;
