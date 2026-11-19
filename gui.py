@@ -258,6 +258,25 @@ def fd_relay(fd_path: str, query: dict):
     return 200, body
 
 
+def dk_relay() -> tuple:
+    """/api/dk/markets: DraftKings' first-points markets for every NBA game, fetched by this Mac (DraftKings allows it;
+    it refuses cloud servers) — the same way /api/fd serves FanDuel. Same JSON the page would read from DraftKings
+    itself, so the page's parseDK works on it unchanged. Shared for 20 s like FanDuel."""
+    import requests
+    import draftkings_odds as dk
+    with _fd_lock:
+        hit = _fd_cache.get("__dk__")
+        if hit and time.time() - hit[0] < FD_CACHE_SECONDS:
+            return 200, hit[1]
+    try:
+        body = to_json(dk.league_markets(dk.FIRST_POINTS))
+    except (requests.RequestException, ValueError) as e:
+        return 502, to_json({"error": f"DraftKings unreachable: {type(e).__name__}"})
+    with _fd_lock:
+        _fd_cache["__dk__"] = (time.time(), body)
+    return 200, body
+
+
 def to_json(obj) -> bytes:
     """JSON that tolerates numpy numbers (the model's probabilities)."""
     return json.dumps(obj, default=lambda o: o.item() if hasattr(o, "item") else str(o)).encode()
@@ -304,7 +323,8 @@ class Job:
 # ──────────────────────────────────────────────
 # DATA VIEW: the CSV and my_predictions.xlsx as tabs in the app
 # ──────────────────────────────────────────────
-DATA_TABS = ("scorecard", "picks", "lineups", "games")
+DATA_TABS = ("scorecard", "picks", "lineups", "games", "odds")
+ODDS_LABELS = ["Date", "Game", "Player", "Sportsbook", "Opening price", "Closing price", "How it moved", "Times it changed"]
 LINEUP_LABELS = ["Date", "Game", "Team", "NBA.com early lineup (Expected)", "NBA.com final lineup (Confirmed)",
                  "Who actually started", "Early lineup right?", "Final lineup right?"]
 GAME_LABELS = {"game_start": "Date", "away_team": "Away", "home_team": "Home", "tip_winner": "Tip won by",
@@ -345,6 +365,10 @@ def data_tab(tab: str) -> dict:
         cols = [{"key": k, "label": GAME_LABELS[k], "yesno": False} for k in GAME_LABELS]
         rows = [[r[i] for i in keep] for r in reversed(nba.csv_rows(con))]
         return {"tab": tab, "version": data_version(), "columns": cols, "rows": rows}
+    if tab == "odds":                         # both books' prices through the day (ev.odds_moves)
+        import ev
+        cols = [{"key": f"o{i}", "label": label, "yesno": False} for i, label in enumerate(ODDS_LABELS)]
+        return {"tab": tab, "version": data_version(), "columns": cols, "rows": ev.odds_moves(con)}
     raise ValueError(f"unknown tab {tab!r} (use one of {', '.join(DATA_TABS)})")
 
 
@@ -630,6 +654,9 @@ class Handler(BaseHTTPRequestHandler):
                 import bets
                 import nba
                 self._send(200, to_json(bets.results(nba.db())))
+            elif path == "/api/dk/markets":                  # live DraftKings odds, fetched by this Mac (dk_relay)
+                code, body = dk_relay()
+                self._send(code, body)
             elif path.startswith("/api/fd/"):                # live FanDuel odds for the page (see fd_relay)
                 code, body = fd_relay(path[len("/api/fd/"):], parse_qs(urlparse(self.path).query))
                 self._send(code, body)
