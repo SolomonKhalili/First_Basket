@@ -743,6 +743,14 @@ NBA/
   2.2422 vs 2.2578); best blend (80/20) gains 0.0003 — noise, not adopted. FanDuel blend still ~2026-12-20.
 - **Backup players:** a questionable starter's likely replacement is re-scored with the whole lineup (`nba.py`
   `score_lineup`, `backups` / `backup_chance` on each card) and gets a table row when he'd make that book's top 5.
+- **Deep research** (`reports/First basket model improvements.md`, 16 ranked ideas) — tested the top ones, none adopted:
+  home court in stage 1 (current logistic already better: 0.6749 / 0.6751 vs 0.6755 / 0.6762); both teams' first
+  scorers as extra step-2 examples (`both_teams_test.py`, worse at every weight); first shot attempt as extra examples
+  (`first_shot_label_test.py`, w=0.1: 2.27248 → 2.27171 Jan–Apr but 2.23766 → 2.23773 this season — re-test at the
+  All-Star break); per-player bonus (`player_bonus_test.py`, worse in both); faster Elo for new jumpers / smaller tip
+  home edge (`tip_newjumper_test.py`, each helps one season only). Per-feature shrinkage was already tuned 11/17.
+  Context: our top pick ≈ StatsBench's published 17.7%; first-team accuracy ceiling ≈ 55–58% (tip winner scores
+  first 66%); press reports the NBA asked partner books to stop "first-of" markets from Oct 2026.
 - **In progress:** full 2024-25 season downloaded into a COPY of the project to test training on it (never into the
   real database unless it wins in both periods).
 
