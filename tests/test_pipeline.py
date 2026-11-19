@@ -574,3 +574,15 @@ def test_retrain_when_model_used_another_early_shot_setting(trained_through_yest
     monkeypatch.setattr(subprocess, "run", fake_run({}, calls))
     nba._retrain_if_needed(trained_through_yesterday)
     assert any("train_pregame.py" in " ".join(c) for c in calls)
+
+
+def test_injury_list_marks_a_cleared_player_active(project):
+    """Listed questionable earlier today, gone from the report now -> shown as cleared (Active), even if he was his
+    team's only listed injury; a failed (empty) report never marks anyone cleared."""
+    import starters as st
+    project.execute(st.INJURY_LOG_SCHEMA)
+    project.execute("INSERT INTO injury_log VALUES ('20261119', 'Deni Avdija', 'POR', 'Day-To-Day', 'Foot', '', '', '2026-11-19 09:00:00')")
+    other_team = [{"name": "Someone Else", "team": "MIL", "status": "Out", "detail": "Knee"}]
+    got = nba._injury_list(project, "20261119", ("POR", "MIL"), other_team, {})
+    assert [(r["name"], r["cleared"]) for r in got["POR"]] == [("Deni Avdija", True)]
+    assert nba._injury_list(project, "20261119", ("POR", "MIL"), [], {})["POR"] == []
