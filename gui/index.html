@@ -658,7 +658,13 @@ body.bets-mode .dayswitch, body.bets-mode #yestSum, body.bets-mode #dataView { d
 .bb-none { color: var(--muted); font-size: 14px; padding: 4px 2px 6px; }
 @media (max-width: 420px) { .bb-row { grid-template-columns: 1fr auto auto; } .bb-rank { display: none; } }
 
-.rec-overall { display: flex; align-items: center; gap: 12px; margin: 2px 0 14px; padding: 10px 12px; border-radius: 12px;
+.verdict-line { font-size: 12.5px; line-height: 1.45; color: var(--muted); margin: 0 0 12px; padding-left: 10px; border-left: 3px solid var(--line); }
+.verdict-line b { color: var(--text); }
+.verdict-line.good { border-left-color: var(--good); } .verdict-line.good b { color: var(--good); }
+.verdict-line.ok { border-left-color: var(--accent); } .verdict-line.ok b { color: var(--accent); }
+.verdict-line.warn { border-left-color: var(--warn); } .verdict-line.warn b { color: var(--warn); }
+.verdict-line.bad { border-left-color: var(--bad); } .verdict-line.bad b { color: var(--bad); }
+.rec-overall { display: flex; align-items: center; gap: 12px; margin: 2px 0 8px; padding: 10px 12px; border-radius: 12px;
   background: var(--surface-2); border: 1px solid var(--line); font-size: 13px; color: var(--muted); }
 .rec-overall .big { font-size: 20px; font-weight: 800; color: var(--text); min-width: 62px; text-align: center; }
 .rec-overall b { color: var(--text); }
@@ -1455,6 +1461,20 @@ function paperBlock(p) {
       <span>${esc(b.player)} at ${american(b.american)} <small>${homeAway(b.matchup)}<br>${b.won ? `<b style="color:var(--good)">won ${money(b.profit)}</b>` : `lost $1 (would have won $${(b.american > 0 ? b.american / 100 : 100 / -b.american).toFixed(2)})`}</small></span></li>`).join("")}</ul></div>`;
 }
 
+/* Is a #1-pick hit rate good? Graded against fixed benchmarks (BLUEPRINT): random 10%, "most minutes" ≈ 14%,
+   a published pro model 17.7% (StatsBench, 724 games), realistic ceiling ≈ 26–30%. Small samples get a ± note. */
+function rateVerdict(rate, games) {
+  const p = rate * 100;
+  const [grade, cls, why] =
+      p < 12 ? ["Poor", "bad", "about the same as guessing (10%)"]
+    : p < 15 ? ["Weak", "warn", "no better than just picking the starter who plays the most minutes (~14%)"]
+    : p < 17.7 ? ["Decent", "ok", "beats guessing (10%) and the most-minutes pick (~14%), but not yet a published pro model (17.7%)"]
+    : p < 22 ? ["Good", "good", "beats guessing (10%), the most-minutes pick (~14%) and a published pro model (17.7%)"]
+    : ["Excellent", "good", "well above a published pro model (17.7%); the realistic ceiling is ~26–30%"];
+  const pm = games ? Math.round(196 * Math.sqrt(rate * (1 - rate) / games)) : 0;   // ≈95% range, in points
+  const note = games < 400 && pm ? ` Only ${games} games so far, so it can still swing about ±${pm} points.` : "";
+  return `<div class="verdict-line ${cls}"><b>${grade}</b> — ${why}.${note}</div>`;
+}
 async function renderRecord() {
   try {
     const r = await getJSON("/api/record");
@@ -1467,10 +1487,12 @@ async function renderRecord() {
         <div class="ring" id="ring"><span class="num">${pct(rate)}</span></div>
         <div class="ring-txt"><b>This season</b><span class="num">${f.hits} of ${f.games} games · top 3: ${pct(top3, 0)}</span><br><span>random pick ≈ 10%</span></div>
       </div>
+      ${f.games ? rateVerdict(rate, f.games) : ""}
       <div class="rec-overall" title="Every game we can grade fairly: each week predicted by a model that had only seen earlier games (last season from ${esc(since)}, plus this season)">
         <span class="num big">${pct(orate)}</span>
         <span><b>Overall</b> <span class="num">${o.hits.toLocaleString()} of ${o.games.toLocaleString()} games${since ? ` since ${esc(since)}` : ""} · top 3: ${pct(otop3, 0)}</span></span>
       </div>
+      ${o.games ? rateVerdict(orate, o.games) : ""}
       <div class="section-title" style="margin-top:4px">Recent games</div>
       <ul class="recent">${r.recent.map((g) => `<li>
         <span class="${g.hit ? "ok" : "no"}">${g.hit ? "✓" : "✗"}</span>
