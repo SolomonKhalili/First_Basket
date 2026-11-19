@@ -776,6 +776,9 @@ NBA/
   Model files record `early_m`; `_retrain_if_needed` retrains when it doesn't match. Season/last-10 trust re-checked:
   current 30 / 10 still best. (Note: `season_backtest.fill_fg_grades` grades the field-goal model with the
   first-points early setting — re-grade only if those grades are re-run.)
+- **Rejected — player shares split by who won the tip** (`experiments/tip_split_test.py`, research idea): 2.22734 →
+  2.22767–2.22915 this season (worse), 2.25270 → 2.25228–2.25265 Jan–Apr (a hair better). 65.6% of first scorers' teams
+  had won the tip.
 - **Rejected — team scoring efficiency in the first-team step** (points per shot attempt, pre-game): 0.67488 →
   0.68299 (2025-26, worse) / 0.67507 → 0.67103 (2026-27) — correlation with scoring first only 0.08.
 
