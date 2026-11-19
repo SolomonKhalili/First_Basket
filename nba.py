@@ -1247,6 +1247,23 @@ def predict_today(first_pass: bool = True, teams: set = frozenset(), ui=None) ->
                     st.injury_flags([p['name'] for p in home_starters + away_starters], inj_report)}
         # every injured player on both teams (the card's Injuries section); refreshed on every picks update
         injury_list = _injury_list(con, game_date, (away_team, home_team), inj_report, team_of)
+        # a starter listed as questionable/doubtful/day-to-day: who would most likely start if he sits (same swap rule
+        # we use for players ruled out), so the page can show the backup next to him
+        backups = {}
+        if source != "nba_confirmed":
+            for team, five in ((home_team, home_starters), (away_team, away_starters)):
+                for nm, status, _ in st.injury_flags([p["name"] for p in five], inj_report):
+                    if st.severity(status) == 0:
+                        continue
+                    try:
+                        fake = [r for r in inj_report if st.norm_name(r["name"]) != st.norm_name(nm)] + \
+                               [{"name": nm, "team": team, "status": "Out", "detail": ""}]
+                        sub = st.substitute_injured(con, team, five, fake, game_date, team_of=team_of, groups=groups)
+                        rep = next((r["in"] for r in sub["replaced"] if st.norm_name(r["out"]) == st.norm_name(nm)), None)
+                        if rep:
+                            backups[nm] = rep
+                    except Exception:  # noqa: BLE001 — a missing backup never blocks the picks
+                        pass
         top5 = [(info[i]['name'], info[i]['team'], float(probs[i]), pm.fair_american(float(probs[i])))
                 for i in order[:5]]
         everyone = [{**info[i], "prob": float(probs[i]),                         # all 10 starters, for EV
@@ -1274,7 +1291,7 @@ def predict_today(first_pass: bool = True, teams: set = frozenset(), ui=None) ->
             **_team_first_odds(fd_games, home_team, away_team, first_team, dk_games, con, game_date),
             "home": home_team, "away": away_team,
             "home_starters": home_starters, "away_starters": away_starters,
-            "injuries": injuries, "injury_list": injury_list, "notes": notes,
+            "injuries": injuries, "injury_list": injury_list, "backups": backups, "notes": notes,
         })
 
     st.save_seen_lineups(con)                  # keep NBA.com's Expected and Confirmed lists (Lineups tab)
