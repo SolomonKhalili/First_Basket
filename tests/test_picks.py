@@ -307,3 +307,16 @@ def test_record_splits_this_season_from_overall():
     assert s["overall"]["games"] == 3 and s["overall"]["hits"] == 2 and s["overall"]["since"] == "20260210"
     assert [g["game_id"] for g in s["games"]] == ["c"]                       # recent list stays this season
     assert s["last_season"]["games"] == 2 and s["last_season"]["hits"] == 1   # games a + b
+
+
+def test_grading_uses_the_live_models_final_step():
+    """Re-created (graded) picks must apply the same simple-rule mix as pregame_model.probabilities."""
+    import numpy as np
+    import pregame_model as pm
+    import season_backtest as sb
+    M = np.zeros((1, 10, len(pm.FEATURES)))
+    M[0, :, pm.FEATURES.index("fb_rate_shrunk")] = [0.3] + [0.1] * 9
+    p = np.full(10, 0.1)
+    got = sb.with_simple_mix([p], M, [0])[0]
+    fb = M[0, :, pm.FEATURES.index("fb_rate_shrunk")]
+    assert np.allclose(got, (1 - pm.SIMPLE_MIX) * p + pm.SIMPLE_MIX * fb / fb.sum())

@@ -58,6 +58,7 @@ session: §11 step 0. Full details of every change are in §10, newest first.)*
   permission: OK". Confirm the site republished after 9 AM; if not, look at the timer and the live job (§4a).
 - **Nothing half-built.** All code is merged; 203 tests pass.
 
+- **Grading fix (2026-11-19):** re-created picks (both seasons) now apply the live model's 20% simple-rule mix (`season_backtest.with_simple_mix`); before, they graded the model without it. Now 20.0% this season, 15.3% last season (playoffs 18.4%), 16.0% all time. Tested leaning on the first-basket rate more as games pile up (20%→60%): better last season (playoffs 23%) but worse this season (18.6%, log-loss 2.2481 vs 2.2372) — not adopted (must be better in both).
 **Coming up (dated)**
 - **Around the All-Star break:** re-test adding play-in/playoff/Finals games to training (tested 2026-11-19 on 215 games of 2026-27, walk-forward: without 20.9% / 2.2378, with 20.5% / 2.2362 — no clear gain, not adopted).
 - **On/after 2026-12-08:** re-check the two inputs adopted 11/18 (opponent by position, head-to-head) and the 20%

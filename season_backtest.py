@@ -35,7 +35,7 @@ DB = "nba_first_basket.db"
 LABEL = "BACKTEST"
 MODEL_ID = "week-by-week-backtest"
 LAST_SEASON_FROM = "20251101"          # last season graded from here: the first ~10 days had no earlier games to learn from
-LAST_SEASON_PLAN = f"{LAST_SEASON_FROM}+playoffs"   # what fill_last_season last built (re-built when this changes)
+LAST_SEASON_PLAN = f"{LAST_SEASON_FROM}+playoffs+mix"   # what fill_last_season last built (re-built when this changes)
 
 
 def load_training():
@@ -50,6 +50,18 @@ def load_training():
     return ns
 
 
+def with_simple_mix(P, M, test):
+    """The live model's final step (pregame_model.probabilities): SIMPLE_MIX of each starter's shrunk season
+    first-basket rate. Without it the grading scored a different model than the one making picks (fixed 2026-11-19:
+    last season 14.6% -> 15.1%, playoffs 13.8% -> 18.4%)."""
+    col = pm.FEATURES.index("fb_rate_shrunk")
+    out = []
+    for p, k in zip(P, test):
+        fb = M[k][:, col]
+        out.append((1 - pm.SIMPLE_MIX) * p + pm.SIMPLE_MIX * fb / fb.sum() if fb.sum() > 0 else p)
+    return out
+
+
 def recreate(con, ns, idx, live, l2, info, names, pool) -> tuple:
     """Week by week over the games `idx`: each week predicted by a model trained only on earlier games."""
     gids, dates, home = ns["gids"], ns["dates"], ns["home"]
@@ -62,7 +74,7 @@ def recreate(con, ns, idx, live, l2, info, names, pool) -> tuple:
         test = [k for k in idx if lo <= dates[k] < hi and gids[k] not in live]
         if test:
             model = ns["fit2"](np.where(pool & (dates < lo))[0], l2)      # trained on earlier games only
-            P = ns["predict2"](model, test)
+            P = with_simple_mix(ns["predict2"](model, test), ns["M"], test)    # exactly what the live model does
             for k, probs in zip(test, P):
                 gid, d = gids[k], dates[k]
                 h, a = info[gid]
@@ -109,17 +121,19 @@ def fill_last_season(con) -> int:
     done = con.execute("SELECT value FROM backtest_meta WHERE key = 'last_season'").fetchone()
     if done and done[0] == plan:                  # same games as last time: nothing to do (re-grades ~8 s a night)
         return 0
-    con.execute("DELETE FROM pick_log WHERE lineup_type = ? AND game_date < ?", (LABEL, picks.SEASON_START))
+    con.execute("DELETE FROM pick_log WHERE lineup_type = ?", (LABEL,))   # both seasons' re-created picks
     ns = load_training()
     gids, dates, season = ns["gids"], ns["dates"], ns["season"]
     info = {g: (h, a) for g, h, a in con.execute("SELECT game_id, home_team, away_team FROM games")}
     names = dict(con.execute("SELECT player_id, player_name FROM lineups"))
     live = {g for (g,) in con.execute("SELECT DISTINCT game_id FROM pick_log WHERE lineup_type != ?", (LABEL,))}
-    made, hits = recreate(con, ns, last_season_games(season, dates), live, pm.load().get("l2", 1e-3), info, names,
-                          season != "playoffs")
+    made = hits = 0
+    for idx in (np.where(season == "new")[0], last_season_games(season, dates)):
+        m, h = recreate(con, ns, idx, live, pm.load().get("l2", 1e-3), info, names, season != "playoffs")
+        made += m; hits += h
     con.execute("INSERT OR REPLACE INTO backtest_meta VALUES ('last_season', ?)", (plan,))
     con.commit()
-    print(f"  📈 Last season's record filled in: {made} games, #1 pick right in {hits / max(made, 1):.1%}")
+    print(f"  📈 Re-graded both seasons: {made} games, #1 pick right in {hits / max(made, 1):.1%}")
     return made
 
 
