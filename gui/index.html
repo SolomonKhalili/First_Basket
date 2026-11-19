@@ -760,6 +760,16 @@ body.bets-mode .dayswitch, body.bets-mode #yestSum, body.bets-mode #dataView { d
 .bb-who b { white-space: normal !important; overflow: visible !important; text-overflow: clip !important; }
 .tipok { color: var(--good); font-weight: 700; } .tipno { color: var(--bad); font-weight: 700; }
 .tscroll .bk-table td, .tscroll .bk-table th { padding-left: 2px; padding-right: 2px; }
+
+/* one box per sportsbook */
+.book-sec { margin-top: 14px; padding: 12px; border-radius: 14px; background: var(--surface-2); border: 1px solid var(--line); }
+.book-sec.is-fd { border-top: 3px solid #3b82f6; } .book-sec.is-dk { border-top: 3px solid #22c55e; }
+.book-h { font-weight: 800; font-size: 16px; } .book-sec.is-fd .book-h { color: #93c5fd; } .book-sec.is-dk .book-h { color: #86efac; }
+.book-h small { color: var(--muted); font-weight: 500; font-size: 12.5px; margin-left: 6px; }
+.sub-h { margin: 12px 0 4px; font-weight: 700; font-size: 14px; } .sub-h small { color: var(--muted); font-weight: 400; }
+.tscroll .bk3 th:first-child, .tscroll .bk3 td:first-child { width: 46%; }
+.tscroll .bk3 th, .tscroll .bk3 td { padding-left: 6px; padding-right: 6px; }
+.bk3 .ourp { font-size: 11px; }
 </style>
 </head>
 <body>
@@ -1243,8 +1253,8 @@ function card(c, i) {
         <div class="big"><div class="pct num" data-v="${top[2]}">${pct(top[2])}</div><div class="sub num">fair ${american(top[3])}${topFd}</div></div>
       </div>
       ${valueLine}
-      ${bookTable(c, i, recLine, shortName)}
-      ${teamSection(c)}
+      ${bookSection(c, "FanDuel", recLine, shortName)}
+      ${bookSection(c, "DraftKings", recLine, shortName)}
       ${c.fd_closed ? `<div class="small-note">FanDuel has closed first-basket betting (tip-off is near) — its last prices are shown faded.</div>`
         : c.fanduel_note ? `<div class="small-note">${esc(c.fanduel_note)}</div>` : ""}
       <div class="facts" style="--i:${i}">
@@ -1282,6 +1292,41 @@ function teamFirstLine(c) {
    DraftKings "1st Points Scorer" = first FIELD GOAL only (free throws don't count) -> our field-goal chances. */
 const bookView = {};                                       // matchup -> "FanDuel" | "DraftKings" (per device, this visit)
 const fairOdds = (p) => (p >= 0.5 ? -Math.round(100 * p / (1 - p)) : Math.round(100 * (1 - p) / p));
+/* One box per sportsbook: its OWN top 5 first-basket picks (FanDuel counts free throws -> our normal chances;
+   DraftKings only field goals -> our field-goal chances) and its first-team-to-score odds. */
+function bookSection(c, book, recLine, shortName) {
+  const isFD = book === "FanDuel", short = isFD ? "FD" : "DK";
+  const fg = c.probs_fg || {}, prices = (isFD ? c.fanduel : c.draftkings) || {};
+  const all = c.probs || c.picks.map(([n, t, p]) => [n, t, p]);
+  const list = (isFD ? all.map(([n, t, p]) => [n, t, p]) : all.filter(([n]) => fg[n] !== undefined).map(([n, t]) => [n, t, fg[n]]))
+    .sort((a, b) => b[2] - a[2]).slice(0, 5);
+  const teamOdds = (c.team_first_books || {})[book] || {};
+  if (!isFD && !list.length && !Object.keys(prices).length && !Object.keys(teamOdds).length) return "";
+  const ourCell = (p) => `<span class="our">${american(fairOdds(p))}</span><span class="ourp">${pct(p, 0)} chance</span>`;
+  const bookCell = (a, p) => {
+    if (a === undefined || a === null) return missing(c, book);
+    const ev = p * payout(a) - (1 - p), good = ev >= VALUE_MIN;
+    return `<span class="px ${good ? "good" : ""}" title="${good ? `pays MORE than our odds — value (about ${cents(ev)} per $1 over many bets)` : "pays less than our odds"}">${american(a)}</span>${good ? `<span class="vtag">💰 value</span>` : ""}`;
+  };
+  const rows = list.map(([name, team, p], r) => `<tr data-name="${esc(name)}" data-book="${book}" class="${r === 0 ? "pick1" : r === 1 ? "pick2" : ""}">
+      <td><div class="player">${logo(team, 18)}<span class="pn"><span class="nm"><span class="nfull">${esc(name)}</span><span class="nshort">${esc(shortName(name))}</span></span><span class="sub2"><span class="tc">${esc(team)} · </span>${recLine(name)}</span></span> <small class="tcode">${esc(team)}</small></div></td>
+      <td class="r num">${ourCell(p)}</td><td class="r">${bookCell(prices[name], p)}</td></tr>`).join("");
+  // team chance by this book's rule: FanDuel = the model's team chance; DraftKings = field-goal chances summed by team
+  const teamP = {};
+  if (isFD) Object.assign(teamP, c.first_team || {});
+  else for (const [n, t] of all) if (fg[n] !== undefined) teamP[t] = (teamP[t] || 0) + fg[n];
+  const teams = [c.away, c.home].filter((t) => teamP[t] !== undefined);
+  const teamRows = teams.map((t) => `<tr><td><div class="player">${logo(t, 18)}<b>${esc(t)}</b></div></td>
+      <td class="r num">${ourCell(teamP[t])}</td><td class="r">${bookCell(teamOdds[t], teamP[t])}</td></tr>`).join("");
+  const head = (first) => `<thead><tr><th>${first}</th><th class="r">Our odds</th><th class="r">${short} odds</th></tr></thead>`;
+  return `<div class="book-sec ${isFD ? "is-fd" : "is-dk"}">
+    <div class="book-h">${book} <small>${isFD ? "free throws count" : "only field goals count"}</small></div>
+    <div class="sub-h">🏀 First basket <small>— top 5</small></div>
+    <div class="tscroll"><table class="bk-table bk3">${head("Player")}<tbody>${rows || `<tr><td colspan="3">${missing(c, book)}</td></tr>`}</tbody></table></div>
+    ${teamRows ? `<div class="sub-h">🏀 First team to score${isFD ? "" : " <small>(1st field goal)</small>"}</div>
+    <div class="tscroll"><table class="bk-table bk3">${head("Team")}<tbody>${teamRows}</tbody></table></div>` : ""}
+  </div>`;
+}
 /* A missing price, in plain words: we read the book and it doesn't offer him / the market isn't up yet / we couldn't read it */
 function missing(c, book) {
   const s = (c.book_status || {})[book];
@@ -2458,7 +2503,7 @@ function openBetDialog(row) {
   if (viewDay !== "today" || !lastResult) return;
   const el = row.closest(".card");
   const c = (lastResult.cards || []).find((x) => x.home === el.dataset.home && x.away === el.dataset.away);
-  if (c) openBetFor(c, row.dataset.name);
+  if (c) openBetFor(c, row.dataset.name, row.dataset.book);              // the box you tapped in
 }
 function openBetFor(c, name, bookWanted) {
   const pick = c.picks.find((p) => p[0] === name) || (c.probs || []).find((p) => p[0] === name) || [];
