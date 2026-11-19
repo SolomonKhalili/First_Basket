@@ -849,6 +849,16 @@ details.oc[open] { grid-column: 1 / -1; }
 .ctile .t-odds { font-size: 14px; color: #c9ced8; } .ctile .t-odds b { color: #fff; }
 @media (max-width: 520px) { .hero2 .ctile .pct { font-size: 32px; } .hero2 .shot { width: 92px; } }
 .sc-tabs { margin-bottom: 12px; display: grid !important; grid-template-columns: repeat(3, 1fr) !important; } .sc-tabs button { padding-left: 4px; padding-right: 4px; white-space: nowrap; }
+.inj-sec { margin: 12px 0 4px; border: 1px solid var(--line); border-radius: 12px; padding: 0 12px; }
+.inj-sec > summary { padding: 12px 0; font-weight: 800; font-size: 16px; color: var(--text); }
+.inj-sec > summary small { color: var(--muted); font-weight: 500; font-size: 13px; margin-left: 6px; }
+.iteam { padding: 4px 0 10px; } .iteam-h { display: flex; align-items: center; gap: 6px; font-weight: 700; margin-bottom: 4px; }
+.iteam ul { list-style: none; margin: 0; padding: 0; } .iteam li { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 8px; padding: 6px 0; border-top: 1px dashed var(--line); }
+.iteam li small { flex-basis: 100%; color: var(--muted); font-size: 12.5px; }
+.iname { font-weight: 600; } .inone { color: var(--muted); font-size: 13px; }
+.ist { font-size: 12px; font-weight: 800; padding: 2px 8px; border-radius: 999px; }
+.ist.out { background: rgba(248,113,113,.15); color: #f87171; } .ist.q { background: rgba(251,191,36,.15); color: #fbbf24; } .ist.ok { background: rgba(34,197,94,.15); color: var(--good); }
+.itag { display: block; font-size: 11.5px; font-weight: 700; color: #fbbf24; margin-top: 1px; }
 </style>
 </head>
 <body>
@@ -1341,7 +1351,8 @@ function card(c, i) {
       ${bookSection(c, bookView[c.matchup] || "FanDuel", recLine, shortName)}
       ${c.fd_closed ? `<div class="small-note">FanDuel has closed first-basket betting (tip-off is near) — its last prices are shown faded.</div>`
         : c.fanduel_note ? `<div class="small-note">${esc(c.fanduel_note)}</div>` : ""}
-      <details><summary>Starters</summary><div class="starters">${starterLine(c.away, c.away_starters)}${starterLine(c.home, c.home_starters)}</div></details>
+      ${c.injury_list ? injuryBlock(c) : ""}
+      <details class="inj-sec"><summary>👥 Starters <small>${c.label === "CONFIRMED" ? "confirmed" : "expected"}</small></summary><div class="starters">${starterLine(c.away, c.away_starters)}${starterLine(c.home, c.home_starters)}</div></details>
       ${(c.notes || []).length ? `<ul class="notes">${c.notes.map((n) => `<li>${esc(n)}</li>`).join("")}</ul>` : ""}
     </div>
   </article>`;
@@ -1400,6 +1411,26 @@ function heroTiles(pFd, pDk, oddsFd, oddsDk) {
   return `<div class="tiles-h">Our prediction to score first</div><div class="tiles">
     ${tile("c-fd", "FanDuel", "incl. free throws", pFd, oddsFd, "FD")}${tile("c-dk", "DraftKings", "excl. free throws", pDk, oddsDk, "DK")}</div>`;
 }
+/* 🩹 Injuries: every injured player on both teams, with today's status. Once NBA.com confirms the lineup, a listed
+   player who is in the starting five shows "✅ Starting" (he's playing). Refreshed with every picks update. */
+function injuryBlock(c) {
+  const list = c.injury_list || {};
+  const starters = new Set([...(c.home_starters || []), ...(c.away_starters || [])].map((s) => s.name));
+  const confirmed = c.label === "CONFIRMED";
+  const n = Object.values(list).reduce((k, v) => k + v.length, 0);
+  const rank = (s) => (/out/i.test(s) ? 0 : /doubt/i.test(s) ? 1 : 2);
+  const row = (r) => {
+    const playing = confirmed && starters.has(r.name);
+    const st = playing ? `<span class="ist ok">✅ Starting</span>`
+      : `<span class="ist ${/out/i.test(r.status) ? "out" : "q"}">${esc(r.status)}</span>`;
+    const why = [r.detail.replace(/, est\\. return.*$/i, ""), playing ? "confirmed in the starting lineup" : starters.has(r.name) ? "in our expected lineup" : ""].filter(Boolean).join(" · ");
+    return `<li><span class="iname">${esc(r.name)}</span>${st}${why ? `<small>${esc(why)}</small>` : ""}</li>`;
+  };
+  const team = (tm) => `<div class="iteam"><div class="iteam-h">${logo(tm, 18)}${esc(TEAM_NAMES[tm] || tm)}</div>
+      ${(list[tm] || []).length ? `<ul>${[...list[tm]].sort((a, b) => rank(a.status) - rank(b.status)).map(row).join("")}</ul>` : `<div class="inone">No injuries listed</div>`}</div>`;
+  return `<details class="inj-sec"><summary>🩹 Injuries <small>${n ? `${n} player${n === 1 ? "" : "s"} listed` : "none listed"}${confirmed ? " · lineup confirmed" : ""}</small></summary>
+    ${team(c.away)}${team(c.home)}</details>`;
+}
 const TEAM_NAMES = { ATL: "Atlanta Hawks", BOS: "Boston Celtics", BKN: "Brooklyn Nets", CHA: "Charlotte Hornets", CHI: "Chicago Bulls",
   CLE: "Cleveland Cavaliers", DAL: "Dallas Mavericks", DEN: "Denver Nuggets", DET: "Detroit Pistons", GS: "Golden State Warriors", GSW: "Golden State Warriors",
   HOU: "Houston Rockets", IND: "Indiana Pacers", LAC: "LA Clippers", LAL: "Los Angeles Lakers", MEM: "Memphis Grizzlies", MIA: "Miami Heat",
@@ -1439,7 +1470,7 @@ function bookSection(c, book, recLine, shortName) {
   };
   const ids = Object.fromEntries([...(c.home_starters || []), ...(c.away_starters || [])].map((s) => [s.name, s.player_id]));
   const rows = list.map(([name, team, p], r) => `<tr data-name="${esc(name)}" data-book="${book}" class="${r === 0 ? "pick1" : r === 1 ? "pick2" : ""}">
-      <td><div class="player"><span class="fwrap">${ids[name] ? `<img class="face" src="${headshot(ids[name])}" alt="" loading="lazy" onerror="this.remove()">` : ""}<span class="rank num">${r + 1}</span></span>${logo(team, 18)}<span class="pn"><span class="nm"><span class="nfull">${esc(name)}</span><span class="nshort">${esc(shortName(name))}</span></span><span class="sub2"><span class="tc">${esc(team)} · </span>${recLine(name)}</span></span> <small class="tcode">${esc(team)}</small></div></td>
+      <td><div class="player"><span class="fwrap">${ids[name] ? `<img class="face" src="${headshot(ids[name])}" alt="" loading="lazy" onerror="this.remove()">` : ""}<span class="rank num">${r + 1}</span></span>${logo(team, 18)}<span class="pn"><span class="nm"><span class="nfull">${esc(name)}</span><span class="nshort">${esc(shortName(name))}</span></span><span class="sub2"><span class="tc">${esc(team)} · </span>${recLine(name)}</span>${(c.injuries || {})[name] && c.label !== "CONFIRMED" ? `<span class="itag">⚠️ ${esc(c.injuries[name])}</span>` : ""}</span> <small class="tcode">${esc(team)}</small></div></td>
       <td class="r num">${pctCell(p)}</td><td class="r num">${ourCell(p)}</td><td class="r">${bookCell(prices[name], p)}</td></tr>`).join("");
   // team chance by this book's rule: FanDuel = the model's team chance; DraftKings = field-goal chances summed by team
   const teamP = {};

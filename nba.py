@@ -1245,6 +1245,10 @@ def predict_today(first_pass: bool = True, teams: set = frozenset(), ui=None) ->
             "players": [{**info[i], "prob": float(probs[i])} for i in range(len(info))]})
         injuries = {nm: status for nm, status, _ in
                     st.injury_flags([p['name'] for p in home_starters + away_starters], inj_report)}
+        # every injured player on both teams (the card's Injuries section); refreshed on every picks update
+        injury_list = {t: [{"name": r["name"], "status": r["status"], "detail": r.get("detail") or "",
+                            "return": r.get("return") or ""} for r in st.team_injuries(t, inj_report, team_of) if r["status"]]
+                       for t in (away_team, home_team)}
         top5 = [(info[i]['name'], info[i]['team'], float(probs[i]), pm.fair_american(float(probs[i])))
                 for i in order[:5]]
         everyone = [{**info[i], "prob": float(probs[i]),                         # all 10 starters, for EV
@@ -1272,7 +1276,7 @@ def predict_today(first_pass: bool = True, teams: set = frozenset(), ui=None) ->
             **_team_first_odds(fd_games, home_team, away_team, first_team, dk_games, con, game_date),
             "home": home_team, "away": away_team,
             "home_starters": home_starters, "away_starters": away_starters,
-            "injuries": injuries, "notes": notes,
+            "injuries": injuries, "injury_list": injury_list, "notes": notes,
         })
 
     st.save_seen_lineups(con)                  # keep NBA.com's Expected and Confirmed lists (Lineups tab)
