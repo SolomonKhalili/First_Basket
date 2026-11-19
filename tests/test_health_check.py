@@ -75,3 +75,22 @@ def test_mac_one_blip_is_not_a_problem():
 def test_mac_missing_library_or_app_counts_at_once():
     p = mac_problems("code already up to date", True, ["numpy"], False, {})
     assert "missing numpy" in p[0] and "isn't running" in p[1]
+
+
+def test_cant_reach_github_is_reported_not_mistaken_for_stuck():
+    now = at(17, 30)
+    p = find_problems(now, healthy(now) | {"live_runs": None})
+    assert len(p) == 1 and "signed in" in p[0]
+
+
+def test_health_file_shows_problems_then_records_the_fix(tmp_path, monkeypatch):
+    import health_check
+    monkeypatch.setattr(health_check, "OUT", tmp_path / "HEALTH.md")
+    health_check.write_report(["The website isn't opening (got 404)."], at(12))
+    text = (tmp_path / "HEALTH.md").read_text()
+    assert text.startswith("# ⚠️ PROBLEMS") and "website isn't opening" in text.split("## Recent")[1]
+    health_check.write_report(["The website isn't opening (got 404)."], at(12, 30))   # same problem: no new line
+    assert (tmp_path / "HEALTH.md").read_text().count("website isn't opening") == 2   # once at the top, once in the history
+    health_check.write_report([], at(13))
+    text = (tmp_path / "HEALTH.md").read_text()
+    assert text.startswith("# ✅ All good") and "✅ fixed: The website" in text

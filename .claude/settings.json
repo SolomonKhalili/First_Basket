@@ -1,0 +1,14 @@
+{
+  "hooks": {
+    "SessionStart": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "cd \"$CLAUDE_PROJECT_DIR\" && echo 'HEALTH.md (automatic health check of the website, live job and this Mac — if it shows PROBLEMS, tell the user and fix them first):' && head -40 HEALTH.md 2>/dev/null || echo '(no HEALTH.md yet)'"
+          }
+        ]
+      }
+    ]
+  }
+}

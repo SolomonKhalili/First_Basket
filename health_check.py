@@ -1,19 +1,17 @@
 """
-Health check: looks at everything that's supposed to update by itself and raises an alert when something isn't.
+Health check: looks at everything that's supposed to update by itself and writes what it finds to HEALTH.md in the
+NBA folder (no emails). The Mac runs it every 30 minutes as part of sync_from_cloud.py, and Claude reads HEALTH.md
+at the start of every session in this folder (.claude/settings.json), so problems get noticed and fixed. Run it any
+time:
 
-Runs on GitHub four times a day (.github/workflows/health-check.yml), so it works with the Mac off. When it finds a
-problem it opens an issue titled "⚠️ First Basket needs attention" in this repo — GitHub emails it and shows it in
-the GitHub app. When everything is fine again it closes that issue by itself. You can also run it any time:
-
-    python3 health_check.py            # prints what it finds (needs the gh command, signed in)
+    python3 health_check.py
 
 What it checks:
   • the website opens and its data file is readable
   • the Cloudflare odds relay answers, and its timer is still allowed to start the live job
   • the nightly update saved new data this morning
   • the live job ran recently during game hours and its last run didn't fail
-  • the Mac's own report (sync_from_cloud.py sends it every 30 min): app running, libraries present, code and data
-    syncing. A Mac that is simply off is fine — only problems it reports raise an alert.
+  • the Mac itself (passed in by sync_from_cloud.py): app running, libraries present, code and data syncing
 """
 import json
 import os
@@ -21,6 +19,7 @@ import subprocess
 import sys
 import urllib.request
 from datetime import datetime, timedelta
+from pathlib import Path
 from zoneinfo import ZoneInfo
 
 ET = ZoneInfo("America/New_York")
@@ -28,7 +27,6 @@ REPO = "SolomonKhalili/First_Basket"            # private: code, data ("state" b
 SITE_REPO = "SolomonKhalili/first-basket"       # public website + live job
 SITE = "https://solomonkhalili.github.io/first-basket/"
 RELAY = "https://first-basket-odds.solomonkhalili.workers.dev"
-TITLE = "⚠️ First Basket needs attention"
 LIVE_GAP_MIN = 90                               # live job starts every 20 min; this long with none = stuck
 
 
@@ -58,11 +56,14 @@ def find_problems(now: datetime, f: dict) -> list:
             p.append("The nightly update didn't run this morning (data last saved "
                      f"{_ago(now, saved) if saved else 'never'}) — last night's results aren't filed.")
 
-    runs = f.get("live_runs") or []                      # newest first: {"created": dt, "status", "conclusion"}
+    runs = f.get("live_runs")                            # newest first: {"created": dt, "status", "conclusion"}
+    if runs is None:
+        p.append("Couldn't ask GitHub about the live job (is the `gh` command still signed in on the Mac?).")
+        runs = []
     done = [r for r in runs if r["status"] == "completed"]
     if done and done[0]["conclusion"] not in ("success", "skipped", "cancelled"):
         p.append(f"The live job's last run failed ({done[0]['conclusion']}, {_ago(now, done[0]['created'])}).")
-    if 10 <= now.hour <= 23:
+    if 10 <= now.hour <= 23 and f.get("live_runs") is not None:
         last = max((r["created"] for r in runs), default=None)
         if last is None or now - last > timedelta(minutes=LIVE_GAP_MIN):
             p.append(f"The live job hasn't started in {_ago(now, last) if last else 'a long time'} — "
@@ -113,57 +114,59 @@ def gather() -> dict:
                               "--json", "createdAt,status,conclusion"))
         f["live_runs"] = [{"created": _when(r["createdAt"]), "status": r["status"], "conclusion": r["conclusion"]}
                           for r in runs]
-    except (subprocess.CalledProcessError, ValueError):
-        f["live_runs"] = []
-    raw = os.environ.get("MAC_HEALTH") or ""
-    if not raw:
-        try:
-            raw = _gh("variable", "get", "MAC_HEALTH", "-R", REPO)
-        except subprocess.CalledProcessError:
-            raw = ""
-    try:
-        m = json.loads(raw)
-        f["mac"] = {"at": _when(m["at"]), "problems": m.get("problems", [])}
-    except (ValueError, KeyError, TypeError):
-        f["mac"] = None
+    except (OSError, subprocess.SubprocessError, ValueError):
+        f["live_runs"] = None                            # couldn't ask GitHub
+    f["mac"] = None
     return f
 
 
-# ── raising / clearing the alert ──────────────────────────────────────────────
-def alert(problems: list, now: datetime) -> str:
-    """Open, update or close the alert issue. Returns a line for the log."""
-    found = json.loads(_gh("issue", "list", "-R", REPO, "--state", "open", "--search", f'in:title "{TITLE}"',
-                           "--json", "number,body"))
-    issue = found[0] if found else None
+# ── writing HEALTH.md ─────────────────────────────────────────────────────────
+HERE = Path(__file__).resolve().parent
+OUT = HERE / "HEALTH.md"
+HISTORY_KEEP = 30
+
+
+def render(problems: list, now: datetime, history: list) -> str:
+    """Pure (testable). history: earlier '- time — text' lines, newest first."""
     stamp = now.strftime("%a %b %-d, %-I:%M %p ET")
-    body = ("The automatic health check found something that isn't updating by itself:\n\n"
-            + "\n".join(f"- {x}" for x in problems)
-            + f"\n\nChecked {stamp}. This closes by itself once everything is working again. "
-              "To get it fixed, open Claude and say: *fix the health check alert*.")
-    if problems and not issue:
-        _gh("issue", "create", "-R", REPO, "--title", TITLE, "--body", body)
-        return "alert opened"
-    if problems and issue:
-        old = {ln for ln in issue["body"].splitlines() if ln.startswith("- ")}
-        new = {f"- {x}" for x in problems}
-        _gh("issue", "edit", str(issue["number"]), "-R", REPO, "--body", body)
-        if new - old:                                   # something new broke: a comment sends a fresh email
-            _gh("issue", "comment", str(issue["number"]), "-R", REPO, "--body",
-                "New problem:\n\n" + "\n".join(sorted(new - old)))
-        return "alert updated"
-    if issue:
-        _gh("issue", "close", str(issue["number"]), "-R", REPO, "--comment", f"✅ Everything is working again ({stamp}).")
-        return "alert closed"
-    return "all good"
+    head = (f"# ⚠️ PROBLEMS — First Basket needs attention\n\nChecked {stamp}:\n\n" + "\n".join(f"- {x}" for x in problems)
+            if problems else f"# ✅ All good — everything is updating by itself\n\nChecked {stamp}.")
+    hist = "\n".join(history[:HISTORY_KEEP]) or "(none yet)"
+    return (f"{head}\n\n## Recent problems (newest first)\n\n{hist}\n\n"
+            "_Written every 30 min by health_check.py (run from sync_from_cloud.py on the Mac)._\n")
+
+
+def write_report(problems: list, now: datetime) -> None:
+    """Update HEALTH.md; a problem is added to the history when it first appears or comes back."""
+    try:
+        old = OUT.read_text()
+    except OSError:
+        old = ""
+    current = {ln[2:] for ln in old.split("## Recent problems")[0].splitlines() if ln.startswith("- ")}
+    history = [ln for ln in old.split("## Recent problems")[-1].splitlines() if ln.startswith("- ")] if old else []
+    stamp = now.strftime("%b %-d %-I:%M %p")
+    new = [f"- {stamp} — {x}" for x in problems if x not in current]
+    fixed = [f"- {stamp} — ✅ fixed: {x}" for x in sorted(current - set(problems))]
+    tmp = OUT.with_name(".HEALTH.md.writing")
+    tmp.write_text(render(problems, now, new + fixed + history))
+    os.replace(tmp, OUT)
+
+
+def run(mac_problems=None) -> list:
+    """Check everything (mac_problems: what the Mac found about itself), write HEALTH.md, return the problems."""
+    now = datetime.now(ET)
+    f = gather()
+    f["mac"] = {"at": now, "problems": mac_problems or []}
+    problems = find_problems(now, f)
+    write_report(problems, now)
+    return problems
 
 
 def main() -> int:
-    now = datetime.now(ET)
-    problems = find_problems(now, gather())
+    problems = run()
     for x in problems or ["Everything is updating by itself."]:
         print(("⚠️  " if problems else "✅ ") + x)
-    if "--report" in sys.argv:
-        print(alert(problems, now))
+    print(f"(written to {OUT.name})")
     return 0
 
 

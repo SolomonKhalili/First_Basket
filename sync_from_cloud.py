@@ -180,7 +180,7 @@ def nudge_cloud() -> None:
 
 
 # ──────────────────────────────────────────────
-# HEALTH REPORT: the Mac tells GitHub how it's doing, so health_check.py (on GitHub) can raise an alert.
+# HEALTH: the Mac checks itself and the cloud, and writes the result to HEALTH.md (health_check.py).
 # ──────────────────────────────────────────────
 LIBRARIES = ["numpy", "pandas", "scipy", "requests", "rich", "cryptography", "sportsdataverse"]
 STRIKES = 3                                       # a sync/code problem must repeat this many runs (1.5 h) to count
@@ -206,7 +206,6 @@ def report_health(code_line: str, sync_ok: bool) -> None:
     import importlib.util
     import json
     import urllib.request
-    from datetime import datetime, timezone
     missing = [m for m in LIBRARIES if importlib.util.find_spec(m) is None]
     try:
         urllib.request.urlopen("http://127.0.0.1:8765/", timeout=10)
@@ -223,10 +222,9 @@ def report_health(code_line: str, sync_ok: bool) -> None:
         sfile.write_text(json.dumps(strikes))
     except OSError:
         pass
-    note = json.dumps({"at": datetime.now(timezone.utc).isoformat(timespec="seconds"), "problems": problems})
-    subprocess.run(["gh", "variable", "set", "MAC_HEALTH", "-R", REPO, "--body", note], check=True,
-                   capture_output=True, timeout=60)
-    log("health report sent: " + ("; ".join(problems) if problems else "all OK"))
+    import health_check
+    found = health_check.run(problems)
+    log("health: " + ("; ".join(found) if found else "all OK") + " (HEALTH.md)")
 
 
 def main() -> int:
@@ -250,7 +248,7 @@ def main() -> int:
     try:
         report_health(code_line, ok)
     except Exception as e:  # noqa: BLE001 — offline: the next run reports
-        log(f"health report not sent ({type(e).__name__}: {e})")
+        log(f"health check skipped ({type(e).__name__}: {e})")
     return 0 if ok else 1
 
 

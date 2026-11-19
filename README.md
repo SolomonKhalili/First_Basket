@@ -40,7 +40,7 @@ accounts only by the owner: `python3 site_users.py add NAME`). Everything below 
 | Retraining | Nightly ~4 AM ET | same job |
 | Keeping the job switched on | Every 10 min | Cloudflare timer (backup: this Mac, every 30 min) |
 | This Mac's NBA folder (newest code from GitHub + the cloud's data; never overwrites edits made on the Mac) | Every 30 min | `sync_from_cloud.py` (`launcher/com.firstbasket.sync.plist`) |
-| Health check: emails an alert (GitHub issue) when anything stops updating by itself; closes it when fixed | ~4 times a day | `health_check.py` (`.github/workflows/health-check.yml`) |
+| Health check: writes `HEALTH.md` in this folder (✅ all good, or ⚠️ what stopped updating); Claude reads it at the start of every session | Every 30 min while the Mac is on | `health_check.py` (run by `sync_from_cloud.py`) |
 | Desktop app | Always running, live odds every 30 s | `gui.py` (`launcher/com.firstbasket.app.plist`) |
 
 The model, code and data stay in the private repo; the website only holds encrypted results that each friend's
@@ -67,7 +67,7 @@ python3 gui.py                      # the same picks in your web browser (cards,
 
 If you already have the database and `pregame_model.json`, you only need the last two commands.
 
-Run the tests any time: `python3 -m pytest` (211 tests, all in the `tests/` folder).
+Run the tests any time: `python3 -m pytest` (213 tests, all in the `tests/` folder).
 
 ---
 
@@ -203,7 +203,7 @@ NBA/
 ├── train_pregame.py        # retrains pregame_model.json and runs the week-by-week test
 ├── build_features.py       # builds training matrices and player game logs
 ├── picks.py                # pick log + track record (`eval`)
-├── tests/                  # 211 tests (python3 -m pytest)
+├── tests/                  # 213 tests (python3 -m pytest)
 ├── first_basket_data.csv   # every past game: who scored first (auto-regenerated; don't edit by hand)
 ├── my_predictions.xlsx     # open this: Scorecard, Games (our picks vs results), Lineups (expected vs confirmed vs actual)
 ├── nba_first_basket.db     # SQLite database
