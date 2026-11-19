@@ -839,11 +839,11 @@ details.oc[open] { grid-column: 1 / -1; }
 .hero2 .who { padding-bottom: 12px; flex: 1; min-width: 0; }
 .hero2 .shot { width: 108px; height: 92px; }
 .team-hero.hero2 .shot { height: 92px; padding-bottom: 10px; }
-.ctiles-h { font-size: 11px; color: var(--accent); text-transform: uppercase; letter-spacing: .1em; font-weight: 700; margin: 12px 0 8px; }
-.ctiles { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+.tiles-h { font-size: 11px; color: var(--accent); text-transform: uppercase; letter-spacing: .1em; font-weight: 700; margin: 12px 0 8px; }
+.tiles { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
 .ctile { position: static; overflow: visible; text-align: center; background: rgba(0,0,0,.28); border: 1px solid var(--line); border-radius: 12px; padding: 10px 8px; }
-.ctile.fd { box-shadow: inset 0 3px 0 #3b82f6; } .ctile.dk { box-shadow: inset 0 3px 0 #22c55e; }
-.ctile .t-bk { font-weight: 800; font-size: 15px; }
+.ctile.c-fd { box-shadow: inset 0 3px 0 #3b82f6; } .ctile.c-dk { box-shadow: inset 0 3px 0 #22c55e; }
+.ctile .t-bk { font-weight: 800; font-size: 15px; color: var(--text); }
 .ctile .t-rule { font-size: 13px; color: #c9ced8; margin-top: 1px; }
 .hero2 .ctile .pct { font-size: 36px; margin: 6px 0 4px; line-height: 1; }
 .ctile .t-odds { font-size: 14px; color: #c9ced8; } .ctile .t-odds b { color: #fff; }
@@ -1397,7 +1397,7 @@ function heroTiles(pFd, pDk, oddsFd, oddsDk) {
       <div class="pct num"${p !== undefined ? ` data-v="${p}"` : ""}>${p !== undefined ? pct(p) : "–"}</div>
       <div class="t-odds">${odds !== undefined && odds !== null ? `${short} odds <b class="num">${american(odds)}</b>` : `${short} odds –`}</div></div>`;
   return `<div class="tiles-h">Our chance to score first</div><div class="tiles">
-    ${tile("fd", "FanDuel", "incl. free throws", pFd, oddsFd, "FD")}${tile("dk", "DraftKings", "excl. free throws", pDk, oddsDk, "DK")}</div>`;
+    ${tile("c-fd", "FanDuel", "incl. free throws", pFd, oddsFd, "FD")}${tile("c-dk", "DraftKings", "excl. free throws", pDk, oddsDk, "DK")}</div>`;
 }
 const TEAM_NAMES = { ATL: "Atlanta Hawks", BOS: "Boston Celtics", BKN: "Brooklyn Nets", CHA: "Charlotte Hornets", CHI: "Chicago Bulls",
   CLE: "Cleveland Cavaliers", DAL: "Dallas Mavericks", DEN: "Denver Nuggets", DET: "Detroit Pistons", GS: "Golden State Warriors", GSW: "Golden State Warriors",
