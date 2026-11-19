@@ -16,3 +16,4 @@ run.log
 dk_prices.json
 launcher/dk.log
 iphone_shots/
+.claude/settings.local.json

@@ -113,8 +113,8 @@ def update_code() -> str:
         else:
             git("checkout", "--", f)
     git("merge", "--ff-only", "-q", "FETCH_HEAD")
-    if any(f == "gui.py" or f.startswith("gui/") for f in incoming):
-        try:                                                          # the app restarts with the new page
+    if any(f.endswith(".py") and not f.startswith("tests/") or f.startswith("gui/") for f in incoming):
+        try:                                                          # the app restarts with the new code
             subprocess.run(["launchctl", "kickstart", "-k", f"gui/{os.getuid()}/com.firstbasket.app"],
                            capture_output=True, timeout=60)
         except (OSError, subprocess.SubprocessError):
