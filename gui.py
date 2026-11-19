@@ -619,6 +619,13 @@ class Handler(BaseHTTPRequestHandler):
                 self._send(200, to_json(day_cards(y)))
             elif path == "/api/record":
                 self._send(200, to_json(track_record()))
+            elif path == "/api/bets":                       # my bets (kept on the relay, see bets.py)
+                import bets
+                self._send(200, to_json({"user": self._bets_user(), "bets": bets.load(self._bets_user())}))
+            elif path == "/api/results":                    # first scorer of recent games: settles older bets
+                import bets
+                import nba
+                self._send(200, to_json(bets.results(nba.db())))
             elif path.startswith("/api/fd/"):                # live FanDuel odds for the page (see fd_relay)
                 code, body = fd_relay(path[len("/api/fd/"):], parse_qs(urlparse(self.path).query))
                 self._send(code, body)
@@ -638,6 +645,8 @@ class Handler(BaseHTTPRequestHandler):
             return self._login(raw)
         if self._gate(path):
             return
+        if path in ("/api/bets", "/api/bets/delete"):      # anyone logged in keeps their own bets
+            return self._bets_post(path, raw)
         if path != "/api/predict":
             return self._send(404, b'{"error": "not found"}')
         if self._who()["role"] != "owner":          # viewers never run the model
@@ -650,6 +659,23 @@ class Handler(BaseHTTPRequestHandler):
         teams = nba.parse_teams(body.get("teams") or [])
         started = JOB.start(teams)
         self._send(202 if started else 409, to_json({"started": started}))
+
+    def _bets_user(self) -> str:
+        import bets
+        return (self._who() or {}).get("user") or bets.OWNER
+
+    def _bets_post(self, path: str, raw: bytes):
+        import bets
+        try:
+            body = json.loads(raw or b"{}")
+            out = bets.remove(self._bets_user(), str(body.get("id") or "")) if path.endswith("/delete") \
+                else bets.add(self._bets_user(), body)
+        except ValueError as e:
+            return self._send(400, to_json({"error": str(e)}))
+        except Exception as e:  # noqa: BLE001 — relay down / offline
+            traceback.print_exc()
+            return self._send(502, to_json({"error": f"couldn't save right now ({type(e).__name__}) — try again"}))
+        self._send(200, to_json({"user": self._bets_user(), "bets": out}))
 
     def _login(self, raw: bytes):
         from urllib.parse import parse_qs

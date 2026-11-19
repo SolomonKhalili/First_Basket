@@ -104,7 +104,18 @@ def build_bundle(result) -> dict:
         "record": gui.track_record(),
         "data": {tab: gui.data_tab(tab) for tab in gui.DATA_TABS},
         "yesterday": _yesterday(gui, now),
+        "results": _results(),
     }
+
+
+def _results() -> dict:
+    """First scorer of recent games, so "My bets" can settle bets from earlier days (bets.results)."""
+    try:
+        import bets
+        import nba
+        return bets.results(nba.db())
+    except Exception:  # noqa: BLE001
+        return {}
 
 
 def _yesterday(gui, now) -> dict:
@@ -252,6 +263,7 @@ def live(out: Path, once: bool = False) -> int:
         say("no website accounts yet — nothing to publish")
         return 0
     started, last_pub, last_save, published_fp, fails = time.time(), 0.0, time.time(), None, 0
+    last_bets = 0.0
     day = datetime.now(ET).strftime("%Y%m%d")          # the NBA day this run looks after
     settings = lambda: json.dumps(load_site_users(), sort_keys=True) + (  # noqa: E731 — accounts + relay address
         RELAY_FILE.read_text() if RELAY_FILE.exists() else "")
@@ -280,6 +292,14 @@ def live(out: Path, once: bool = False) -> int:
                 import draftkings_odds as dk
                 dk.pull_relay_log(relay, nba.db(), datetime.now(ET).strftime("%Y%m%d"))
             except Exception:  # noqa: BLE001 — storage not set up yet / relay down: FanDuel only
+                traceback.print_exc()
+        if relay and time.time() - last_bets > 1800:  # copy everyone's bets into the database (saved with the data)
+            try:
+                import bets
+                import nba
+                bets.backup_all(nba.db(), load_site_users())
+                last_bets = time.time()
+            except Exception:  # noqa: BLE001 — relay down: next time
                 traceback.print_exc()
         users_now = settings()
         if users_now != users_seen:

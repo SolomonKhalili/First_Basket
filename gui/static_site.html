@@ -206,6 +206,50 @@
     return board;
   }
 
+  // ── my bets: this account's own list on the relay, encrypted here with the data key (same as bets.py) ──
+  async function betsLoad() {
+    const blob = await (await realFetch(`${window.FB_ODDS_BASE}/bets?u=${encodeURIComponent(user)}`, { cache: "no-store" })).json();
+    if (!blob) return [];
+    const k = await crypto.subtle.importKey("raw", rawKey, "AES-GCM", false, ["decrypt"]);
+    const plain = await crypto.subtle.decrypt({ name: "AES-GCM", iv: b64d(blob.iv) }, k, b64d(blob.ct));
+    return JSON.parse(new TextDecoder().decode(plain)).bets || [];
+  }
+  async function betsSave(bets) {
+    const k = await crypto.subtle.importKey("raw", rawKey, "AES-GCM", false, ["encrypt"]);
+    const iv = crypto.getRandomValues(new Uint8Array(12));
+    const ct = new Uint8Array(await crypto.subtle.encrypt({ name: "AES-GCM", iv }, k,
+      new TextEncoder().encode(JSON.stringify({ bets: bets.slice(-1500) }))));
+    const digest = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(`first-basket-bets:${b64e(rawKey)}:${user}`));
+    const w = [...new Uint8Array(digest)].map((b) => b.toString(16).padStart(2, "0")).join("");
+    const r = await realFetch(`${window.FB_ODDS_BASE}/bets?u=${encodeURIComponent(user)}`, { method: "PUT",
+      headers: { "Content-Type": "application/json" }, body: JSON.stringify({ iv: b64e(iv), ct: b64e(ct), w }) });
+    if (!r.ok) throw new Error(`relay ${r.status}`);
+  }
+  function betClean(b) {                                            // same rules as bets.clean
+    const american = Math.round(+b.american), stake = Math.round(+b.stake * 100) / 100;
+    if (!(american >= 100 || american <= -100)) throw new Error("odds look wrong (use American odds like +600 or -110)");
+    if (!(stake > 0 && stake <= 100000)) throw new Error("amount must be more than $0");
+    if (!b.player || !/^\d{8}$/.test(b.day || "")) throw new Error("missing player or day");
+    const s = (v, n = 60) => String(v || "").slice(0, n);
+    return { id: s(b.id, 40) || String(Date.now()), at: +b.at || Date.now(), day: s(b.day, 8), game_id: s(b.game_id, 20),
+             away: s(b.away, 5), home: s(b.home, 5), player: s(b.player), player_id: s(b.player_id, 20), team: s(b.team, 5),
+             book: s(b.book, 20) || "FanDuel", american, stake };
+  }
+  async function betsApi(path, init) {
+    if (!window.FB_ODDS_BASE) return reply({ error: "bets need the relay" }, 503);
+    try {
+      if (path === "/api/bets" && (!init || !init.method || init.method === "GET")) return reply({ user, bets: await betsLoad() });
+      const body = JSON.parse((init && init.body) || "{}");
+      let bets = await betsLoad();
+      if (path === "/api/bets/delete") bets = bets.filter((b) => b.id !== String(body.id || ""));
+      else { const b = betClean(body); bets = bets.filter((x) => x.id !== b.id).concat([b]); }
+      await betsSave(bets);
+      return reply({ user, bets });
+    } catch (e) {
+      return reply({ error: /odds|amount|missing/.test(e.message) ? e.message : "couldn't save right now — try again" }, /odds|amount|missing/.test(e.message) ? 400 : 502);
+    }
+  }
+
   // ── answer the page's /api/... requests from the unlocked results ──
   window.fetch = async (input, init) => {
     const u = new URL(typeof input === "string" ? input : input.url, location.href);
@@ -215,11 +259,13 @@
     const path = u.pathname.slice(at);
     if (path === "/api/me") return reply({ user, role: "viewer", logins: true });
     if (path === "/api/predict") return reply({ error: "view-only" }, 403);
+    if (path === "/api/bets" || path === "/api/bets/delete") return betsApi(path, init);
     try { await refresh(false); } catch (e) { return reply({ error: "log in first" }, 401); }
     if (path === "/api/status") return reply(bundle.status);
     if (path === "/api/record") return reply(bundle.record);
     if (path === "/api/yesterday") return reply(bundle.yesterday || { cards: [], games: [], hits: 0, graded: 0 });
     if (path === "/api/data_version") return reply({ version: bundle.version });
+    if (path === "/api/results") return reply(bundle.results || {});
     if (path === "/api/data") {
       const d = bundle.data[u.searchParams.get("tab") || "picks"];
       return d ? reply({ ...d, version: bundle.version }) : reply({ error: "unknown tab" }, 400);

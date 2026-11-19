@@ -581,6 +581,57 @@ th .short { display: none; }
 .tscroll.fd-closed th:nth-child(5) , .tscroll.fd-closed td:nth-child(5) { opacity: .45; }   /* FanDuel closed: faded */
 .top-best { box-shadow: inset 0 0 0 1.5px var(--gold); border-radius: 6px; padding: 0 4px; }
 .top-worse { opacity: .5; }
+
+/* ── My bets ── */
+body.bets-mode .board-wrap, body.bets-mode #progress, body.bets-mode #error, body.bets-mode .layout,
+body.bets-mode .dayswitch, body.bets-mode #yestSum, body.bets-mode #dataView { display: none !important; }
+.cards tbody tr[data-name] { cursor: pointer; }
+.cards tbody tr[data-name]:hover td { background: color-mix(in srgb, var(--accent) 10%, transparent); }
+.bet-mark { display: inline-block; margin-left: 4px; font-size: 11px; font-weight: 800; color: var(--accent); white-space: nowrap; }
+.bets-view { margin-top: 22px; }
+.bets-stats { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; margin: 0 0 14px; }
+.bets-stats div { background: var(--surface); border: 1px solid var(--line); border-radius: 14px; padding: 12px 10px; text-align: center; }
+.bets-stats b { display: block; font-size: 22px; font-weight: 800; }
+.bets-stats b.pos { color: var(--good); } .bets-stats b.neg { color: var(--bad); }
+.bets-stats span { font-size: 12px; color: var(--muted); }
+@media (max-width: 560px) { .bets-stats { grid-template-columns: repeat(2, 1fr); } }
+.bets-how { background: var(--surface); border: 1px solid var(--line); border-radius: 14px; padding: 12px 14px; font-size: 14px; color: var(--muted); margin-bottom: 14px; }
+.bets-how b { color: var(--text); }
+.bet-list { display: grid; gap: 8px; }
+.bet-row { display: grid; grid-template-columns: 1fr auto auto; gap: 10px; align-items: center; background: var(--surface);
+  border: 1px solid var(--line); border-radius: 14px; padding: 11px 12px; }
+.bet-row .who { min-width: 0; }
+.bet-row .who b { display: block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.bet-row .who small { color: var(--muted); font-size: 12.5px; }
+.bet-row .out { text-align: right; font-weight: 800; white-space: nowrap; }
+.bet-row .out small { display: block; font-weight: 500; font-size: 12px; color: var(--muted); }
+.bet-row.won { border-color: color-mix(in srgb, var(--good) 50%, var(--line)); } .bet-row.won .out { color: var(--good); }
+.bet-row.lost .out { color: var(--bad); } .bet-row.wait .out { color: var(--warn); }
+.bet-row .del { background: none; border: 0; color: var(--muted); font-size: 16px; padding: 6px; cursor: pointer; border-radius: 8px; }
+.bet-row .del:hover { color: var(--bad); background: var(--bad-soft); }
+.bet-day { margin: 10px 2px 0; font-size: 12px; font-weight: 700; color: var(--muted); text-transform: uppercase; letter-spacing: .05em; }
+.betdlg { border: 0; padding: 0; border-radius: 20px; width: min(420px, calc(100vw - 24px)); background: var(--surface); color: var(--text);
+  box-shadow: 0 24px 60px rgba(0,0,0,.5); }
+.betdlg::backdrop { background: rgba(0,0,0,.55); }
+.betdlg form { padding: 20px; display: grid; gap: 12px; }
+.betdlg h3 { margin: 0; font-size: 20px; }
+.betdlg .bsub { color: var(--muted); font-size: 13.5px; margin-top: -6px; }
+.betdlg label { display: grid; gap: 5px; font-size: 13px; font-weight: 600; color: var(--muted); }
+.betdlg input, .betdlg select { font: inherit; font-size: 16px; color: var(--text); background: var(--surface-2); border: 1px solid var(--line);
+  border-radius: 11px; padding: 11px 12px; width: 100%; }
+.betdlg input:focus, .betdlg select:focus { outline: 2px solid color-mix(in srgb, var(--accent) 60%, transparent); border-color: var(--accent); }
+.betdlg .blabel { font-size: 13px; font-weight: 600; color: var(--muted); margin-bottom: 6px; }
+.betdlg .blabel span, .betdlg .blabel-note { font-weight: 400; font-size: 12px; }
+.bbooks { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; }
+.bbook { display: grid; gap: 2px; justify-items: center; padding: 10px 6px; border-radius: 12px; border: 1.5px solid var(--line);
+  background: var(--surface-2); color: var(--text); font: inherit; font-weight: 700; font-size: 14px; cursor: pointer; }
+.bbook small { font-weight: 800; font-size: 15px; color: var(--muted); }
+.bbook.best small { color: var(--gold, #fbbf24); }
+.bbook.on { border-color: var(--accent); background: color-mix(in srgb, var(--accent) 16%, var(--surface-2)); }
+.bbook.on small { color: var(--text); }
+.betdlg .win { font-size: 14px; color: var(--muted); } .betdlg .win b { color: var(--good); }
+.betdlg .berr { color: var(--bad); font-size: 13.5px; } .betdlg .berr:empty { display: none; }
+.betdlg .brow { display: flex; gap: 10px; justify-content: flex-end; }
 </style>
 </head>
 <body>
@@ -595,6 +646,7 @@ th .short { display: none; }
       </div>
     </div>
     <div class="actions">
+      <button class="btn secondary" id="betsBtn" title="The bets you placed: wins, losses and profit">💵 My bets</button>
       <button class="btn secondary" id="dataBtn" title="Your spreadsheet and CSV as tabs: scorecard, picks, lineups, all games">📊 Data</button>
       <button class="btn secondary" id="learnBtn" title="A 1-minute beginner's guide to EV (good deal or bad deal?)">🎓 What's EV?</button>
       <button class="btn secondary" id="runSelected" hidden>Selected games</button>
@@ -630,6 +682,16 @@ th .short { display: none; }
     </div>
     <div class="dpsum" id="dpsum" hidden></div>
     <div id="dbody"><div class="dempty">Loading…</div></div>
+  </section>
+
+  <section class="bets-view" id="betsView" hidden>
+    <div class="data-top">
+      <button class="back" id="betsBack">← Back to picks</button>
+      <h2>💵 My bets</h2>
+    </div>
+    <div class="bets-stats" id="betsStats"></div>
+    <div class="bets-how" id="betsHow">To add a bet: on <b>Today</b>'s picks, <b>tap the player</b> you bet on and type how much you bet. It settles by itself once someone scores the game's first basket.</div>
+    <div class="bet-list" id="betList"><div class="dempty">Loading…</div></div>
   </section>
 
   <div class="dayswitch" role="tablist" aria-label="Which day">
@@ -681,6 +743,19 @@ th .short { display: none; }
   </div>
 </div>
 <div class="toasts" id="toasts"></div>
+<dialog class="betdlg" id="betDlg" aria-labelledby="betTitle">
+  <form id="betForm" method="dialog">
+    <h3 id="betTitle">I bet on …</h3>
+    <div class="bsub" id="betSub"></div>
+    <div class="bbooks-wrap"><div class="blabel">Where did you bet? <span>(tap one — the odds fill in)</span></div>
+      <div class="bbooks" id="betBooks" role="radiogroup" aria-label="Sportsbook"></div></div>
+    <label>Odds <span class="blabel-note">(change it if your ticket says something different)</span><input id="betOdds" inputmode="numeric" placeholder="+600" autocomplete="off"></label>
+    <label>How much did you bet? ($)<input id="betStake" inputmode="decimal" placeholder="10" autocomplete="off"></label>
+    <div class="win" id="betWin"></div>
+    <div class="berr" id="betErr" role="alert"></div>
+    <div class="brow"><button type="button" class="btn secondary" id="betCancel">Cancel</button><button type="submit" class="btn" id="betSave">Save bet</button></div>
+  </form>
+</dialog>
 <dialog class="learn" id="learn" aria-labelledby="learnTitle">
   <div class="learn-head">
     <span style="font-size:22px">🎓</span><h2 id="learnTitle">Good deal or bad deal?</h2>
@@ -1017,6 +1092,7 @@ function countUp(el) {
 
 /* Card headers follow the live board: countdown → LIVE score → Final, plus the first-basket verdict. */
 function updateCardsLive() {
+  try { markBetRows(); } catch (e) { /* bets not loaded yet */ }
   if (viewDay === "yesterday") return;                     // yesterday's cards are filled once, from /api/yesterday
   document.querySelectorAll(".card").forEach((el) => {
     const g = gameOf(el.dataset.home, el.dataset.away);
@@ -1301,6 +1377,7 @@ function renderResult(res) {
   $("cards").innerHTML = res.cards.length ? res.cards.map(card).join("")
     : `<div class="empty">No picks to show right now — see “Not predicted” for why.</div>`;
   document.querySelectorAll(".hero .pct").forEach(countUp);
+  try { markBetRows(); } catch (e) { /* bets not loaded yet */ }
   $("skippedPanel").hidden = !res.skipped.length;
   $("skipped").innerHTML = res.skipped.map((s) => `<li><b>${esc(s.matchup)}</b><span>${esc(s.reason)}</span></li>`).join("");
   $("warnPanel").hidden = !res.notes.length;
@@ -1865,6 +1942,165 @@ setInterval(() => refreshBoard(), 30000);                                       
 setInterval(() => { renderTicker(); updateCardsLive();                         // countdowns tick
   document.querySelectorAll(".cd").forEach((e) => (e.textContent = countdown(e.dataset.iso))); }, 20000);
 
+
+
+/* ── My bets: tap a player on Today's cards -> log the bet; "My bets" shows wins, losses, profit ── */
+let myBets = null, betResults = null, betDraft = null;
+const etDay = () => new Intl.DateTimeFormat("en-CA", { timeZone: "America/New_York" }).format(new Date()).replaceAll("-", "");
+const dayLabel = (d) => new Date(+d.slice(0, 4), +d.slice(4, 6) - 1, +d.slice(6, 8)).toLocaleDateString([], { weekday: "short", month: "short", day: "numeric" });
+async function loadBets() {
+  const r = await getJSON("/api/bets");
+  if (r.error) throw new Error(r.error);
+  myBets = r.bets || [];
+  return myBets;
+}
+function settle(b) {                    // -> {state: "won" | "lost" | "wait", profit}
+  const fb = (betResults || {})[b.game_id];
+  let scorer = fb ? { id: fb[0], name: fb[1] } : null;
+  if (!scorer) { const g = board.find((x) => String(x.game_id) === String(b.game_id)); if (g && g.first_basket) scorer = g.first_basket; }
+  if (!scorer) return { state: "wait", profit: 0 };
+  const won = (b.player_id && String(scorer.id) === String(b.player_id)) || normName(scorer.name) === normName(b.player);
+  return won ? { state: "won", profit: b.stake * payout(b.american), scorer: scorer.name } : { state: "lost", profit: -b.stake, scorer: scorer.name };
+}
+function markBetRows() {                // "💵 $10" next to players you bet on today
+  document.querySelectorAll(".bet-mark").forEach((e) => e.remove());
+  if (!myBets || viewDay !== "today") return;
+  const today = etDay();
+  document.querySelectorAll("#cards .card").forEach((el) => {
+    for (const b of myBets.filter((x) => x.day === today && x.home === el.dataset.home && x.away === el.dataset.away)) {
+      const row = [...el.querySelectorAll("tbody tr")].find((t) => normName(t.dataset.name) === normName(b.player));
+      row?.querySelector(".nm")?.insertAdjacentHTML("beforeend", `<span class="bet-mark" title="You bet $${b.stake} at ${american(b.american)} (${esc(b.book)})">💵 $${+b.stake}</span>`);
+    }
+  });
+}
+function renderBets() {
+  const list = [...(myBets || [])].sort((a, b) => (b.day + b.at).localeCompare(a.day + a.at) || b.at - a.at);
+  const done = list.map((b) => ({ b, s: settle(b) }));
+  const settled = done.filter((x) => x.s.state !== "wait");
+  const won = settled.filter((x) => x.s.state === "won").length;
+  const staked = settled.reduce((t, x) => t + x.b.stake, 0), profit = settled.reduce((t, x) => t + x.s.profit, 0);
+  const waiting = done.filter((x) => x.s.state === "wait");
+  $("betsStats").innerHTML = `
+    <div><b class="${profit > 0 ? "pos" : profit < 0 ? "neg" : ""}">${money(profit)}</b><span>Profit</span></div>
+    <div><b>${won} / ${settled.length}</b><span>Bets won</span></div>
+    <div><b>$${staked.toFixed(2)}</b><span>Money bet (settled)</span></div>
+    <div><b class="${profit > 0 ? "pos" : profit < 0 ? "neg" : ""}">${staked ? `${profit >= 0 ? "+" : "−"}${Math.abs(profit / staked * 100).toFixed(0)}%` : "–"}</b><span>Return${waiting.length ? ` · ${waiting.length} waiting` : ""}</span></div>`;
+  if (!list.length) { $("betList").innerHTML = `<div class="dempty">No bets yet.</div>`; return; }
+  let html = "", lastDay = "";
+  for (const { b, s } of done) {
+    if (b.day !== lastDay) { html += `<div class="bet-day">${esc(dayLabel(b.day))}</div>`; lastDay = b.day; }
+    const out = s.state === "won" ? `Won ${money(s.profit)}<small>${esc(b.player.split(" ").slice(-1)[0])} scored first 🏀</small>`
+      : s.state === "lost" ? `Lost ${money(s.profit)}<small>${esc(s.scorer || "someone else")} scored first</small>`
+      : `Waiting<small>wins ${money(b.stake * payout(b.american))}</small>`;
+    html += `<div class="bet-row ${s.state}">
+      <div class="who"><b>${esc(b.player)}</b><small>${esc(b.away)} @ ${esc(b.home)} · ${esc(b.book)} ${american(b.american)} · $${(+b.stake).toFixed(2)}</small></div>
+      <div class="out">${out}</div>
+      <button class="del" data-del="${esc(b.id)}" title="Delete this bet" aria-label="Delete this bet">✕</button></div>`;
+  }
+  $("betList").innerHTML = html;
+}
+async function openBets() {
+  closeData();
+  document.body.classList.add("bets-mode");
+  $("betsView").hidden = false;
+  if (location.hash !== "#bets") history.replaceState(null, "", "#bets");
+  window.scrollTo(0, 0);
+  if (myBets) renderBets(); else $("betList").innerHTML = `<div class="dempty">Loading…</div>`;
+  try {
+    [betResults] = await Promise.all([getJSON("/api/results"), loadBets()]);
+    renderBets();
+  } catch (e) { $("betList").innerHTML = `<div class="dempty">Couldn't load your bets right now — try again in a minute.</div>`; }
+}
+function closeBets() {
+  document.body.classList.remove("bets-mode");
+  $("betsView").hidden = true;
+  if (location.hash === "#bets") history.replaceState(null, "", location.pathname);
+  markBetRows();
+}
+function betWinLine() {
+  const a = Math.round(+String($("betOdds").value).replace(/[^\d.-]/g, "")), s = +$("betStake").value;
+  $("betWin").innerHTML = (a >= 100 || a <= -100) && s > 0 ? `If he scores first you win <b>${money(s * payout(a))}</b> (plus your $${s.toFixed(2)} back).` : "";
+}
+function openBetDialog(row) {
+  if (viewDay !== "today" || !lastResult) return;
+  const el = row.closest(".card"), name = row.dataset.name;
+  const c = (lastResult.cards || []).find((x) => x.home === el.dataset.home && x.away === el.dataset.away);
+  if (!c) return;
+  const pick = c.picks.find((p) => p[0] === name) || [];
+  const starter = [...(c.home_starters || []), ...(c.away_starters || [])].find((p) => p.name === name) || {};
+  const g = gameOf(c.home, c.away) || {};
+  const book = (c.best_book || {})[name] || ((c.fanduel || {})[name] !== undefined ? "FanDuel" : (c.draftkings || {})[name] !== undefined ? "DraftKings" : "FanDuel");
+  const price = (book === "DraftKings" ? c.draftkings : c.fanduel || {})?.[name];
+  betDraft = { day: etDay(), game_id: String(g.game_id || ""), away: c.away, home: c.home, player: name,
+               player_id: String(starter.player_id || ""), team: pick[1] || "" };
+  $("betTitle").textContent = `I bet on ${name}`;
+  $("betSub").textContent = `${c.away} @ ${c.home} · first basket`;
+  betDraft.prices = { FanDuel: (c.fanduel || {})[name], DraftKings: (c.draftkings || {})[name] };
+  betDraft.best = (c.best_book || {})[name];
+  pickBook(book);
+  if (price === undefined) $("betOdds").value = "";
+  $("betStake").value = "";
+  $("betErr").textContent = "";
+  betWinLine();
+  $("betDlg").showModal();
+  setTimeout(() => $("betStake").focus(), 50);
+}
+function pickBook(book) {                     // the three book buttons: each shows its price; tapping one fills the odds
+  betDraft.book = book;
+  const pr = betDraft.prices || {};
+  $("betBooks").innerHTML = ["FanDuel", "DraftKings", "Other"].map((b) => {
+    const a = pr[b];
+    return `<button type="button" class="bbook ${b === book ? "on" : ""} ${b === betDraft.best ? "best" : ""}" role="radio" aria-checked="${b === book}" data-book="${b}">
+      ${b}<small>${a !== undefined && a !== null ? (b === betDraft.best ? "★" : "") + american(a) : b === "Other" ? "type odds" : "–"}</small></button>`;
+  }).join("");
+  const a = pr[book];
+  if (a !== undefined && a !== null) $("betOdds").value = american(a);
+  else if (book === "Other") { $("betOdds").value = ""; setTimeout(() => $("betOdds").focus(), 30); }
+  betWinLine();
+}
+$("betBooks").addEventListener("click", (ev) => { const b = ev.target.closest("[data-book]"); if (b) pickBook(b.dataset.book); });
+$("betOdds").addEventListener("input", betWinLine);
+$("betStake").addEventListener("input", betWinLine);
+$("betCancel").addEventListener("click", () => $("betDlg").close());
+$("betForm").addEventListener("submit", async (ev) => {
+  ev.preventDefault();
+  const odds = Math.round(+String($("betOdds").value).replace(/[^\d.-]/g, "")), stake = +$("betStake").value;
+  if (!(odds >= 100 || odds <= -100)) { $("betErr").textContent = "Type the odds like +600 (or -110)."; return; }
+  if (!(stake > 0)) { $("betErr").textContent = "Type how much you bet, like 10."; return; }
+  $("betSave").disabled = true; $("betSave").textContent = "Saving…";
+  try {
+    const r = await getJSON("/api/bets", { method: "POST", headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ ...betDraft, prices: undefined, best: undefined, id: `${Date.now()}-${Math.random().toString(36).slice(2, 7)}`, at: Date.now(),
+                             book: betDraft.book || "FanDuel", american: odds, stake }) });
+    if (r.error) throw new Error(r.error);
+    myBets = r.bets;
+    $("betDlg").close();
+    markBetRows();
+    toast(`💵 Saved: $${stake.toFixed(2)} on ${esc(betDraft.player)} at ${american(odds)}. See it under <b>My bets</b>.`);
+  } catch (e) { $("betErr").textContent = e.message || "Couldn't save — try again."; }
+  finally { $("betSave").disabled = false; $("betSave").textContent = "Save bet"; }
+});
+$("cards").addEventListener("click", (ev) => {
+  if (ev.target.closest("button, a, .whats")) return;
+  const row = ev.target.closest("tbody tr[data-name]");
+  if (row) openBetDialog(row);
+});
+$("betList").addEventListener("click", async (ev) => {
+  const id = ev.target.closest("[data-del]")?.dataset.del;
+  if (!id) return;
+  const b = (myBets || []).find((x) => x.id === id);
+  if (!b || !confirm(`Delete your $${b.stake} bet on ${b.player}?`)) return;
+  try {
+    const r = await getJSON("/api/bets/delete", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ id }) });
+    if (r.error) throw new Error(r.error);
+    myBets = r.bets; renderBets();
+  } catch (e) { toast("Couldn't delete right now — try again.", "bad"); }
+});
+$("betsBtn").addEventListener("click", openBets);
+$("betsBack").addEventListener("click", closeBets);
+$("dataBtn").addEventListener("click", () => { if (!$("betsView").hidden) closeBets(); });
+if (location.hash === "#bets") openBets();
+loadBets().then(markBetRows).catch(() => {});
 
 /* ── Who is logged in (owner / viewer) ── */
 let ROLE = "owner", lastFinished = null;

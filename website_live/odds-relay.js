@@ -80,6 +80,35 @@ async function dkLog(request, env) {
   return new Response(JSON.stringify({ saved: changed }), { headers: { ...cors, "Content-Type": "application/json" } });
 }
 
+// ── My bets: each website account's own bet list, kept in KV (key "bets:<user>", never expires). The list is
+// encrypted in the browser with the website's data key, so this only ever stores scrambled text. Only someone who
+// is logged in can change it: the first save sets a write code (derived from the data key + user name) and later
+// saves must send the same code ("betsw:<user>" keeps only its SHA-256).
+const sha256hex = async (s) => [...new Uint8Array(await crypto.subtle.digest("SHA-256", new TextEncoder().encode(s)))]
+  .map((b) => b.toString(16).padStart(2, "0")).join("");
+async function myBets(request, env) {
+  const origin = request.headers.get("Origin") || "";
+  const cors = { "Access-Control-Allow-Origin": LOG_ORIGINS.has(origin) ? origin : SITE, "Vary": "Origin",
+                 "Access-Control-Allow-Methods": "GET, PUT", "Access-Control-Allow-Headers": "Content-Type" };
+  const json = (obj, status = 200) => new Response(JSON.stringify(obj), { status, headers: { ...cors, "Content-Type": "application/json", "Cache-Control": "no-store" } });
+  if (request.method === "OPTIONS") return new Response(null, { status: 204, headers: cors });
+  if (!env.DKLOG) return json({ error: "storage not set up" }, 503);
+  const user = new URL(request.url).searchParams.get("u") || "";
+  if (!/^[a-z0-9_.-]{1,40}$/.test(user)) return json({ error: "bad user" }, 400);
+  if (request.method === "GET") return json(JSON.parse((await env.DKLOG.get(`bets:${user}`)) || "null"));
+  if (request.method !== "PUT") return json({ error: "not allowed" }, 405);
+  const text = await request.text();
+  if (text.length > 200000) return json({ error: "too big" }, 413);
+  let body;
+  try { body = JSON.parse(text); } catch (e) { return json({ error: "bad json" }, 400); }
+  if (typeof body.iv !== "string" || typeof body.ct !== "string" || typeof body.w !== "string" || body.w.length < 32) return json({ error: "bad body" }, 400);
+  const want = await env.DKLOG.get(`betsw:${user}`), have = await sha256hex(body.w);
+  if (want && want !== have) return json({ error: "not allowed" }, 403);
+  if (!want) await env.DKLOG.put(`betsw:${user}`, have);
+  await env.DKLOG.put(`bets:${user}`, JSON.stringify({ iv: body.iv, ct: body.ct, at: Date.now() }));
+  return json({ saved: true });
+}
+
 export default {
   async scheduled(event, env, ctx) {
     ctx.waitUntil(keepJobRunning(env).then((m) => console.log("timer:", m)));
@@ -88,6 +117,7 @@ export default {
   async fetch(request, env, ctx) {
     const cors = { "Access-Control-Allow-Origin": SITE, "Vary": "Origin" };
     if (new URL(request.url).pathname === "/dk-log") return dkLog(request, env);
+    if (new URL(request.url).pathname === "/bets") return myBets(request, env);
     if (new URL(request.url).pathname === "/timer-check") {           // what the timer would do now (starts nothing)
       return new Response(await keepJobRunning(env, true), { headers: { "Content-Type": "text/plain" } });
     }
