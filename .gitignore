@@ -9,3 +9,4 @@ __pycache__/
 users.json
 users.tmp
 launcher/ngrok.log
+launcher/sync.log

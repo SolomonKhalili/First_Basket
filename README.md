@@ -24,6 +24,15 @@ Every game is labeled with the lineup type it used. Use `--confirmed-only` to sk
 
 ---
 
+## Runs by itself (nothing to start)
+
+| Where | What happens automatically |
+|---|---|
+| **GitHub (cloud)** | Hourly on game days + nightly ~4 AM ET: new games, lineups, injuries, FanDuel odds, picks, results, `first_basket_data.csv`, `my_predictions.xlsx`, retraining when needed; publishes the private website (`.github/workflows/update-site.yml`, `publish.py`) |
+| **This Mac — NBA folder** | Every 30 min and at login: downloads the newest database, CSV, spreadsheet and model from the cloud (`sync_from_cloud.py`, `launcher/com.firstbasket.sync.plist`) |
+| **This Mac — desktop app** | Starts at login and keeps running (restarted if it stops); updates itself like the cloud; the Desktop icon just opens it (`launcher/com.firstbasket.app.plist`) |
+| **Website** | https://solomonkhalili.github.io/first-basket/ — accounts: `python3 site_users.py add NAME` |
+
 ## Quick start
 
 ```bash

@@ -1,0 +1,37 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<!-- Keeps the desktop app running in the background: starts gui.py at login and restarts it if it ever stops
+     (checked once a minute). The Desktop icon then just opens it in the browser, already up to date.
+     Installed as ~/Library/LaunchAgents/com.firstbasket.app.plist. To turn it off:
+       launchctl bootout gui/$(id -u) ~/Library/LaunchAgents/com.firstbasket.app.plist -->
+<plist version="1.0">
+<dict>
+  <key>Label</key>
+  <string>com.firstbasket.app</string>
+  <key>ProgramArguments</key>
+  <array>
+    <string>/opt/homebrew/bin/python3</string>
+    <string>/Users/solomonkhalili/Desktop/NBA/gui.py</string>
+    <string>--no-open</string>
+  </array>
+  <key>WorkingDirectory</key>
+  <string>/Users/solomonkhalili/Desktop/NBA</string>
+  <key>EnvironmentVariables</key>
+  <dict>
+    <key>PATH</key>
+    <string>/opt/homebrew/bin:/usr/bin:/bin</string>
+    <key>PYTHONUNBUFFERED</key>
+    <string>1</string>
+  </dict>
+  <key>RunAtLoad</key>
+  <true/>
+  <key>KeepAlive</key>
+  <true/>
+  <key>ThrottleInterval</key>
+  <integer>60</integer>
+  <key>StandardOutPath</key>
+  <string>/tmp/firstbasket-app.log</string>
+  <key>StandardErrorPath</key>
+  <string>/tmp/firstbasket-app.log</string>
+</dict>
+</plist>
