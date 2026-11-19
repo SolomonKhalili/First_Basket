@@ -69,8 +69,10 @@ session: §11 step 0. Full details of every change are in §10, newest first.)*
 - **Calibration check + team stretch (2026-11-19):** odds formula verified (12.1% → +726, 57% → −133; page = server); player chances sum to 100% per game; players well calibrated over 14,570 starters (said 7.8% → 7.4%, 10.4% → 10.3%, 13.2% → 13.2%, 22.4% → 22.4%); no bench player scored first in 1,537 games. Team chances were too cautious at the extremes (said 63% → 73%, 37% → 27%). Mixing the simple rule inside each team helped 2026-27 but not Jan–Apr 2026 — not adopted. Adopted `pregame_model.TEAM_STRETCH = 1.4` (team chance → sigmoid(1.4·logit), players keep their in-team shares), learned on one season and checked on the other: player and team log-loss better in both. Applied in the live model and the grading (both seasons re-graded).
 **Coming up (dated)**
 - **Around the All-Star break:** re-test adding play-in/playoff/Finals games to training (tested 2026-11-19 on 215 games of 2026-27, walk-forward: without 20.9% / 2.2378, with 20.5% / 2.2362 — no clear gain, not adopted).
-- **On/after 2026-12-08:** re-check the two inputs adopted 11/18 (opponent by position, head-to-head) and the 20%
-  simple-rule mix — §7.1 item 4. Keep only what is still better in both test periods.
+- ~~On/after 2026-12-08: re-check the two inputs adopted 11/18 and the simple-rule mix~~ — **done early 2026-11-19** on
+  the history model (`experiments/inputs_recheck_test.py`): removing opponent-by-position (2.22785 / 2.25382) or
+  head-to-head (2.22763 / 2.25304) is worse in both periods than keeping them (2.22734 / 2.25270) — both kept; the mix
+  was re-tuned to 25% (FanDuel model). Re-check again around the All-Star break.
 - **~2026-12-20 (150+ finished games with saved odds):** test blending in sportsbook odds
   (`experiments/market_blend_test.py`, §10 11/18 "accuracy pass"). Log-loss decides.
 - **Around the All-Star break:** re-test the tip height prior and first-shot extra examples (§10, 11/19 evening).
