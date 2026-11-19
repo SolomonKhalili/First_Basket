@@ -216,7 +216,7 @@ def _git(*args, cwd) -> None:
     subprocess.run(["git", *args], cwd=cwd, check=True, capture_output=True, timeout=180)
 
 
-CODE_FILES = (".py", "requirements.txt")        # + anything under gui/: what the live job runs or publishes
+CODE_FILES = (".py", "requirements.txt")        # plus anything under gui/: what the live job runs or publishes
 
 
 def code_changed(changed_files) -> bool:
