@@ -468,7 +468,11 @@ body.data-mode .board-wrap, body.data-mode #progress, body.data-mode #error, bod
 @media (max-width: 520px) { .dtable-wrap { max-height: calc(100vh - 340px); } .dcount { margin-left: 0; } }
 
 /* ── Accounts: viewer mode (friends) ── */
-body.viewer #runAll, body.viewer #runSelected, body.viewer #clearSel, body.viewer #ddown, body.viewer #boardHint { display: none !important; }
+body.viewer #runAll, body.viewer #runSelected, body.viewer #ddown { display: none !important; }
+.card[hidden] { display: none !important; }
+.filter-note { margin: 0 0 14px; display: flex; align-items: center; gap: 10px; flex-wrap: wrap; font-size: 14px;
+  color: var(--muted); }
+.filter-note b { color: var(--text); }
 .acct { display: inline-flex; align-items: center; gap: 8px; font-size: 13px; color: rgba(255,255,255,.75);
   background: rgba(255,255,255,.07); border: 1px solid rgba(255,255,255,.12); border-radius: 999px; padding: 6px 12px; }
 .acct b { color: #fff; }
@@ -551,7 +555,7 @@ body.viewer #runAll, body.viewer #runSelected, body.viewer #clearSel, body.viewe
     <div class="board" id="board">
       <div class="tile skel" style="height:78px"></div><div class="tile skel" style="height:78px"></div><div class="tile skel" style="height:78px"></div>
     </div>
-    <div class="hint" id="boardHint">Tap games to choose them, then press <b>Selected games</b>. Or press <b>All games</b>. <button class="link" id="clearSel" hidden>Clear selection</button></div>
+    <div class="hint" id="boardHint"><span id="boardHintText">Tap games to show only those below. To re-run the model for them, press <b>Selected</b>; for every game, <b>All games</b>.</span> <button class="link" id="clearSel" hidden>Show all games</button></div>
   </div>
 
   <div class="progress" id="progress"><span class="bouncer">🏀</span><span id="step">Working…</span><span class="elapsed num" id="elapsed"></span></div>
@@ -684,9 +688,9 @@ function tile(g) {
     res += `<div class="res tipline" title="Tip: ${esc(op.away_jumper || "not known")} vs ${esc(op.home_jumper || "not known")}; (won/taken) = opening tips this season">Tip: ${
       favHome ? last(op.away_jumper) : `<b>${last(op.away_jumper)}</b>`}${won("away_jumper")} vs ${favHome ? `<b>${last(op.home_jumper)}</b>` : last(op.home_jumper)}${won("home_jumper")}</div>`;
   }
-  return `<button class="tile ${pre && ROLE !== "viewer" ? "pickable" : ""} ${live ? "live" : ""}" data-id="${esc(g.game_id)}"
+  return `<button class="tile pickable ${live ? "live" : ""}" data-id="${esc(g.game_id)}"
       style="--away-c:${color(g.away_team)};--home-c:${color(g.home_team)}"
-      aria-pressed="${selected.has(g.game_id)}" ${pre ? "" : "aria-disabled='true' title='Already started — the model is pre-game only'"}>
+      aria-pressed="${selected.has(g.game_id)}" title="Tap to show only the games you pick (tap again to remove)">
     <div class="teams">${logo(g.away_team, 26)}${esc(g.away_team)} <span class="at">@</span> ${logo(g.home_team, 26)}${esc(g.home_team)}${score}</div>
     <div class="meta">${meta}</div>${res}</button>`;
 }
@@ -722,6 +726,30 @@ function syncButtons() {
   $("runSelected").hidden = !n;
   $("clearSel").hidden = !n;
   $("runSelected").textContent = `Selected (${n})`;
+  applyCardFilter();
+}
+
+/* Tapped games only: hide the other games' cards (a view filter — nothing is re-run) */
+function applyCardFilter() {
+  const picked = board.filter((g) => selected.has(g.game_id)).map((g) => `${g.away_team}@${g.home_team}`);
+  const cards = [...document.querySelectorAll("#cards .card")];
+  let shown = 0;
+  for (const c of cards) {
+    c.hidden = picked.length > 0 && !picked.includes(`${c.dataset.away}@${c.dataset.home}`);
+    if (!c.hidden) shown++;
+  }
+  let note = $("filterNote");
+  if (!note) {
+    note = Object.assign(document.createElement("div"), { id: "filterNote", className: "filter-note" });
+    $("cards").before(note);
+  }
+  note.hidden = !picked.length;
+  if (picked.length) {
+    note.innerHTML = `Showing <b>${picked.length}</b> selected game${picked.length > 1 ? "s" : ""}` +
+      (shown < picked.length ? ` · ${picked.length - shown} ha${picked.length - shown > 1 ? "ve" : "s"} no picks card yet` : "") +
+      ` <button class="link" id="showAllCards">Show all games</button>`;
+    $("showAllCards").onclick = () => { selected.clear(); syncButtons(); renderBoard(); };
+  }
 }
 
 function toast(html, kind = "") {
@@ -903,6 +931,7 @@ function updateCardsLive() {
 
 /* ── Results ──────────────────────────────── */
 function renderResult(res) {
+  setTimeout(applyCardFilter, 0);                            // keep showing only the tapped games
   if (!res) return;
   lastResult = res;
   if (res.date) $("date").textContent = res.date;
@@ -1457,6 +1486,7 @@ async function loadMe() {
     const me = await getJSON("/api/me");
     ROLE = me.role;
     document.body.classList.toggle("viewer", ROLE === "viewer");
+    if (ROLE === "viewer") $("boardHintText").textContent = "Tap games to show only those below — tap again to remove.";
     if (me.logins) {
       $("acct").hidden = false;
       $("acct").innerHTML = `👤 <b>${esc(me.user)}</b> <span class="role">${ROLE === "viewer" ? "viewer" : "owner"}</span> · <a href="/logout">Log out</a>`;
