@@ -319,7 +319,8 @@ def test_grading_uses_the_live_models_final_step():
     p = np.full(10, 0.1)
     got = sb.with_simple_mix([p], M, [0])[0]
     fb = M[0, :, pm.FEATURES.index("fb_rate_shrunk")]
-    assert np.allclose(got, (1 - pm.SIMPLE_MIX) * p + pm.SIMPLE_MIX * fb / fb.sum())
+    k, mix = pm.SETTINGS["first_points"]
+    assert np.allclose(got, pm.stretch_teams((1 - mix) * p + mix * fb / fb.sum(), M[0, :, pm.FEATURES.index("is_home")] > 0.5, k))
 
 
 def test_team_stretch_keeps_shares_and_totals():

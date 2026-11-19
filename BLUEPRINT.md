@@ -764,6 +764,10 @@ NBA/
   2026-27 2.23766 → **2.23423**, Jan–Apr 2026 2.27248 → **2.25775** (top pick 20.9 → 19.1% / 15.1 → 17.0%). Using the
   1,231 games also as training examples was better this season but worse in Jan–Apr — not used (owner's trade concern).
   The first-basket model's tip input now also counts 2024-25 tips (as in the test).
+- **Adopted — re-tuned final step after the history season** (`pregame_model.SETTINGS`): first-points model (FanDuel)
+  team stretch 1.4 → **1.2** and simple-rule mix 20% → **25%** (2026-27 2.22965 → 2.22865, Jan–Apr 2026 2.25417 →
+  2.25336); field-goal model (DraftKings) keeps 1.4 / 20% (the new values were worse for it). Also tested on the new
+  model and NOT adopted: a "boldness" dial (temperature 0.8–1.2) and a minutes-rule blend — each helped one period only.
 
 ### 2026-11-18 (later) — where accuracy is lost, and what didn't help
 

@@ -164,6 +164,8 @@ A player's chance = his team's chance × his share within the team. Inputs built
 
 Trained on the **2025-26 regular season plus every 2026-27 game so far**. The **2024-25 season** (1,321 games, `data_patches/history_2024_25.json.gz`) is used only as **player history** — it makes every player's stats more complete, but its games are never training examples (rosters and roles change). Adding it improved the week-by-week test in both periods (2026-27 log-loss 2.2377 → 2.2342; Jan–Apr 2026 2.2725 → 2.2578).
 
+The final step mixes in each starter's season first-basket rate (25% FanDuel model / 20% DraftKings model) and stretches team chances (×1.2 / ×1.4) — each model keeps the settings that tested best for it.
+
 **Tip-off call shown on the cards** (`tip_model.py`, `extended=True`): every opening tip since 2024-25, **this season's tips count double**, blended 50/50 with a **"who you beat" rating** (Elo) so beating a strong jumper counts more — calls the tip winner **67.9%** this season (64.5% last season).
 
 ### Results (walk-forward test, 215 games of 2026-27)

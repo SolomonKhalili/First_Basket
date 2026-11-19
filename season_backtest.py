@@ -50,7 +50,7 @@ def load_training():
     return ns
 
 
-def with_simple_mix(P, M, test):
+def with_simple_mix(P, M, test, kind: str = "first_points"):
     """The live model's final step (pregame_model.probabilities): SIMPLE_MIX of each starter's shrunk season
     first-basket rate. Without it the grading scored a different model than the one making picks (fixed 2026-11-19:
     last season 14.6% -> 15.1%, playoffs 13.8% -> 18.4%)."""
@@ -58,8 +58,9 @@ def with_simple_mix(P, M, test):
     out = []
     for p, k in zip(P, test):
         fb = M[k][:, col]
-        q = (1 - pm.SIMPLE_MIX) * p + pm.SIMPLE_MIX * fb / fb.sum() if fb.sum() > 0 else p
-        out.append(pm.stretch_teams(q, M[k][:, home] > 0.5))     # same final steps as the live model
+        k_, mix = pm.SETTINGS[kind]                                 # each model's own settings (pregame_model)
+        q = (1 - mix) * p + mix * fb / fb.sum() if fb.sum() > 0 else p
+        out.append(pm.stretch_teams(q, M[k][:, home] > 0.5, k_))     # same final steps as the live model
     return out
 
 
@@ -185,7 +186,8 @@ def fill_fg_grades(con) -> int:
             lo, hi = week.strftime("%Y%m%d"), (week + timedelta(days=7)).strftime("%Y%m%d")
             test = [k for k in idx if lo <= dates[k] < hi and len(starters[k]) == 10]
             if test:
-                P = with_simple_mix(ns["predict2"](ns["fit2"](np.where(pool & (dates < lo))[0], l2), test), ns["M"], test)
+                P = with_simple_mix(ns["predict2"](ns["fit2"](np.where(pool & (dates < lo))[0], l2), test), ns["M"], test,
+                                    "first_field_goal")
                 for k, probs in zip(test, P):
                     probs = np.asarray(probs) / np.sum(probs)
                     con.executemany("INSERT OR REPLACE INTO fg_grades VALUES (?, ?, ?, ?)",

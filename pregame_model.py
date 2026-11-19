@@ -96,6 +96,16 @@ SIMPLE_MIX = 0.2
 # their share inside the team. Learned on one season, checked on the other (1.45 / 1.35): player AND team log-loss
 # better in both (2026-27 2.2371 -> 2.2360, Jan–Apr 2026 2.2646 -> 2.2636).
 TEAM_STRETCH = 1.4
+# Re-tuned 2026-11-19 after the 2024-25 history season was added (experiments in the session's copy, same walk-forward
+# test games): for the FIRST-POINTS model (FanDuel) stretch 1.2 + mix 25% beat 1.4 + 20% in both periods
+# (2026-27 2.22965 -> 2.22865, Jan–Apr 2026 2.25417 -> 2.25336); for the FIELD-GOAL model (DraftKings) the old
+# settings stayed better (2.24909 / 2.26194 vs 2.24986 / 2.26238), so it keeps 1.4 + 20%.
+SETTINGS = {"first_points": (1.2, 0.25), "first_field_goal": (TEAM_STRETCH, SIMPLE_MIX)}
+
+
+def settings_for(model: dict) -> tuple:
+    """(team stretch, simple-rule mix) for this model file: the field-goal model has labels = first_field_goal."""
+    return SETTINGS["first_field_goal" if model.get("labels") == "first_field_goal" else "first_points"]
 
 
 def stretch_teams(p: np.ndarray, is_home: np.ndarray, k: float = TEAM_STRETCH) -> np.ndarray:
@@ -117,8 +127,9 @@ def probabilities(model: dict, rows: list) -> np.ndarray:
     if model.get("type") == "two_stage":
         p = two_stage(model["team"], model["w"], model["mu"], model["sd"], R)
         fb = R[:, FEATURES.index("fb_rate_shrunk")]
-        p = (1 - SIMPLE_MIX) * p + SIMPLE_MIX * fb / fb.sum() if fb.sum() > 0 else p
-        return stretch_teams(p, R[:, FEATURES.index("is_home")] > 0.5)
+        k, mix = settings_for(model)
+        p = (1 - mix) * p + mix * fb / fb.sum() if fb.sum() > 0 else p
+        return stretch_teams(p, R[:, FEATURES.index("is_home")] > 0.5, k)
     R = R[:, :len(model["mu"])]
     Z = (R - np.array(model["mu"])) / np.array(model["sd"])          # older one-stage model files
     s = Z @ np.array(model["w"])
