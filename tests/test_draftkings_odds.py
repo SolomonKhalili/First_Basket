@@ -132,3 +132,17 @@ def test_history_backfill_opening_and_closing(monkeypatch):
     assert dk.backfill_history(con)["games"] == 0                                 # asked once per game
     rows = con.execute("SELECT logged_at, american FROM dk_odds_log ORDER BY logged_at").fetchall()
     assert rows == [("2026-11-01 00:00:00", 700), ("2026-11-01 23:59:59", 600)]
+
+
+def test_cloud_keeps_espn_team_prices_when_a_fresher_snapshot_exists(monkeypatch):
+    snap = [{"home_code": "MEM", "away_code": "GS", "players": [{"player": "P", "team": "MEM", "american": 600}]}]
+    espn = [{"home_code": "MEM", "away_code": "GS", "players": [], "team_first": {"GS": 105, "MEM": -145},
+             "team_first_open": {"GS": 120, "MEM": -160}},
+            {"home_code": "MIL", "away_code": "POR", "players": [{"player": "Q", "team": "MIL", "american": 500}], "team_first": {}}]
+    monkeypatch.setattr(dk, "fetch_first_basket_odds", lambda: (_ for _ in ()).throw(RuntimeError("blocked")))
+    monkeypatch.setattr(dk, "load_snapshot", lambda: (snap, 1.0))
+    monkeypatch.setattr(dk, "fetch_via_espn", lambda games, con: espn)
+    monkeypatch.setattr(dk, "log_espn", lambda con, day, games: 0)
+    got = {g["home_code"]: g for g in nba._draftkings_prices([{"game_id": "1"}], [])}
+    assert got["MEM"]["players"][0]["american"] == 600 and got["MEM"]["team_first"] == {"GS": 105, "MEM": -145}
+    assert "MIL" in got                                                       # ESPN fills the game the snapshot lacks

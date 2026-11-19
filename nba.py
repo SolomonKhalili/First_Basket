@@ -1324,8 +1324,13 @@ def _draftkings_prices(games: list, warn: list, ui=None):
             dk.log_espn(db(), date.today().strftime("%Y%m%d"), espn)
         except Exception:  # noqa: BLE001
             espn = []
-        if snap is not None:              # fresher where we have it; ESPN for any game it doesn't cover
-            have = {(g["home_code"], g["away_code"]) for g in snap}
+        if snap is not None:              # fresher player prices where we have them; ESPN for any game they don't cover
+            by = {(g["home_code"], g["away_code"]): g for g in espn}
+            for g in snap:                # ...and ESPN's team market + opening prices on every game (snapshots lack them)
+                e = by.get((g["home_code"], g["away_code"])) or {}
+                g.setdefault("team_first", e.get("team_first", {}))
+                g.setdefault("team_first_open", e.get("team_first_open", {}))
+            have = set(by) & {(g["home_code"], g["away_code"]) for g in snap}
             return snap + [g for g in espn if (g["home_code"], g["away_code"]) not in have]
         if espn:
             return espn
