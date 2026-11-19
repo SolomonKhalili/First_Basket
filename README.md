@@ -66,7 +66,7 @@ python3 gui.py                      # the same picks in your web browser (cards,
 
 If you already have the database and `pregame_model.json`, you only need the last two commands.
 
-Run the tests any time: `python3 -m pytest` (192 tests, all in the `tests/` folder).
+Run the tests any time: `python3 -m pytest` (196 tests, all in the `tests/` folder).
 
 ---
 
@@ -156,6 +156,7 @@ With 198 games the margin of error is about ±5.5 points, so this is not statist
 | Source | Used for | Cost |
 |--------|----------|------|
 | ESPN via `sportsdataverse` | Schedules, play-by-play, box scores, injury report | Free |
+| ESPN game summary (`site.api.espn.com`) | Starters + positions on days NBA.com posts no lineups (e.g. 11/02/26) | Free |
 | NBA.com daily lineups feed (`stats.nba.com/js/data/leaders/00_daily_lineups_YYYYMMDD.json`) | Expected/confirmed starters (appears during the game day) | Free |
 | NBA.com live box score (`cdn.nba.com/static/json/liveData/...`) | Confirmed starters (backup) | Free |
 | FanDuel sportsbook feed (public, no login) | First Basket prices; live price feed every ~30 s | Free |
@@ -201,7 +202,7 @@ NBA/
 ├── train_pregame.py        # retrains pregame_model.json and runs the week-by-week test
 ├── build_features.py       # builds training matrices and player game logs
 ├── picks.py                # pick log + track record (`eval`)
-├── tests/                  # 192 tests (python3 -m pytest)
+├── tests/                  # 196 tests (python3 -m pytest)
 ├── first_basket_data.csv   # every past game: who scored first (auto-regenerated; don't edit by hand)
 ├── my_predictions.xlsx     # open this: Scorecard, Games (our picks vs results), Lineups (expected vs confirmed vs actual)
 ├── nba_first_basket.db     # SQLite database

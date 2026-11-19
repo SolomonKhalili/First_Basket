@@ -249,6 +249,8 @@ def lineup_rows(con) -> list:
         if (d, team, "Confirmed") not in snap or len(snap[(d, team, "Confirmed")]) < 5:
             snap.setdefault((d, team, "Confirmed_old"), []).append((pid, name, pos))
     empty_days = {d for (d,) in con.execute("SELECT game_date FROM official_lineup_days WHERE players = 0")}
+    empty_days |= {d for (d,) in con.execute(          # filled from ESPN only: NBA.com still posted nothing
+        "SELECT game_date FROM official_lineups GROUP BY game_date HAVING SUM(status != 'ESPN') = 0")}
     finished_games = set()
     if "first_baskets" in tables and "games" in tables:
         finished_games = {(d, h, a) for d, h, a in con.execute(

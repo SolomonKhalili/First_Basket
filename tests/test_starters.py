@@ -500,3 +500,68 @@ def test_injury_report_is_kept_once_per_status():
     rep[0]["status"] = "Out"
     assert st.save_injury_report(con, "20261119", rep) == 1                      # a change gets its own row
     assert con.execute("SELECT COUNT(*) FROM injury_log").fetchone()[0] == 2
+
+
+# ── ESPN fallback when NBA.com posts no lineups for a day (11/02/26) ──
+def _espn_summary(team_starters):
+    return {"boxscore": {"players": [
+        {"team": {"abbreviation": team}, "statistics": [{"athletes": [
+            {"starter": True, "athlete": {"id": pid, "displayName": name, "position": {"abbreviation": pos}}}
+            for pid, name, pos in starters] + [
+            {"starter": False, "athlete": {"id": "b", "displayName": "Bench Guy", "position": {"abbreviation": "C"}}}]}]}
+        for team, starters in team_starters.items()]}}
+
+
+CLE = [("allen", "Jarrett Allen", "C"), ("mobley", "Evan Mobley", "C"), ("harden", "James Harden", "G"),
+       ("mitchell", "Donovan Mitchell", "G"), ("thomas", "Meleek Thomas", "G")]
+OKC = [("jw", "Jaylin Williams", "F"), ("hart", "Isaiah Hartenstein", "C"), ("kw", "Kenrich Williams", "G"),
+       ("sga", "Shai Gilgeous-Alexander", "G"), ("am", "Ajay Mitchell", "G")]
+
+
+def test_espn_starters_are_parsed_without_the_bench():
+    got = st.parse_espn_starters(_espn_summary({"CLE": CLE, "OKC": OKC}))
+    assert got["CLE"] == CLE and got["OKC"] == OKC
+    assert st.parse_espn_starters(_espn_summary({"CLE": CLE[:4]})) == {}       # not 5 starters: unusable
+
+
+def test_day_without_nba_lineups_is_filled_from_espn_with_one_centre_per_team():
+    con = make_db()
+    st.ensure_official_tables(con)
+    con.execute("INSERT INTO games VALUES ('g1', '20261102', 'CLE', 'OKC')")
+    con.execute("INSERT INTO official_lineups VALUES ('20261020', 'CLE', 'allen', 'Jarrett Allen', 'C', 'Confirmed')")
+    con.execute("INSERT INTO official_lineups VALUES ('20261020', 'CLE', 'mobley', 'Evan Mobley', 'PF', 'Confirmed')")
+    calls = []
+    fetch = lambda gid: calls.append(gid) or st.parse_espn_starters(_espn_summary({"CLE": CLE, "OKC": OKC}))
+    empty_feed = {"games": [{"homeTeam": {"teamAbbreviation": "CLE", "players": []},
+                             "awayTeam": {"teamAbbreviation": "OKC", "players": []}}]}
+    assert st.store_official_lineups(con, "20261102", empty_feed, espn_fetch=fetch) == 10
+    assert calls == ["g1"]
+    rows = dict(((t, n), (p, s)) for t, n, p, s in con.execute(
+        "SELECT team, player_name, position, status FROM official_lineups WHERE game_date = '20261102'"))
+    assert rows[("CLE", "Jarrett Allen")] == ("C", "ESPN")      # NBA.com's usual C keeps it
+    assert rows[("CLE", "Evan Mobley")] == ("F", "ESPN")        # the second ESPN "C" becomes F
+    assert st.listed_center(con, "20261102", "CLE") == "allen"
+    assert st.listed_center(con, "20261102", "OKC") == "hart"
+
+
+def test_espn_is_not_asked_when_nba_listed_both_teams():
+    con = make_db()
+    con.execute("INSERT INTO games VALUES ('g0', '20261117', 'NY', 'TOR')")
+    asked = []
+    st.store_official_lineups(con, "20261117", FEED_DAY, espn_fetch=lambda gid: asked.append(gid) or {})
+    assert asked == []
+
+
+def test_espn_forward_who_nba_listed_at_centre_becomes_the_centre():
+    con = make_db()
+    st.ensure_official_tables(con)
+    con.execute("INSERT INTO games VALUES ('g2', '20261102', 'SA', 'TOR')")
+    con.execute("INSERT INTO official_lineups VALUES ('20261025', 'SA', 'wemby', 'Victor Wembanyama', 'C', 'Confirmed')")
+    sa = [("fox", "De'Aaron Fox", "G"), ("wemby", "Victor Wembanyama", "F"), ("castle", "Stephon Castle", "G"),
+          ("v", "Devin Vassell", "G"), ("h", "Dylan Harper", "G")]
+    tor = [("b", "Scottie Barnes", "F"), ("q", "Immanuel Quickley", "G"), ("w", "Ja'Kobe Walter", "G"),
+           ("r", "RJ Barrett", "F"), ("m", "Collin Murray-Boyles", "F")]
+    st.store_official_lineups(con, "20261102", None,
+                              espn_fetch=lambda gid: st.parse_espn_starters(_espn_summary({"SA": sa, "TOR": tor})))
+    assert st.listed_center(con, "20261102", "SA") == "wemby"
+    assert st.listed_center(con, "20261102", "TOR") is None      # no history, no ESPN C: no centre (model's backup)

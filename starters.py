@@ -380,9 +380,77 @@ def save_seen_lineups(con) -> int:
     return sum(store_lineup_snapshot(con, d, feed) for d, feed in list(_FEED_CACHE.items()) if feed)
 
 
-def store_official_lineups(con, d: str, feed=None) -> int:
+ESPN_SUMMARY = "https://site.api.espn.com/apis/site/v2/sports/basketball/nba/summary"
+
+
+def parse_espn_starters(data: dict) -> dict:
+    """Pure function. ESPN game-summary JSON -> {team: [(espn id, name, position)]} for teams with 5 starters.
+    ESPN's position is the player's usual one (G / F / C), not NBA.com's slot that night."""
+    out = {}
+    for t in (data or {}).get("boxscore", {}).get("players", []):
+        team = (t.get("team") or {}).get("abbreviation", "")
+        athletes = ((t.get("statistics") or [{}])[0]).get("athletes", [])
+        starters = [(str(a["athlete"].get("id", "")), a["athlete"].get("displayName", ""),
+                     (a["athlete"].get("position") or {}).get("abbreviation", ""))
+                    for a in athletes if a.get("starter") and a.get("athlete")]
+        if team and len(starters) == 5:
+            out[team] = starters
+    return out
+
+
+def fetch_espn_starters(event_id: str) -> dict:
+    """One finished game's starters from ESPN (see parse_espn_starters). {} on failure."""
+    try:
+        import requests
+        time.sleep(SLEEP)
+        r = requests.get(ESPN_SUMMARY, params={"event": event_id}, timeout=15, headers={"User-Agent": "Mozilla/5.0"})
+        r.raise_for_status()
+        return parse_espn_starters(r.json())
+    except Exception as e:  # noqa: BLE001
+        print(f"  (ESPN starters fetch failed for game {event_id}: {e})")
+        return {}
+
+
+def espn_fallback_rows(con, d: str, have: set, fetch=fetch_espn_starters) -> list:
+    """NBA.com sometimes posts no lineups for a day (11/02/26: none at all). For each game played on `d` whose teams
+    NBA.com didn't list (`have` = teams it did), take the starters from ESPN's box score, status 'ESPN'.
+    ESPN gives each player's usual position, which can mean two centres or none (it calls Wembanyama F). The tip-off
+    model needs ONE centre per team: the starter NBA.com listed at C most often in the 120 days before `d` (else ESPN's C) is C, any
+    other ESPN "C" becomes F."""
+    from datetime import datetime, timedelta
+    rows = []
+    since = (datetime.strptime(d, "%Y%m%d") - timedelta(days=120)).strftime("%Y%m%d")
+    games = con.execute("SELECT game_id, home_team, away_team FROM games WHERE game_date = ?", (d,)).fetchall() \
+        if con.execute("SELECT 1 FROM sqlite_master WHERE name = 'games'").fetchone() else []
+    for gid, home, away in games:
+        if home in have and away in have:
+            continue
+        found = fetch(gid)
+        for team in (home, away):
+            if team in have or team not in found:
+                continue
+            players = [list(p) for p in found[team]]
+
+            def listed_c(p):                         # recent only: last season's small-ball centre isn't this one
+                return con.execute("""SELECT COUNT(*) FROM official_lineups WHERE player_id = ? AND position = 'C'
+                                      AND game_date < ? AND game_date >= ? AND status != 'ESPN'""",
+                                   (p[0], d, since)).fetchone()[0]
+            score = {id(p): (listed_c(p), position_group(p[2]) == "C") for p in players}
+            best = max(players, key=lambda p: score[id(p)])    # ties: ESPN's order
+            centre = best if any(score[id(best)]) else None
+            for p in players:
+                if p is centre:
+                    p[2] = "C"
+                elif position_group(p[2]) == "C":
+                    p[2] = "F"
+            rows += [(d, team, pid or None, name, pos, "ESPN") for pid, name, pos in players]
+    return rows
+
+
+def store_official_lineups(con, d: str, feed=None, espn_fetch=fetch_espn_starters) -> int:
     """Store NBA.com's starting lineups for day `d` (YYYYMMDD): team (ESPN code), ESPN player id (by name),
     position, status. `feed` = the day's daily-lineups JSON (fetched if not given); None = no file that day.
+    Games NBA.com didn't list are filled from ESPN's box score (`espn_fallback_rows`, status 'ESPN').
     The day is recorded in official_lineup_days either way, so it is not fetched again. Returns starters stored."""
     ensure_official_tables(con)
     if feed is None:
@@ -397,6 +465,7 @@ def store_official_lineups(con, d: str, feed=None) -> int:
                     continue                      # bench players carry no position
                 name = p.get("playerName") or f"{p.get('firstName', '')} {p.get('lastName', '')}".strip()
                 rows.append((d, team, id_map.get(norm_name(name)), name, p["position"], str(p.get("lineupStatus", ""))))
+    rows += espn_fallback_rows(con, d, {r[1] for r in rows}, espn_fetch)
     con.executemany("INSERT OR REPLACE INTO official_lineups VALUES (?,?,?,?,?,?)", rows)
     con.execute("INSERT OR REPLACE INTO official_lineup_days VALUES (?, ?)", (d, len(rows)))
     con.commit()
