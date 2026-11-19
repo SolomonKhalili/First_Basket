@@ -1,6 +1,6 @@
 # NBA First Basket Scorer — Project Blueprint
 
-> **Last updated:** 2026-11-19 (ESPN fallback for blank NBA.com lineup days; Today / Yesterday views, AWAY / HOME labels, iPhone and desktop layout fixes, paper betting explained) · **Owner:** Solomon · **Folder:** `~/Desktop/NBA`
+> **Last updated:** 2026-11-19 ("Where we left off" in §0; ESPN fallback for blank NBA.com lineup days; Today / Yesterday views, AWAY / HOME labels, iPhone and desktop layout fixes, paper betting explained) · **Owner:** Solomon · **Folder:** `~/Desktop/NBA`
 >
 > Single source of truth for the project's state: what works, how well, what is known to be wrong, and
 > what comes next. Update it in the same session as any change (checklist in §11). Every number here was
@@ -36,6 +36,54 @@ and — later — compare those odds with sportsbook prices.
   lineups, injuries and odds every 3 minutes from 9 AM to the last tip-off, re-runs the picks and republishes;
   FanDuel odds on the page refresh every ~30 s through a free Cloudflare relay; results are filed as each game ends;
   the nightly update (4 AM ET) retrains. A Cloudflare timer keeps the job running; the Mac is only a backup. Details §4a.
+
+**Where we left off — read this first in a new session.** *(Keep this block current at the end of every
+session: §11 step 0. Full details of every change are in §10, newest first.)*
+
+*Last session ended 2026-11-19, ~7:30 AM ET* (a cloud session, continued from the Mac's desktop session of 11/18–19).
+
+**Right now (what we're in the middle of)**
+- **Owner's setup:** Claude on the Mac with **Remote Control** on (Claude desktop app → Settings → Claude Code →
+  Remote Control, NBA folder added), used from the phone's Claude app → Code → pick the Mac. The owner was setting
+  this up at 7:30 AM on 11/19. In a fresh Mac session, **first bring the NBA folder up to date with GitHub's
+  `main`** (the 11/19 morning work below is there; the Mac hadn't pulled it). The Mac's synced data files may differ
+  from `main`: keep the newer data (the cloud's), lose neither.
+- **Check pending:** first fully automatic morning start (Cloudflare timer → live job from 9 AM ET on 11/19). At
+  7:00 AM the site was last published 4:02 AM (nightly run, worked) and `/timer-check` said "nothing to do · start
+  permission: OK". Confirm the site republished after 9 AM; if not, look at the timer and the live job (§4a).
+- **Nothing half-built.** All code is merged; 196 tests pass.
+
+**Coming up (dated)**
+- **On/after 2026-12-01:** confirm 11/02/26 got its starters from the ESPN fallback (`official_lineups` rows with
+  status `ESPN` for that date). The cloud stops re-checking 11/02 after 12/02.
+- **On/after 2026-12-08:** re-check the two inputs adopted 11/18 (opponent by position, head-to-head) and the 20%
+  simple-rule mix — §7.1 item 4. Keep only what is still better in both test periods.
+- **~2026-12-20 (150+ finished games with saved odds):** test blending in sportsbook odds
+  (`experiments/market_blend_test.py`, §10 11/18 "accuracy pass"). Log-loss decides.
+- **Around the All-Star break:** re-test adding 2024-25 tip-offs (`old_tips`, §7.1 item 5).
+- **Optional tidy-up:** `.claude/worktrees/` on the Mac holds 9 old project copies that can be deleted.
+
+**What was done, and when** (one line each; details in §10)
+- **11/07–11/09:** first version of the bot (several 11/09 "done" items turned out not to exist — fixed 11/17).
+- **11/17:** full review and overhaul: two-stage model + early-shot share, tip-off model rebuilt with NBA.com's
+  listed centre, calibration checked, CLI picks by game, 115 tests.
+- **11/18 (day):** Mac app (`gui.py`) with EV guide, season records, Data view; Desktop app with icon; accounts;
+  FanDuel odds + EV + paper betting; private login website; cloud updates every 3 min from 9 AM, nightly retrain
+  4 AM; Cloudflare odds relay + timer.
+- **11/18 (evening):** DraftKings odds read by each viewer's browser; iPhone-friendly odds table; first-basket
+  pop-up; cards kept after tip-off with their last saved lines.
+- **11/18 (late):** model accuracy pass — **adopted** opponent-by-position + head-to-head inputs and a 20%
+  simple-rule mix; rejected recency weighting, team first-possession, jumper height, tree model.
+- **11/18 (night):** DraftKings line log (`dk_odds_log`); timer's GitHub key fixed; results filed even after the last tip.
+- **11/19 (12–1 AM):** Today / Yesterday switch; AWAY / HOME labels; orange missed-pick colours; iPhone and desktop
+  layout fixes (`iphone_check.py`); paper betting explained for beginners.
+- **11/19 (morning, cloud session):** docs caught up; ESPN fallback for lineup days NBA.com leaves blank (11/02/26);
+  fixed a test that wrote real DraftKings lines into the database; this handoff section. Learned: NBA.com's early
+  lineups before 11/17 are gone for good (don't chase); NBA.com's servers refuse cloud computers, ESPN doesn't.
+
+**Talking to the owner:** plain words, short answers, one clear next step. Not technical; got lost in git/branch
+talk on 11/19 — keep git out of the conversation (hard rule 8) and just say what was saved. Owner wants
+`README.md` / this file kept up to date without being asked.
 
 **Hard rules (decisions already made).**
 1. Use only the two most recent seasons (2025-26 and 2026-27); rosters and roles change too fast for older data.
@@ -444,14 +492,12 @@ Owner's order: **fix everything first, then build forward.**
 2. ~~**Two-stage model**~~ — **adopted 2026-11-17** (20.7% / 2.2369 vs 19.7% / 2.2453; §3.1).
 3. ~~Smarter step 1~~ — tested 2026-11-17, not adopted (team "scored first" history / tip conversion: 2026-27
    58.1% → 60.6% but Jan–Apr 2026 55.1% → 54.3%; log-loss change ≤ 0.0003 there).
-4. **Matchups — re-test later:** share of the opponent's conceded first baskets that went to the player's position
-   (G/F/C, NBA.com slot). Log-loss better in both periods (2026-27 2.2368 → 2.2350; Jan–Apr 2.2781 → 2.2748) but the
-   top pick worse this season (20.7% → 18.2%, −5 games; Jan–Apr 14.7% → 14.6%). Not adopted yet; re-test with more
-   2026-27 games (`python3 experiments/matchups_test.py`).
-   **Head-to-head** (2026-11-17): tip-off jumper-vs-jumper rejected; first basket vs tonight's opponent (this season
-   only, M=5) slightly better in both periods, but small and best-of-three. **Decision (2026-11-17): not added
-   yet; re-test on or after 2026-12-08** (≈3 more weeks of games) with `python3 experiments/h2h_fb_test.py`. Add it
-   only if "this season only" is still better in both periods then; the tip-off version stays rejected.
+4. ~~Matchups + head-to-head~~ — **adopted 2026-11-18 (late)**, see §10 "accuracy pass": opponent by position
+   (`opp_pos_share`) and first basket vs tonight's opponent, this season only (`vs_opp_rate`), both in
+   `context_features.py` and live in `pregame_model.py`. **Re-check on/after 2026-12-08** with
+   `python3 experiments/combined_test.py`: keep them only if still better in both test periods (their weights are
+   small, −0.07). The 20% simple-rule mix (`SIMPLE_MIX`) is re-checked the same day. Tip-off head-to-head stays
+   rejected. (Earlier 11/17 notes said "not added yet"; superseded.)
 5. ~~Accuracy ideas (2026-11-17)~~: early-shot share **adopted**; free-throw rate and shrink-strength tuning
    rejected (§3.1). Remaining idea: add the 2024-25 season (≈1,230 more games) — **decided 2026-11-17: not now**; keep
    2025-26 + this season. Tested 2026-11-17 for tips only: more tip calls right, but first-basket picks worse —
@@ -1123,6 +1169,8 @@ lineups, and the tip-off feature was broken.
 
 ## 11. End-of-session checklist
 
+0. Update **"Where we left off"** in §0: date/time the session ended, what's in progress, what's coming up (with
+   dates), and one dated line in "What was done".
 1. Add a dated entry to §10 (what changed, what was run, results).
 2. Update §4 (component status) and §7 (tick off finished items, add new ones).
 3. Update §2 (data counts) and §3 (new results — walk-forward only, never in-sample).
