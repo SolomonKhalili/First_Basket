@@ -1391,8 +1391,9 @@ function bookSection(c, book, recLine, shortName) {
   const teams = [c.away, c.home].filter((t) => teamP[t] !== undefined);
   const dkTeamP = {};
   for (const [n, t] of all) if (fg[n] !== undefined) dkTeamP[t] = (dkTeamP[t] || 0) + fg[n];
+  // value only for the team we favor to score first (an underdog team is never called value)
   const teamRows = teams.map((t) => `<tr><td><div class="player">${logo(t, 18)}<b>${esc(t)}</b></div></td>
-      <td class="r num">${pctCell(teamP[t])}</td><td class="r num">${ourCell(teamP[t])}</td><td class="r">${bookCell(teamOdds[t], teamP[t])}</td></tr>`).join("");
+      <td class="r num">${pctCell(teamP[t])}</td><td class="r num">${ourCell(teamP[t])}</td><td class="r">${teamP[t] > 0.5 ? bookCell(teamOdds[t], teamP[t]) : teamOdds[t] === undefined || teamOdds[t] === null ? missing(c, book) : `<span class="px">${american(teamOdds[t])}</span>`}</td></tr>`).join("");
   const head = (first) => `<thead><tr><th>${first}</th><th class="r">Chance</th><th class="r">Our odds</th><th class="r">${short} odds</th></tr></thead>`;
   return `<div class="book-sec ${isFD ? "is-fd" : "is-dk"}">
     <div class="book-h">${book} <small>${isFD ? "including free throws" : "excluding free throws"}</small></div>
@@ -2432,7 +2433,7 @@ function bestBets() {
       if (best && best.ev >= VALUE_MIN) out.push({ c, name, team, ...best });
     }
     const tf = c.team_first_odds || {}, tv = c.team_first_ev || {};     // team to score first (FanDuel)
-    for (const t of Object.keys(tf)) if (tv[t] >= VALUE_MIN && c.first_team)
+    for (const t of Object.keys(tf)) if (tv[t] >= VALUE_MIN && c.first_team && c.first_team[t] > 0.5)   // only the favored team
       out.push({ c, name: `${t} to score first`, team: t, prob: c.first_team[t], book: (c.team_first_book || {})[t] || "FanDuel", american: tf[t], ev: tv[t], teamBet: true });
   }
   return out.sort((a, b) => b.ev - a.ev);
