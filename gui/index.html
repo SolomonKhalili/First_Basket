@@ -859,6 +859,13 @@ details.oc[open] { grid-column: 1 / -1; }
 .ist { font-size: 12px; font-weight: 800; padding: 2px 8px; border-radius: 999px; }
 .ist.out { background: rgba(248,113,113,.15); color: #f87171; } .ist.q { background: rgba(251,191,36,.15); color: #fbbf24; } .ist.ok { background: rgba(34,197,94,.15); color: var(--good); }
 .itag { display: block; font-size: 11.5px; font-weight: 700; color: #fbbf24; margin-top: 1px; }
+.ihurt { color: var(--text); font-weight: 600; }
+.steam { padding: 8px 0 12px; border-top: 1px solid var(--line); }
+.scols { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+.sh { font-size: 11px; font-weight: 800; text-transform: uppercase; letter-spacing: .06em; color: var(--accent); margin-bottom: 4px; }
+.slist { margin: 0; padding-left: 18px; font-size: 14px; line-height: 1.6; }
+.itag.in { display: inline; }
+.snote { margin-top: 6px; font-size: 12.5px; color: var(--muted); }
 </style>
 </head>
 <body>
@@ -874,6 +881,8 @@ details.oc[open] { grid-column: 1 / -1; }
     </div>
     <div class="actions">
       <button class="btn secondary" id="picksBtn" title="Today's first basket predictions">🏀 Picks</button>
+      <button class="btn secondary" id="injBtn" title="Every injury for tonight's games, with changes">🩹 Injuries</button>
+      <button class="btn secondary" id="startBtn" title="Projected and confirmed starters for tonight's games">👥 Starters</button>
       <button class="btn secondary" id="oddsBtn" title="Every odds change today, with the time">📈 Odds tracker</button>
       <button class="btn secondary" id="betsBtn" title="The bets you placed: wins, losses and profit">💵 My bets</button>
       <button class="btn secondary" id="dataBtn" title="Your spreadsheet and CSV as tabs: scorecard, picks, lineups, all games">📊 Data</button>
@@ -924,6 +933,16 @@ details.oc[open] { grid-column: 1 / -1; }
     <div class="bet-list" id="betList"><div class="dempty">Loading…</div></div>
   </section>
 
+  <section class="bets-view" id="injView" hidden>
+    <div class="data-top"><button class="back" data-close-view>← Back to picks</button><h2>🩹 Injuries</h2></div>
+    <div class="bets-how">Everyone on tonight's injury report, with every change today. Updates by itself — and again when NBA.com confirms the starting lineups (~30 min before tip-off).</div>
+    <div id="injList"><div class="dempty">Loading…</div></div>
+  </section>
+  <section class="bets-view" id="startView" hidden>
+    <div class="data-top"><button class="back" data-close-view>← Back to picks</button><h2>👥 Starters</h2></div>
+    <div class="bets-how"><b>Projected</b> = NBA.com's expected starting five. <b>Confirmed</b> = NBA.com's official starting five, posted ~30 min before tip-off.</div>
+    <div id="startList"><div class="dempty">Loading…</div></div>
+  </section>
   <section class="bets-view" id="oddsView" hidden>
     <div class="data-top">
       <button class="back" id="oddsBack">← Back to picks</button>
@@ -1415,20 +1434,11 @@ function heroTiles(pFd, pDk, oddsFd, oddsDk) {
    player who is in the starting five shows "✅ Starting" (he's playing). Refreshed with every picks update. */
 function injuryBlock(c) {
   const list = c.injury_list || {};
-  const starters = new Set([...(c.home_starters || []), ...(c.away_starters || [])].map((s) => s.name));
-  const confirmed = c.label === "CONFIRMED";
-  const n = Object.values(list).reduce((k, v) => k + v.length, 0);
-  const rank = (s) => (/out/i.test(s) ? 0 : /doubt/i.test(s) ? 1 : 2);
-  const row = (r) => {
-    const playing = confirmed && starters.has(r.name);
-    const st = playing ? `<span class="ist ok">✅ Starting</span>`
-      : `<span class="ist ${/out/i.test(r.status) ? "out" : "q"}">${esc(r.status)}</span>`;
-    const why = [r.detail.replace(/, est\\. return.*$/i, ""), playing ? "confirmed in the starting lineup" : starters.has(r.name) ? "in our expected lineup" : ""].filter(Boolean).join(" · ");
-    return `<li><span class="iname">${esc(r.name)}</span>${st}${why ? `<small>${esc(why)}</small>` : ""}</li>`;
-  };
+  const n = Object.values(list).reduce((k, v) => k + v.filter((r) => !r.cleared).length, 0);
+  const sev = (r) => (r.cleared ? 3 : /out/i.test(r.status) ? 0 : /doubt/i.test(r.status) ? 1 : 2);
   const team = (tm) => `<div class="iteam"><div class="iteam-h">${logo(tm, 18)}${esc(TEAM_NAMES[tm] || tm)}</div>
-      ${(list[tm] || []).length ? `<ul>${[...list[tm]].sort((a, b) => rank(a.status) - rank(b.status)).map(row).join("")}</ul>` : `<div class="inone">No injuries listed</div>`}</div>`;
-  return `<details class="inj-sec"><summary>🩹 Injuries <small>${n ? `${n} player${n === 1 ? "" : "s"} listed` : "none listed"}${confirmed ? " · lineup confirmed" : ""}</small></summary>
+      ${(list[tm] || []).length ? `<ul>${[...list[tm]].sort((a, b) => sev(a) - sev(b)).map((r) => injuryLine(r, c)).join("")}</ul>` : `<div class="inone">No injuries listed</div>`}</div>`;
+  return `<details class="inj-sec"><summary>🩹 Injuries <small>${n ? `${n} player${n === 1 ? "" : "s"} listed` : "none listed"}${c.label === "CONFIRMED" ? " · lineup confirmed" : ""}</small></summary>
     ${team(c.away)}${team(c.home)}</details>`;
 }
 const TEAM_NAMES = { ATL: "Atlanta Hawks", BOS: "Boston Celtics", BKN: "Brooklyn Nets", CHA: "Charlotte Hornets", CHI: "Chicago Bulls",
@@ -1857,6 +1867,7 @@ $("dayYest").addEventListener("click", showYesterday);
 $("dayToday").addEventListener("click", showToday);
 
 function renderResult(res) {
+  setTimeout(() => { if (!$("injView").hidden) drawInjuries(); if (!$("startView").hidden) { lineupsToday = null; drawStarters(); } }, 0);
   setTimeout(() => { if (!$("oddsView").hidden) drawOdds(); }, 0);   // odds tracker open: redraw with the picks
   if (!res) return;
   lastResult = res;
@@ -2946,10 +2957,86 @@ function closeOdds() {
   if (location.hash === "#odds") history.replaceState(null, "", location.pathname);
 }
 $("oddsBtn").addEventListener("click", openOdds);
+/* ── 🩹 Injuries and 👥 Starters pages (all of today's games) ── */
+const VIEWS = ["injView", "startView"];
+function closeViews() {
+  for (const v of VIEWS) $(v).hidden = true;
+  if ($("oddsView").hidden && $("betsView").hidden) document.body.classList.remove("bets-mode");
+  if (["#injuries", "#starters"].includes(location.hash)) history.replaceState(null, "", location.pathname);
+}
+function openView(id, hash, draw) {
+  closeData(); if (!$("betsView").hidden) closeBets(); if (!$("oddsView").hidden) closeOdds();
+  for (const v of VIEWS) $(v).hidden = v !== id;
+  document.body.classList.add("bets-mode");
+  if (location.hash !== hash) history.replaceState(null, "", hash);
+  window.scrollTo(0, 0);
+  draw();
+}
+const shortTime = (s) => { if (!s) return ""; const d = new Date(s.replace(" ", "T")); return isNaN(d) ? "" : d.toLocaleTimeString([], { hour: "numeric", minute: "2-digit" }); };
+const sevWord = (s) => (/out/i.test(s) ? "out" : /doubt/i.test(s) ? "doubtful" : /day/i.test(s) ? "day-to-day (questionable)" : String(s || "").toLowerCase());
+/* one injured player in plain words: what he's listed as, what changed today, and always the injury */
+function injuryLine(r, c) {
+  const starters = new Set([...(c.home_starters || []), ...(c.away_starters || [])].map((s) => s.name));
+  const confirmed = c.label === "CONFIRMED", playing = confirmed && starters.has(r.name);
+  const hurt = (r.detail || "").split(",")[0] || "injury not given";
+  const m = (r.detail || "").match(/est\. return (\d{4})-(\d{2})-(\d{2})/);
+  const back = m ? new Date(+m[1], +m[2] - 1, +m[3]).toLocaleDateString([], { month: "short", day: "numeric" }) : "";
+  const h = r.history || [], first = h.length ? h[0][0] : r.status, firstQ = h.find(([s]) => !/out/i.test(s));
+  const at = h.length ? shortTime(h[h.length - 1][1]) : "";
+  let tag, text;
+  if (r.cleared || playing) {
+    tag = `<span class="ist ok">✅ Active</span>`;
+    text = `Was listed as ${sevWord(firstQ ? firstQ[0] : first)} — now ${playing ? "<b>in the confirmed starting lineup</b>" : "<b>off the injury report</b>"}`;
+  } else if (/out/i.test(r.status)) {
+    tag = `<span class="ist out">❌ Out</span>`;
+    text = firstQ ? `Was listed as ${sevWord(firstQ[0])} — <b>now ruled out</b>${at ? ` (${at})` : ""}` : `Ruled out${back ? ` · back about ${back}` : ""}`;
+  } else {
+    tag = `<span class="ist q">⚠️ ${esc(/day/i.test(r.status) ? "Questionable" : r.status)}</span>`;
+    text = confirmed ? `Listed as ${sevWord(r.status)} — <b>not in the confirmed starting lineup</b>` : `Listed as ${sevWord(r.status)} — game-time decision`;
+  }
+  return `<li><span class="iname">${esc(r.name)}</span>${tag}<small>${text} · <b class="ihurt">${esc(hurt)}</b>${starters.has(r.name) && !confirmed ? " · in our expected lineup" : ""}</small></li>`;
+}
+function drawInjuries() {
+  const cards = (lastResult?.cards || []).filter((c) => c.injury_list);
+  if (!cards.length) { $("injList").innerHTML = `<div class="dempty">${lastResult ? "No injury report for today's games yet." : "Loading…"}</div>`; return; }
+  const sev = (r) => (r.cleared ? 3 : /out/i.test(r.status) ? 0 : /doubt/i.test(r.status) ? 1 : 2);
+  $("injList").innerHTML = cards.map((c) => `<div class="ogame">
+      <div class="ogame-h">${logo(c.away, 26)}${esc(c.away)} <span class="at">@</span> ${logo(c.home, 26)}${esc(c.home)}<small>${esc(cardStart(c))} · ${c.label === "CONFIRMED" ? "lineups confirmed" : "lineups not confirmed yet"}</small></div>
+      ${[c.away, c.home].map((tm) => { const rows = [...(c.injury_list[tm] || [])].sort((a, b) => sev(a) - sev(b));
+        return `<div class="iteam"><div class="iteam-h">${logo(tm, 18)}${esc(TEAM_NAMES[tm] || tm)}</div>
+          ${rows.length ? `<ul>${rows.map((r) => injuryLine(r, c)).join("")}</ul>` : `<div class="inone">No injuries listed</div>`}</div>`; }).join("")}
+    </div>`).join("");
+}
+let lineupsToday = null;
+async function drawStarters() {
+  const cards = lastResult?.cards || [];
+  try { if (!lineupsToday) lineupsToday = await getJSON("/api/data?tab=lineups"); } catch (e) { /* show what the cards know */ }
+  const today = (lineupsToday?.rows || []).filter((r) => cards.some((c) => c.matchup === r[1]));
+  if (!cards.length) { $("startList").innerHTML = `<div class="dempty">Loading…</div>`; return; }
+  const names = (v) => (v && !/^not |^game not|^–$/i.test(v) ? v.split(",").map((s) => s.trim()).filter(Boolean) : null);
+  $("startList").innerHTML = cards.map((c) => `<div class="ogame">
+      <div class="ogame-h">${logo(c.away, 26)}${esc(c.away)} <span class="at">@</span> ${logo(c.home, 26)}${esc(c.home)}<small>${esc(cardStart(c))}</small></div>
+      ${[[c.away, c.away_starters], [c.home, c.home_starters]].map(([tm, ours]) => {
+        const r = today.find((x) => x[1] === c.matchup && x[2] === tm) || [];
+        const proj = names(r[3]), conf = names(r[4]), used = (ours || []).map((s) => s.name);
+        const list = (arr) => arr ? `<ol class="slist">${arr.map((n) => `<li>${esc(n)}${(c.injuries || {})[n] ? ` <span class="itag in">⚠️ ${esc(c.injuries[n])}</span>` : ""}</li>`).join("")}</ol>` : "";
+        const swapped = proj && used.length && used.some((n) => !proj.includes(n))
+          ? `<div class="snote">🔁 Our picks use: ${used.map(esc).join(", ")} (we swapped out players ruled out after NBA.com posted).</div>` : "";
+        return `<div class="steam"><div class="iteam-h">${logo(tm, 18)}${esc(TEAM_NAMES[tm] || tm)}</div>
+          <div class="scols"><div><div class="sh">Projected</div>${list(proj) || `<div class="inone">Not posted yet</div>`}</div>
+            <div><div class="sh">Confirmed</div>${list(conf) || `<div class="inone">Not confirmed yet<br><small>~30 min before tip-off</small></div>`}</div></div>${swapped}</div>`;
+      }).join("")}</div>`).join("");
+}
+$("injBtn").addEventListener("click", () => openView("injView", "#injuries", drawInjuries));
+$("startBtn").addEventListener("click", () => { lineupsToday = null; openView("startView", "#starters", drawStarters); });
+document.addEventListener("click", (ev) => { if (ev.target.closest("[data-close-view]")) closeViews(); });
+if (location.hash === "#injuries") openView("injView", "#injuries", drawInjuries);
+if (location.hash === "#starters") openView("startView", "#starters", drawStarters);
 $("picksBtn").addEventListener("click", () => {             // back to the predictions from any page
   if (!$("oddsView").hidden) closeOdds();
   if (!$("betsView").hidden) closeBets();
   closeData();
+  closeViews();
   window.scrollTo({ top: 0, behavior: "smooth" });
 });
 $("oddsBack").addEventListener("click", closeOdds);

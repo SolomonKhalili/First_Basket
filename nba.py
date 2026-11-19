@@ -1246,9 +1246,7 @@ def predict_today(first_pass: bool = True, teams: set = frozenset(), ui=None) ->
         injuries = {nm: status for nm, status, _ in
                     st.injury_flags([p['name'] for p in home_starters + away_starters], inj_report)}
         # every injured player on both teams (the card's Injuries section); refreshed on every picks update
-        injury_list = {t: [{"name": r["name"], "status": r["status"], "detail": r.get("detail") or "",
-                            "return": r.get("return") or ""} for r in st.team_injuries(t, inj_report, team_of) if r["status"]]
-                       for t in (away_team, home_team)}
+        injury_list = _injury_list(con, game_date, (away_team, home_team), inj_report, team_of)
         top5 = [(info[i]['name'], info[i]['team'], float(probs[i]), pm.fair_american(float(probs[i])))
                 for i in order[:5]]
         everyone = [{**info[i], "prob": float(probs[i]),                         # all 10 starters, for EV
@@ -1393,6 +1391,36 @@ def _draftkings_prices(games: list, warn: list, ui=None):
             return espn
         warn.append(f"DraftKings odds unavailable ({type(e).__name__}) — FanDuel only")
         return None
+
+
+def _injury_list(con, game_date: str, teams, inj_report, team_of) -> dict:
+    """{team: [{name, status, detail, return, history: [[status, first_seen], ...], cleared}]} — everyone on today's
+    injury report for both teams, with every status change saved today (injury_log), plus anyone who was on today's
+    report earlier but has dropped off it (cleared = True: he's no longer listed, so he's available)."""
+    day = str(game_date).replace("-", "")[:8]
+    hist = {}
+    try:
+        for name, team, status, detail, ret, seen in con.execute(
+                """SELECT player_name, team, status, detail, return_date, first_seen FROM injury_log
+                   WHERE game_date = ? ORDER BY first_seen""", (day,)):
+            hist.setdefault(st.norm_name(name), {"name": name, "team": team, "detail": detail, "return": ret, "h": []})["h"].append([status, seen])
+    except Exception:  # noqa: BLE001 — no log yet: current report only
+        pass
+    out = {}
+    for t in teams:
+        rows, seen = [], set()
+        for r in st.team_injuries(t, inj_report, team_of):
+            if not r["status"]:
+                continue
+            k = st.norm_name(r["name"]); seen.add(k)
+            rows.append({"name": r["name"], "status": r["status"], "detail": r.get("detail") or "", "return": r.get("return") or "",
+                         "history": (hist.get(k) or {}).get("h", [[r["status"], ""]]), "cleared": False})
+        for k, h in hist.items():           # only when today's report for this team actually loaded (a failed feed != healthy)
+            if rows and k not in seen and (h["team"] or team_of.get(k)) == t:
+                rows.append({"name": h["name"], "status": "Available", "detail": h["detail"] or "", "return": h["return"] or "",
+                             "history": h["h"], "cleared": True})
+        out[t] = rows
+    return out
 
 
 def _best_value(players: list, fd_prices: dict, dk_prices: dict) -> list:
