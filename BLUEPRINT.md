@@ -47,11 +47,16 @@ session: §11 step 0. Full details of every change are in §10, newest first.)*
   Remote Control, NBA folder added), used from the phone's Claude app → Code → pick the Mac. The owner was setting
   this up at 7:30 AM on 11/19. In a fresh Mac session, **first bring the NBA folder up to date with GitHub's
   `main`** (the 11/19 morning work below is there; the Mac hadn't pulled it). The Mac's synced data files may differ
-  from `main`: keep the newer data (the cloud's), lose neither.
+  from `main`: keep the newer data (the cloud's), lose neither. After that one manual update the Mac **updates its
+  code by itself every 30 min** (`sync_from_cloud.update_code`); check `launcher/sync.log` says "code updated" /
+  "code already up to date".
+- **Owner's rule:** everything done anywhere (phone, cloud session) must end up in the Mac's NBA folder. Work in a
+  cloud session reaches GitHub's `main` (via a pull request Claude merges when the owner agrees), then the Mac's
+  30-min sync brings it in.
 - **Check pending:** first fully automatic morning start (Cloudflare timer → live job from 9 AM ET on 11/19). At
   7:00 AM the site was last published 4:02 AM (nightly run, worked) and `/timer-check` said "nothing to do · start
   permission: OK". Confirm the site republished after 9 AM; if not, look at the timer and the live job (§4a).
-- **Nothing half-built.** All code is merged; 196 tests pass.
+- **Nothing half-built.** All code is merged; 203 tests pass.
 
 **Coming up (dated)**
 - **On/after 2026-12-01:** confirm 11/02/26 got its starters from the ESPN fallback (`official_lineups` rows with
@@ -80,6 +85,8 @@ session: §11 step 0. Full details of every change are in §10, newest first.)*
 - **11/19 (morning, cloud session):** docs caught up; ESPN fallback for lineup days NBA.com leaves blank (11/02/26);
   fixed a test that wrote real DraftKings lines into the database; this handoff section. Learned: NBA.com's early
   lineups before 11/17 are gone for good (don't chase); NBA.com's servers refuse cloud computers, ESPN doesn't.
+- **11/19 (~7:45 AM):** the Mac's 30-min sync now also takes GitHub's newest code by itself (safe: never
+  overwrites Mac edits). Tested on practice copies: update, no-op, clash skipped, identical untracked file replaced.
 
 **Talking to the owner:** plain words, short answers, one clear next step. Not technical; got lost in git/branch
 talk on 11/19 — keep git out of the conversation (hard rule 8) and just say what was saved. Owner wants
@@ -366,7 +373,7 @@ fallback 0.6354 / 0.6323 → NBA.com's listed C in training too 0.6299 / 0.6309.
 | First-shot data + share | `nba.first_shots`, `build_features.first_shot_share` | ✅ Recorded for every game; tested as a model input and not adopted (§7.1) |
 | Early-shot data + share | `nba.early_shots`, `build_features.early_shot_share` | ✅ Each team's first 5 attempts recorded for every game; **used by the model** (stage 2) |
 
-**Tests:** 196 passing in 15 files (`python3 -m pytest`, 2026-11-19). Earlier breakdown (2026-11-17): 115 passing — `test_starters.py` (45), `test_pipeline.py` (29: sync, retrain decision, incremental build incl. late-labelled games, label guards, tip-rate rule), `test_display.py` (10), `test_tip_model.py` (8), `test_picks.py` (19), `test_pregame_model.py` (4). The incremental-build test was checked by re-introducing the old zero-games bug: it fails, as it should.
+**Tests:** 203 passing in 16 files (`python3 -m pytest`, 2026-11-19). Earlier breakdown (2026-11-17): 115 passing — `test_starters.py` (45), `test_pipeline.py` (29: sync, retrain decision, incremental build incl. late-labelled games, label guards, tip-rate rule), `test_display.py` (10), `test_tip_model.py` (8), `test_picks.py` (19), `test_pregame_model.py` (4). The incremental-build test was checked by re-introducing the old zero-games bug: it fails, as it should.
 
 ### 4a. App, website and automation (2026-11-18)
 
@@ -381,7 +388,7 @@ fallback 0.6354 / 0.6323 → NBA.com's listed C in training too 0.6299 / 0.6309.
 | Nightly update | same job, `kind=once` | ✅ ~4 AM ET: results, CSV, spreadsheet, retraining, republish |
 | Odds relay + timer | `website_live/odds-relay.js`, `website_live/wrangler.jsonc` → Cloudflare Worker `first-basket-odds` (GitHub repo SolomonKhalili/first-basket-odds, auto-deployed) | ✅ Relay live (`first-basket-odds.solomonkhalili.workers.dev/prices`); only the price feed, only for the website. Timer every 10 min starts the live job if nothing is running (needs the `GH_TOKEN` secret, added 2026-11-18). ⏳ First automatic start not yet observed (due 2026-11-19 from 9 AM) |
 | Today's cards memory | `gui.keep_todays_cards`, `todays_cards.json` | ✅ A card stays after tip-off; a card rebuilt from the log never replaces a saved one; matched by matchup |
-| Mac sync + backup | `sync_from_cloud.py`, `launcher/com.firstbasket.sync.plist` | ✅ Every 30 min: downloads the cloud's data into the NBA folder; starts the cloud job if it has gone quiet (only while the Mac is on) |
+| Mac sync + backup | `sync_from_cloud.py`, `launcher/com.firstbasket.sync.plist` | ✅ Every 30 min: **takes GitHub's newest code (`main`) when safe** (`update_code` / `code_update_plan`, 2026-11-19: never overwrites a file edited on the Mac that GitHub also changed, skips if the Mac has its own unsaved-to-GitHub commits, restarts the Mac app if its page changed); downloads the cloud's data into the NBA folder; starts the cloud job if it has gone quiet (only while the Mac is on) |
 | Mac app always on | `launcher/com.firstbasket.app.plist`, Desktop "First Basket Picks.app" | ✅ Starts at login, restarted if it stops |
 | One-time setup scripts | `setup_live_updates.sh`, `setup_odds_relay.sh` | ✅ Both run 2026-11-18 (the relay ended up deployed from the Cloudflare dashboard via GitHub instead) |
 | Old private-repo workflow | `.github/workflows/update-site.yml` | Stands down on its timer (`LIVE_ENABLED=true`); still runs if started by hand; publishes to `gh-pages` |
@@ -569,7 +576,7 @@ NBA/
 ├── pregame_model.json      # active model weights + walk-forward results
 ├── train_pregame.py        # training, walk-forward test, keep-previous check
 ├── build_features.py       # training matrices (incremental) + player game logs
-├── tests/                  # 196 tests in 15 files (python3 -m pytest)
+├── tests/                  # 203 tests in 16 files (python3 -m pytest)
 ├── nba_first_basket.db     # SQLite: games, first_baskets, lineups, official_lineups, first_shots, early_shots, pick_log (+ legacy predictions)
 ├── player_game_logs.pkl    # per-player game logs
 ├── X_train.npy, y_train.npy, groups.npy, game_ids.json, feature_names.json, meta.json   # training matrices
@@ -609,6 +616,19 @@ NBA/
 ---
 
 ## 10. Change log (newest first)
+
+### 2026-11-19 (morning, later) — the Mac takes GitHub's code by itself
+
+- **Owner's request:** everything done from the phone or a cloud session must update the NBA folder on the Mac.
+  `sync_from_cloud.py` (every 30 min) now first runs `update_code()`: fetch `main`, fast-forward when safe, then the
+  usual data download. `code_update_plan` (pure, `tests/test_code_update.py`, 7 tests) decides: up to date → nothing;
+  Mac has commits GitHub lacks → skip; a code file edited on the Mac (tracked or untracked) that GitHub also
+  changed, with different content → skip and log; data files (`FILES`) and identical files are reset first (the
+  data download replaces them right after). If `gui.py` or `gui/` changed, the Mac app is restarted
+  (`launchctl kickstart -k gui/<uid>/com.firstbasket.app`). Tested end-to-end on practice repositories (a fake
+  GitHub + fake Mac): update, repeat = no-op, clash skipped with the Mac's edit kept, identical untracked file
+  (like the Mac's `.claude/launch.json`) replaced. **Starts working after the Mac gets this file once.**
+- **Verified:** 203 tests pass.
 
 ### 2026-11-19 (morning) — ESPN fills days NBA.com left blank; a test no longer writes to the real database
 
