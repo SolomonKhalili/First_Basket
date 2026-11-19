@@ -826,6 +826,9 @@ details.oc[open] .otap { visibility: hidden; }
 .tl-t { color: var(--muted); } .tl-a { text-align: right; } .tl-w { grid-column: 1 / -1; font-weight: 700; font-size: 12px; } .tl-w small { color: var(--muted); font-weight: 400; }
 .og-key { display: block; margin-top: 4px; } .og-key .g { color: var(--good); } .og-key .r { color: #f87171; }
 .ocells { align-items: start; }
+details.oc > summary::marker { content: ""; }
+details.oc[open] { grid-column: 1 / -1; }
+.otl { max-height: 340px; overflow-y: auto; }
 </style>
 </head>
 <body>
@@ -840,6 +843,7 @@ details.oc[open] .otap { visibility: hidden; }
       </div>
     </div>
     <div class="actions">
+      <button class="btn secondary" id="picksBtn" title="Today's first basket predictions">🏀 Picks</button>
       <button class="btn secondary" id="oddsBtn" title="Every odds change today, with the time">📈 Odds tracker</button>
       <button class="btn secondary" id="betsBtn" title="The bets you placed: wins, losses and profit">💵 My bets</button>
       <button class="btn secondary" id="dataBtn" title="Your spreadsheet and CSV as tabs: scorecard, picks, lineups, all games">📊 Data</button>
@@ -2833,12 +2837,13 @@ async function openOdds() {
   window.scrollTo(0, 0);
   try {
     const d = await getJSON("/api/odds_track");
+    for (let k = 0; k < 40 && !lastResult?.cards; k++) await new Promise((r) => setTimeout(r, 250));   // wait for today's picks
     if (!d.games?.length) { $("oddsList").innerHTML = `<div class="dempty">No odds saved yet today.</div>`; return; }
     $("oddsList").innerHTML = d.games.map((g) => {
       const c = (lastResult?.cards || []).find((x) => x.matchup === g.matchup);
       const rank = Object.fromEntries(((c && (c.probs || c.picks)) || []).map(([n], k) => [n, k]));
       const ids = Object.fromEntries([...((c && c.home_starters) || []), ...((c && c.away_starters) || [])].map((s) => [s.name, s.player_id]));
-      const players = [...g.players].sort((a, b) => (rank[a.name] ?? 99) - (rank[b.name] ?? 99) || moveSize(b) - moveSize(a)).map((p) => `<div class="orow">
+      const players = [...g.players].filter((p) => !c || rank[p.name] !== undefined).sort((a, b) => (rank[a.name] ?? 99) - (rank[b.name] ?? 99) || moveSize(b) - moveSize(a)).map((p) => `<div class="orow">
           <div class="oname">${ids[p.name] ? `<img class="face" src="${headshot(ids[p.name])}" alt="" loading="lazy" onerror="this.remove()">` : logo(p.team || "", 18)}<b>${esc(p.name)}</b><small>${esc(p.team || "")}</small></div>
           <div class="ocells">${oddsCell(g.matchup, "player", p.name, "FanDuel", p.books.FanDuel)}${oddsCell(g.matchup, "player", p.name, "DraftKings", p.books.DraftKings)}</div></div>`).join("");
       const teams = (g.teams || []).map((tm) => `<div class="orow">
@@ -2857,6 +2862,12 @@ function closeOdds() {
   if (location.hash === "#odds") history.replaceState(null, "", location.pathname);
 }
 $("oddsBtn").addEventListener("click", openOdds);
+$("picksBtn").addEventListener("click", () => {             // back to the predictions from any page
+  if (!$("oddsView").hidden) closeOdds();
+  if (!$("betsView").hidden) closeBets();
+  closeData();
+  window.scrollTo({ top: 0, behavior: "smooth" });
+});
 $("oddsBack").addEventListener("click", closeOdds);
 if (location.hash === "#odds") openOdds();
 
