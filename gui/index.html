@@ -511,9 +511,19 @@ body.viewer #runAll, body.viewer #runSelected, body.viewer #ddown { display: non
 .fd-live .livedot::after { background: var(--good); }
 @keyframes fdFlash { from { box-shadow: 0 0 0 2px var(--good); } to { box-shadow: var(--shadow); } }
 .card.fd-flash { animation: fdFlash 1.2s ease-out; }
-.tscroll { overflow-x: auto; -webkit-overflow-scrolling: touch; }   /* a wide odds table swipes sideways, never cut off */
+.tscroll { overflow-x: auto; -webkit-overflow-scrolling: touch; border: 1px solid var(--line); border-radius: 12px; margin-top: 12px; }
+/* a real table: header row, cell lines, alternating row shading */
+.tscroll table { margin-top: 0; border-collapse: collapse; }
+.tscroll thead th { background: var(--surface-2); padding-top: 9px; padding-bottom: 9px; border-bottom: 1px solid var(--line); }
+.tscroll th + th, .tscroll td + td { border-left: 1px solid var(--line); }
+.tscroll th, .tscroll td { padding-left: 8px; padding-right: 8px; }
+.tscroll tbody tr:nth-child(even) td { background: color-mix(in srgb, var(--surface-2) 60%, transparent); }
+.tscroll tbody tr.scored td { background: var(--good-soft); }
+.tscroll td.r, .tscroll th.r { text-align: center; }   /* a wide odds table swipes sideways, never cut off */
 th .short { display: none; }
 .nshort { display: none; }
+.tc { display: none; }
+.sub2 { display: block; }
 @container cardbody (max-width: 520px) { .tscroll .nshort { display: inline; } }
 /* compact odds table whenever the CARD is narrow — a phone, or a laptop showing cards side by side */
 .card-body { container-type: inline-size; container-name: cardbody; }
@@ -521,10 +531,18 @@ th .short { display: none; }
   th .long { display: none; } th .short { display: inline; }
   .tscroll table { font-size: 13px; }
   .tscroll td.rank, .tscroll thead th:first-child { display: none; }       /* the order already shows the rank */
-  .tscroll td, .tscroll th { padding-left: 2px; padding-right: 2px; }
+  .tscroll td, .tscroll th { padding-left: 4px; padding-right: 4px; }
+  .tscroll td:nth-child(2), .tscroll th:nth-child(2) { padding-left: 7px; }
+  .tscroll .fd { min-width: 0; padding-left: 3px; padding-right: 3px; }
+  .tscroll th:nth-child(2), .tscroll td:nth-child(2) { border-left: 0; }   /* rank hidden: player is the first column */
   .tscroll .player { gap: 5px; }
   .tscroll .fd { padding-left: 4px; padding-right: 4px; min-width: 40px; font-size: 12px; }
-  .tscroll .nm { display: block; font-weight: 600; line-height: 1.2; overflow-wrap: anywhere; }   /* long names wrap, never cut */
+  .tscroll .nm { display: block; font-weight: 600; line-height: 1.2; }        /* long names wrap between words */
+  .tscroll td:nth-child(2) { min-width: 80px; }
+  .tscroll table { font-size: 12.5px; }
+  .tscroll .fd { font-size: 11.5px; }
+  .tscroll .player > img, .tscroll .player > svg, .tscroll .player > .logo { display: none; }   /* team code instead */
+  .tscroll .tc { display: inline; color: var(--muted); font-size: 12px; }
   .tscroll .nfull { display: none; }
   .tscroll td .bar { display: none; }                                        /* the % says it; room for names */
   .tscroll .player img, .tscroll .player svg { width: 15px; height: 15px; }
@@ -898,7 +916,7 @@ function card(c, i) {
   const shortName = (n) => { const w = String(n).split(" "); return w.length > 1 ? `${w[0][0]}. ${w.slice(1).join(" ")}` : n; };
   const rows = c.picks.map(([name, team, p, fair], r) => `<tr data-name="${esc(name)}">
       <td class="rank num">${r + 1}</td>
-      <td><div class="player">${logo(team, 18)}<span class="pn"><span class="nm"><span class="nfull">${esc(name)}</span><span class="nshort">${esc(shortName(name))}</span></span>${recLine(name)}</span> <small class="tcode">${esc(team)}</small></div></td>
+      <td><div class="player">${logo(team, 18)}<span class="pn"><span class="nm"><span class="nfull">${esc(name)}</span><span class="nshort">${esc(shortName(name))}</span></span><span class="sub2"><span class="tc">${esc(team)} · </span>${recLine(name)}</span></span> <small class="tcode">${esc(team)}</small></div></td>
       <td class="r num"><span class="bar"><i style="width:${(p / max) * 100}%;--r:${r}"></i></span>${pct(p)}</td>
       <td class="r num odds">${american(fair)}</td>${fdCell(name, fair)}${evCell(name)}</tr>`).join("");
   const starterLine = (team, players) => `<div class="line"><span class="tm">${logo(team, 18)}${esc(team)}</span>
@@ -934,7 +952,7 @@ function card(c, i) {
       </div>
       ${valueLine}
       <div class="tscroll ${dkOn ? "two-books" : ""} ${c.fd_closed ? "fd-closed" : ""}"><table style="--i:${i}">
-        <thead><tr><th></th><th>Player</th><th class="r">Chance</th><th class="r">Fair</th>${fdOn ? '<th class="r"><span class="long">FanDuel</span><span class="short">FD</span></th>' + (dkOn ? '<th class="r"><span class="long">DraftKings</span><span class="short">DK</span></th>' : '') + '<th class="r" title="Good deal? (best price of the books) Average profit per $1 in the long run">Value<button class="whats" data-learn="2" title="What is this?">?</button></th>' : ""}</tr></thead>
+        <thead><tr><th></th><th>Player</th><th class="r"><span class="long">Chance</span><span class="short">%</span></th><th class="r">Fair</th>${fdOn ? '<th class="r"><span class="long">FanDuel</span><span class="short">FD</span></th>' + (dkOn ? '<th class="r"><span class="long">DraftKings</span><span class="short">DK</span></th>' : '') + '<th class="r" title="Good deal? (best price of the books) Average profit per $1 in the long run">Value<button class="whats" data-learn="2" title="What is this?">?</button></th>' : ""}</tr></thead>
         <tbody>${rows}</tbody>
       </table></div>
       ${c.fd_closed ? `<div class="small-note">FanDuel has closed first-basket betting (tip-off is near) — its last prices are shown faded.</div>`
