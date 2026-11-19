@@ -813,6 +813,19 @@ body.bets-mode .dayswitch, body.bets-mode #yestSum, body.bets-mode #dataView { d
 .team-hero .shot img { width: 84px; height: 84px; object-fit: contain; }
 @media (max-width: 520px) { .team-hero .shot img { width: 64px; height: 64px; } }
 .team-hero .initials { font-size: 20px; }
+.ogame-h { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; } .ogame-h small { font-family: var(--body, inherit); font-size: 12px; color: var(--muted); font-weight: 500; text-transform: none; margin-left: auto; }
+.oname .face { width: 30px; height: 30px; }
+details.oc { padding: 0; } details.oc summary { list-style: none; cursor: pointer; display: grid; gap: 2px; padding: 8px; }
+details.oc summary::-webkit-details-marker { display: none; }
+details.oc[open] { outline: 1px solid var(--accent); }
+.ot.up, .tl-w.up { color: var(--good); } .ot.dn, .tl-w.dn { color: #f87171; } .otap { color: var(--accent); font-weight: 700; }
+details.oc[open] .otap { visibility: hidden; }
+.otl { list-style: none; margin: 0; padding: 4px 8px 8px; display: grid; gap: 2px; border-top: 1px solid var(--line); }
+.otl li { display: grid; grid-template-columns: 1fr auto; gap: 0 8px; padding: 5px 0; border-bottom: 1px dashed var(--line); font-size: 12.5px; }
+.otl li:last-child { border-bottom: 0; }
+.tl-t { color: var(--muted); } .tl-a { text-align: right; } .tl-w { grid-column: 1 / -1; font-weight: 700; font-size: 12px; } .tl-w small { color: var(--muted); font-weight: 400; }
+.og-key { display: block; margin-top: 4px; } .og-key .g { color: var(--good); } .og-key .r { color: #f87171; }
+.ocells { align-items: start; }
 </style>
 </head>
 <body>
@@ -827,7 +840,7 @@ body.bets-mode .dayswitch, body.bets-mode #yestSum, body.bets-mode #dataView { d
       </div>
     </div>
     <div class="actions">
-      <button class="btn secondary" id="oddsBtn" title="How each sportsbook's odds moved today">📈 Odds</button>
+      <button class="btn secondary" id="oddsBtn" title="Every odds change today, with the time">📈 Odds tracker</button>
       <button class="btn secondary" id="betsBtn" title="The bets you placed: wins, losses and profit">💵 My bets</button>
       <button class="btn secondary" id="dataBtn" title="Your spreadsheet and CSV as tabs: scorecard, picks, lineups, all games">📊 Data</button>
       <button class="btn secondary" id="learnBtn" title="A 1-minute beginner's guide to EV (good deal or bad deal?)">🎓 What's EV?</button>
@@ -880,9 +893,10 @@ body.bets-mode .dayswitch, body.bets-mode #yestSum, body.bets-mode #dataView { d
   <section class="bets-view" id="oddsView" hidden>
     <div class="data-top">
       <button class="back" id="oddsBack">← Back to picks</button>
-      <h2>📈 Odds today</h2>
+      <h2>📈 Odds tracker</h2>
     </div>
-    <div class="bets-how">How each sportsbook's odds moved since they opened today. <b>↓ = the payout dropped</b>: the sportsbook now thinks he's <b>more likely</b> (people are betting him). <b>↑ = the payout went up</b>: less likely. The little line goes <b>up</b> when he gets more likely. Biggest movers first.</div>
+    <div class="bets-how">Every time a sportsbook changed its odds today. <b>Tap a sportsbook box</b> to see each change with the time.
+      <span class="og-key"><b class="g">🟢 Better</b> = the payout went up (you'd win more) · <b class="r">🔴 Worse</b> = the payout went down.</span></div>
     <div id="oddsList"><div class="dempty">Loading…</div></div>
   </section>
 
@@ -2131,7 +2145,7 @@ const DTABS = [
   { id: "picks", label: "🎯 Our picks" },
   { id: "lineups", label: "📋 Lineups" },
   { id: "games", label: "🏀 All games" },
-  { id: "odds", label: "📈 Odds moves" },
+  { id: "odds", label: "📈 Odds tracker" },
 ];
 // the "right/wrong" filter: which column it looks at, per tab
 const DRESULT = {
@@ -2792,12 +2806,21 @@ function oddsCell(matchup, kind, name, book, pts) {
   if (live !== undefined && live !== null && (!pts.length || pts[pts.length - 1][1] !== live)) pts.push([new Date().toISOString(), live]);
   if (!pts.length) { const c = (lastResult?.cards || []).find((x) => x.matchup === matchup);
     return `<div class="oc none"><span class="ob">${book}</span><span class="on">${c ? missing(c, book) : "–"}</span></div>`; }
-  const open = pts[0][1], now = pts[pts.length - 1][1], moved = now === open ? 0 : impliedP(now) > impliedP(open) ? -1 : 1;
-  const arrow = moved < 0 ? `<b class="oa dn">↓</b>` : moved > 0 ? `<b class="oa up">↑</b>` : `<b class="oa">=</b>`;
-  const times = pts.map(([t, a]) => `${american(a)} at ${localTime(t)}`).join("\n");
-  return `<div class="oc" title="${esc(times)}"><span class="ob">${book}</span>
-    <span class="on">${american(open)} → <b>${american(now)}</b> ${arrow}</span>${spark(pts)}
-    <span class="oo">${pts.length - 1} change${pts.length === 2 ? "" : "s"}</span></div>`;
+  const open = pts[0][1], now = pts[pts.length - 1][1];
+  const dir = (a, b) => (payout(b) > payout(a) ? 1 : payout(b) < payout(a) ? -1 : 0);   // +1 = pays more (better for you)
+  const d = dir(open, now), n = pts.length - 1;
+  const tag = d > 0 ? `<b class="ot up">🟢 Better</b>` : d < 0 ? `<b class="ot dn">🔴 Worse</b>` : `<b class="ot">No change</b>`;
+  const lines = pts.map(([tm, a], k) => {
+    const v = k === 0 ? 0 : dir(pts[k - 1][1], a);
+    const what = k === 0 ? `<span class="tl-w">Opened</span>`
+      : v > 0 ? `<span class="tl-w up">🟢 Better <small>from ${american(pts[k - 1][1])}</small></span>`
+      : v < 0 ? `<span class="tl-w dn">🔴 Worse <small>from ${american(pts[k - 1][1])}</small></span>` : `<span class="tl-w">Same</span>`;
+    return `<li><span class="tl-t">${esc(localTime(tm))}</span><b class="tl-a num">${american(a)}</b>${what}</li>`;
+  }).reverse().join("");
+  return `<details class="oc"><summary><span class="ob">${book}</span>
+      <span class="on num">${american(open)} → <b>${american(now)}</b></span>${spark(pts)}
+      <span class="oo">${tag} · ${n} change${n === 1 ? "" : "s"} <span class="otap">▾ times</span></span></summary>
+    <ol class="otl">${lines}</ol></details>`;
 }
 function moveSize(row) {                          // biggest change in chance at either book (for sorting)
   return Math.max(0, ...Object.values(row.books || {}).map((p) => p.length ? Math.abs(impliedP(p[p.length - 1][1]) - impliedP(p[0][1])) : 0));
@@ -2812,14 +2835,19 @@ async function openOdds() {
     const d = await getJSON("/api/odds_track");
     if (!d.games?.length) { $("oddsList").innerHTML = `<div class="dempty">No odds saved yet today.</div>`; return; }
     $("oddsList").innerHTML = d.games.map((g) => {
-      const players = [...g.players].sort((a, b) => moveSize(b) - moveSize(a)).map((p) => `<div class="orow">
-          <div class="oname">${logo(p.team || "", 18)}<b>${esc(p.name)}</b><small>${esc(p.team || "")}</small></div>
+      const c = (lastResult?.cards || []).find((x) => x.matchup === g.matchup);
+      const rank = Object.fromEntries(((c && (c.probs || c.picks)) || []).map(([n], k) => [n, k]));
+      const ids = Object.fromEntries([...((c && c.home_starters) || []), ...((c && c.away_starters) || [])].map((s) => [s.name, s.player_id]));
+      const players = [...g.players].sort((a, b) => (rank[a.name] ?? 99) - (rank[b.name] ?? 99) || moveSize(b) - moveSize(a)).map((p) => `<div class="orow">
+          <div class="oname">${ids[p.name] ? `<img class="face" src="${headshot(ids[p.name])}" alt="" loading="lazy" onerror="this.remove()">` : logo(p.team || "", 18)}<b>${esc(p.name)}</b><small>${esc(p.team || "")}</small></div>
           <div class="ocells">${oddsCell(g.matchup, "player", p.name, "FanDuel", p.books.FanDuel)}${oddsCell(g.matchup, "player", p.name, "DraftKings", p.books.DraftKings)}</div></div>`).join("");
       const teams = (g.teams || []).map((tm) => `<div class="orow">
           <div class="oname">${logo(tm.team, 18)}<b>${esc(tm.team)}</b><small>scores first</small></div>
           <div class="ocells">${oddsCell(g.matchup, "team", tm.team, "FanDuel", tm.books.FanDuel)}${oddsCell(g.matchup, "team", tm.team, "DraftKings", tm.books.DraftKings)}</div></div>`).join("");
-      return `<div class="ogame"><div class="ogame-h">${esc(g.matchup)}</div>${players}
-        ${teams ? `<div class="osub">🏀 First team to score <small>(DraftKings: 1st field goal)</small></div>${teams}` : ""}</div>`;
+      const [aw, hm] = g.matchup.split(" @ ");
+      return `<div class="ogame"><div class="ogame-h">${logo(aw, 26)}${esc(aw)} <span class="at">@</span> ${logo(hm, 26)}${esc(hm)}${c ? `<small>${esc(cardStart(c))}</small>` : ""}</div>
+        <div class="osub">🏀 First basket</div>${players}
+        ${teams ? `<div class="osub">🏀 First team to score <small>(FanDuel incl. free throws · DraftKings 1st field goal)</small></div>${teams}` : ""}</div>`;
     }).join("");
   } catch (e) { $("oddsList").innerHTML = `<div class="dempty">Couldn't load the odds right now — try again in a minute.</div>`; }
 }
