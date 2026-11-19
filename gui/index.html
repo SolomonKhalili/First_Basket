@@ -1194,15 +1194,16 @@ function teamFirstLine(c) {
     if (a === undefined) return "–";
     const o = (open[book] || {})[t], mv = o === undefined || o === a ? "" : payout(a) < payout(o)
       ? `<span class="mv dn" title="${book} opened at ${american(o)}: payout dropped">↓</span>` : `<span class="mv up" title="${book} opened at ${american(o)}: payout rose">↑</span>`;
-    const star = Object.keys(books).length > 1 && where[t] === book;
+    const star = false;                                    // books' team markets differ (DraftKings = 1st field goal)
     return `<b class="${star ? "tf-best" : ""} ${v[t] >= VALUE_MIN && where[t] === book ? "g" : ""}">${star ? "★" : ""}${american(a)}</b>${mv}`;
   };
-  const rows = Object.keys(books).map((book) => `<tr><td>${book}</td><td>${cell(book, c.away)}</td><td>${cell(book, c.home)}</td></tr>`).join("");
+  const label = (b) => b === "DraftKings" ? `DraftKings <small title="DraftKings' team market counts only the first FIELD GOAL (free throws don't count) — a slightly different bet, so it isn't compared">(1st field goal)</small>` : b;
+  const rows = Object.keys(books).map((book) => `<tr><td>${label(book)}</td><td>${cell(book, c.away)}</td><td>${cell(book, c.home)}</td></tr>`).join("");
   const best = [c.away, c.home].filter((t) => v[t] >= VALUE_MIN).sort((a, b) => v[b] - v[a])[0];
   return `<table class="tf-table"><tr><th></th><th>${esc(c.away)}</th><th>${esc(c.home)}</th></tr>${rows}</table>
     <div class="tf-verdict ${best ? "pos" : ""}">${best
       ? `💰 <b>Good bet: ${esc(best)} to score first</b> on ${esc(where[best] || "FanDuel")} — it pays more than it should (about ${cents(v[best])} profit per $1 over time).`
-      : `No good bet here — both books pay too little on both teams.`}</div>`;
+      : `No good bet here — FanDuel pays too little on both teams.`}</div>`;
 }
 function countUp(el) {
   const v = parseFloat(el.dataset.v);

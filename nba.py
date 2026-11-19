@@ -1314,6 +1314,8 @@ def _team_first_odds(fd_games, home: str, away: str, first_team, dk_games=None, 
         return {}
     best, where = {}, {}
     for book, p in books.items():
+        if book == "DraftKings":                    # ESPN's "First Team to Score" is DraftKings' "Team to Score 1st FG"
+            continue                                # (field goals only) — a different bet from first POINTS: shown, not compared
         for team, a in p.items():
             if team not in best or ev.profit_per_dollar(a) > ev.profit_per_dollar(best[team]):
                 best[team], where[team] = a, book
