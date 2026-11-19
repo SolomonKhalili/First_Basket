@@ -127,8 +127,8 @@ button { font: inherit; cursor: pointer; border: 0; color: inherit; }
 .tile .res { font-size: 12.5px; border-top: 1px dashed var(--line); padding-top: 6px; color: var(--muted); }
 .tile .res b { color: var(--text); font-weight: 600; }
 .tag { font-size: 11px; font-weight: 700; border-radius: 6px; padding: 1px 6px; margin-left: 4px; white-space: nowrap; }
-.tag.hit { background: var(--good-soft); color: var(--good); animation: pop .5s ease both; }
-.tag.top3 { background: var(--warn-soft); color: var(--warn); }
+.tag.hit { background: var(--good-soft); color: var(--good); border: 1px solid color-mix(in srgb, var(--good) 55%, transparent); font-weight: 700; animation: pop .5s ease both; }
+.tag.top3 { background: var(--warn-soft); color: var(--warn); border: 1px solid color-mix(in srgb, var(--warn) 55%, transparent); font-weight: 700; }
 .tag.miss { background: color-mix(in srgb, var(--accent) 22%, var(--surface)); color: var(--accent); border: 1px solid color-mix(in srgb, var(--accent) 55%, transparent); font-weight: 700; }
 .dot { width: 10px; height: 10px; border-radius: 50%; display: inline-block; flex: none; }
 .hint { color: var(--muted); font-size: 13px; margin-top: 10px; }
@@ -184,8 +184,8 @@ button { font: inherit; cursor: pointer; border: 0; color: inherit; }
 
 .verdict { display: none; margin-bottom: 12px; padding: 10px 12px; border-radius: 11px; font-size: 14px; font-weight: 600; }
 .verdict.on { display: block; animation: pop .45s ease both; }
-.verdict.hit { background: var(--good-soft); color: var(--good); }
-.verdict.top3 { background: var(--warn-soft); color: var(--warn); }
+.verdict.hit { background: var(--good-soft); color: var(--good); border: 1.5px solid var(--good); border-left-width: 5px; }
+.verdict.top3 { background: var(--warn-soft); color: var(--warn); border: 1.5px solid var(--warn); border-left-width: 5px; }
 .verdict.miss { background: color-mix(in srgb, var(--accent) 18%, var(--surface)); color: var(--text); border: 1.5px solid var(--accent); border-left-width: 5px; }
 .verdict.miss b { color: var(--accent); }
 .verdict.wait { background: var(--surface-2); color: var(--muted); font-weight: 500; }
