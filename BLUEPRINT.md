@@ -59,6 +59,7 @@ session: §11 step 0. Full details of every change are in §10, newest first.)*
 - **Nothing half-built.** All code is merged; 203 tests pass.
 
 **Coming up (dated)**
+- **Around the All-Star break:** re-test adding play-in/playoff/Finals games to training (tested 2026-11-19 on 215 games of 2026-27, walk-forward: without 20.9% / 2.2378, with 20.5% / 2.2362 — no clear gain, not adopted).
 - **On/after 2026-12-08:** re-check the two inputs adopted 11/18 (opponent by position, head-to-head) and the 20%
   simple-rule mix — §7.1 item 4. Keep only what is still better in both test periods.
 - **~2026-12-20 (150+ finished games with saved odds):** test blending in sportsbook odds
