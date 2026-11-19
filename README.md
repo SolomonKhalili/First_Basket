@@ -65,7 +65,7 @@ python3 gui.py                      # the same picks in your web browser (cards,
 
 If you already have the database and `pregame_model.json`, you only need the last two commands.
 
-Run the tests any time: `python3 -m pytest` (182 tests, all in the `tests/` folder).
+Run the tests any time: `python3 -m pytest` (186 tests, all in the `tests/` folder).
 
 ---
 
@@ -158,6 +158,7 @@ With 198 games the margin of error is about ±5.5 points, so this is not statist
 | NBA.com daily lineups feed (`stats.nba.com/js/data/leaders/00_daily_lineups_YYYYMMDD.json`) | Expected/confirmed starters (appears during the game day) | Free |
 | NBA.com live box score (`cdn.nba.com/static/json/liveData/...`) | Confirmed starters (backup) | Free |
 | FanDuel sportsbook feed (public, no login) | First Basket prices; live price feed every ~30 s | Free |
+| DraftKings sportsbook feed (public, no login) | "1st Points Scorer" prices, every 3 min; best price across both books | Free |
 | GitHub (Actions + Pages) | Cloud updates and the private website | Free |
 | Cloudflare Workers (free plan) | Live-odds relay + the timer that keeps the cloud job on | Free, no card |
 
@@ -209,6 +210,7 @@ NBA/
 ├── publish.py              # builds the encrypted website; --live keeps it updated all evening
 ├── site_users.py           # website accounts
 ├── fanduel_odds.py, ev.py  # FanDuel prices + value (EV)
+├── draftkings_odds.py      # DraftKings prices
 ├── sync_from_cloud.py      # Mac: download the cloud's data + start the cloud job if it went quiet
 ├── website_live/           # the cloud job, the Cloudflare relay + timer
 ├── launcher/               # Mac launch agents + Desktop app
@@ -222,7 +224,7 @@ NBA/
 - **Pre-game accuracy is low.** Expect roughly 15–18%, not 60%. A single game is a one-event market; even a real edge loses for long stretches.
 - **Lineups can change.** Anything not marked CONFIRMED may differ at tip; a bet on a player who doesn't start is typically voided. Run close to tip.
 - **Projections are guesses** based on recent starts, the injury report and current rosters (about 4 of 5 starters right before NBA.com posts). They ignore rest days and matchups.
-- **Odds are FanDuel only.** Other sportsbooks aren't compared; always confirm the price on the bet slip.
+- **Odds: FanDuel + DraftKings.** Value uses whichever pays more. DraftKings may block automated reading at any time (then FanDuel only). Always confirm the price on the bet slip.
 - **Website delays:** odds ~30 s, lineups/picks ~3–6 min (GitHub Pages allows ~10 publishes an hour).
 - **Unofficial endpoints** (ESPN, NBA.com JSON) can break without notice.
 

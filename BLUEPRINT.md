@@ -318,7 +318,7 @@ fallback 0.6354 / 0.6323 → NBA.com's listed C in training too 0.6299 / 0.6309.
 | First-shot data + share | `nba.first_shots`, `build_features.first_shot_share` | ✅ Recorded for every game; tested as a model input and not adopted (§7.1) |
 | Early-shot data + share | `nba.early_shots`, `build_features.early_shot_share` | ✅ Each team's first 5 attempts recorded for every game; **used by the model** (stage 2) |
 
-**Tests:** 182 passing in 15 files (`python3 -m pytest`, 2026-11-18). Earlier breakdown (2026-11-17): 115 passing — `test_starters.py` (45), `test_pipeline.py` (29: sync, retrain decision, incremental build incl. late-labelled games, label guards, tip-rate rule), `test_display.py` (10), `test_tip_model.py` (8), `test_picks.py` (19), `test_pregame_model.py` (4). The incremental-build test was checked by re-introducing the old zero-games bug: it fails, as it should.
+**Tests:** 186 passing in 16 files (`python3 -m pytest`, 2026-11-18). Earlier breakdown (2026-11-17): 115 passing — `test_starters.py` (45), `test_pipeline.py` (29: sync, retrain decision, incremental build incl. late-labelled games, label guards, tip-rate rule), `test_display.py` (10), `test_tip_model.py` (8), `test_picks.py` (19), `test_pregame_model.py` (4). The incremental-build test was checked by re-introducing the old zero-games bug: it fails, as it should.
 
 ### 4a. App, website and automation (2026-11-18)
 
@@ -326,6 +326,7 @@ fallback 0.6354 / 0.6323 → NBA.com's listed C in training too 0.6299 / 0.6309.
 |-----------|---------|--------|
 | Desktop app (GUI) | `gui.py`, `gui/index.html` | ✅ Picks cards, live scoreboard (ESPN), tip-off matchups, EV guide, Data view (Scorecard / Our picks / Lineups / All games with search, season and player filters); tap games to show only those; started games keep the picks made before tip-off ("Picked before tip-off", rebuilt from `pick_log` if needed); exact pick number of the first scorer ("Our #2 pick"); always dark |
 | Live FanDuel odds on the page | `gui/index.html` (`refreshOdds`), `gui.py` `/api/fd/prices`, `fanduel_odds.fetch_prices` | ✅ Read on page open, then every 30 s, from FanDuel's small price feed (~7 KB/game) by market + selection id (`card.fd_market`, set by `nba._fanduel_card`); EV and best deal recomputed in the page; 20 s shared cache; backs off on errors. Prices matched FanDuel exactly in a live check |
+| DraftKings odds | `draftkings_odds.py`, `nba._draftkings_prices`, `nba._best_prices`; page `bookCell` | ✅ 2026-11-18 (owner's decision): DraftKings' "1st Points Scorer" (subcategory 16305 — first points incl. free throws, same rule as FanDuel and the model), read from the JSON DraftKings' site loads, one request for every game. Cards show FanDuel + DraftKings; Value and Best deal use the better price and name the book. Refreshed every 3 min by the cloud (not through the relay). Paper betting / `odds_log` stay FanDuel-only. Live check: all 30 starters matched (accents included); prices differ by book (Dončić FD +330 / DK +365). DraftKings refuses requests without browser-style headers; the owner accepted that it may block or change this |
 | Accounts (Mac app sharing) | `accounts.py` | ✅ Hashed passwords, owner/viewer; no length rules (owner's choice) |
 | Private website | `publish.py`, `gui/static_site.html`, `site_users.py`, `site_users.json` | ✅ Same page as the app; results encrypted (AES-256-GCM), each friend's password unlocks the key in the browser; remember-me 30 days; view-only. Accounts: `python3 site_users.py add NAME` (solomon, bhass, simon) |
 | Live cloud job | `website_live/live-picks.yml` (runs in the public repo: unlimited free minutes), `publish.py --live` | ✅ Every 3 min from 9 AM: full update + picks; republishes on any change (≤ ~every 6 min: GitHub Pages limit); after the last tip-off files each result as its game ends (`nba.file_finished_games`), then stops; re-reads accounts each check; public log says only "published" / "no change" (details in the private `run.log`) |
@@ -399,6 +400,9 @@ next run fills in the results.
 - `GH_TOKEN` (fine-grained GitHub token, Actions read/write on `first-basket` only) expires on the date chosen at
   creation; when GitHub emails about it, make a new one and replace the Cloudflare secret. The token was also pasted
   in chat once; the owner chose to keep it (small scope).
+- **DraftKings** is read with browser-style headers (a bare request is refused); owner's call, 2026-11-18. It may
+  stop working without notice; the app then falls back to FanDuel only (note on the page). Fanatics has no web odds
+  (app only), so it can't be added this way.
 - NBA.com's `cdn.nba.com` scoreboard refuses cloud servers (403); the daily lineups feed supplies the game id, and a
   refusal now gives one note per run, not one per game.
 - Cloudflare free plan: 100,000 requests a day (expected use ~2%); over the limit the relay stops until midnight UTC
@@ -517,7 +521,7 @@ NBA/
 ├── pregame_model.json      # active model weights + walk-forward results
 ├── train_pregame.py        # training, walk-forward test, keep-previous check
 ├── build_features.py       # training matrices (incremental) + player game logs
-├── tests/                  # 182 tests in 15 files (python3 -m pytest)
+├── tests/                  # 186 tests in 16 files (python3 -m pytest)
 ├── nba_first_basket.db     # SQLite: games, first_baskets, lineups, official_lineups, first_shots, early_shots, pick_log (+ legacy predictions)
 ├── player_game_logs.pkl    # per-player game logs
 ├── X_train.npy, y_train.npy, groups.npy, game_ids.json, feature_names.json, meta.json   # training matrices
@@ -528,6 +532,7 @@ NBA/
 ├── publish.py              # builds the encrypted website; --live = game-night loop, --once = one update
 ├── site_users.py, site_users.json   # website accounts (wrapped keys only, no passwords)
 ├── fanduel_odds.py, ev.py  # FanDuel prices (pages + live price feed); EV, value, odds log, paper betting
+├── draftkings_odds.py      # DraftKings "1st Points Scorer" prices (one request for every game)
 ├── sync_from_cloud.py      # Mac: download the cloud's data every 30 min + start the cloud job if it went quiet
 ├── launcher/               # Mac launch agents, Desktop app launcher, icon
 ├── website_live/           # live-picks.yml (public-repo job), odds-relay.js + wrangler.jsonc (Cloudflare), relay_url.txt
@@ -580,6 +585,8 @@ automation:
   remember-me, logout, tapping, EV guide, all Data tabs and filters, phone width, no console errors); public files
   hold no names, model or code; live odds in the app matched FanDuel exactly and refreshed every 30 s; relay answers
   only the website; website carries the relay address and FanDuel ids.
+- **Later the same night:** DraftKings added next to FanDuel (best price + book on every card); phone layout of the
+  odds table fixed (FD/DK labels, rank and Fair hidden on narrow screens, swipe if still too wide). 186 tests.
 - **Not yet verified:** the Cloudflare timer's first automatic start (2026-11-19); the logged-in website showing the
   green live-odds line (owner to look).
 

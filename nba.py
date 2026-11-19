@@ -821,6 +821,7 @@ def predict_today(first_pass: bool = True, teams: set = frozenset(), ui=None) ->
     pending, any_projected = 0, False
     early_index = bf.build_early_shot_index(con)        # each player's share of his team's first 5 shots
     fd_games = _fanduel_prices(pre_games, warn, ui)          # FanDuel "First Basket" prices (None if unreachable)
+    dk_games = _draftkings_prices(pre_games, warn, ui)       # DraftKings "1st Points Scorer" (None if unreachable)
 
     for g in pre_games:
         game_id, game_date = g['game_id'], g['game_date']
@@ -951,7 +952,7 @@ def predict_today(first_pass: bool = True, teams: set = frozenset(), ui=None) ->
                 for i in order[:5]]
         everyone = [{**info[i], "prob": float(probs[i])} for i in order]       # all 10 starters, for EV
         season_counts = season_first_baskets(con, [p['id'] for p in info], game_date)
-        fd_card = _fanduel_card(fd_games, home_team, away_team, top5, everyone)
+        fd_card = _fanduel_card(fd_games, home_team, away_team, top5, everyone, dk_games)
         priced = fd_card.pop("_priced", [])
         if priced:                             # save the prices, so EV can be checked later (ev.paper_results)
             ev.log_odds(con, game_id, game_date, matchup, priced)
@@ -1044,20 +1045,63 @@ def _fanduel_prices(games: list, warn: list, ui=None):
         return None
 
 
-def _fanduel_card(fd_games, home: str, away: str, top5: list, everyone: list = ()) -> dict:
+def _draftkings_prices(games: list, warn: list, ui=None):
+    """DraftKings first-points prices for today's games, or None (with a note) if DraftKings can't be read.
+    Skipped with --no-odds."""
+    if '--no-odds' in sys.argv or not games:
+        return None
+    import draftkings_odds as dk
+    if ui is None:
+        import display as ui
+    try:
+        with ui.console.status("Getting DraftKings first-basket odds…"):
+            return dk.fetch_first_basket_odds()
+    except Exception as e:                 # odds are extra: never stop the predictions over them
+        warn.append(f"DraftKings odds unavailable ({type(e).__name__}) — FanDuel only")
+        return None
+
+
+def _best_prices(books: dict) -> tuple:
+    """{"FanDuel": {name: american}, "DraftKings": {...}} -> ({name: best american}, {name: book}): the price that
+    pays the most for each player (ties go to the first book listed)."""
+    best, where = {}, {}
+    for book, prices in books.items():
+        for name, a in (prices or {}).items():
+            if name not in best or ev.profit_per_dollar(a) > ev.profit_per_dollar(best[name]):
+                best[name], where[name] = a, book
+    return best, where
+
+
+def _fanduel_card(fd_games, home: str, away: str, top5: list, everyone: list = (), dk_games=None) -> dict:
     """The game card's FanDuel fields; {} when odds are off.
     fanduel {name: american}, fanduel_note str, ev {name: EV per $1}, best_value (the starter with the highest
     EV of all 10, if it is positive) and _priced (rows for ev.log_odds; popped before display)."""
-    if fd_games is None:
+    if fd_games is None and dk_games is None:
         return {}
     import fanduel_odds as fd
-    game = fd.game_for(fd_games, home, away)
-    if not game or not game["players"]:
-        return {"fanduel": {}, "fanduel_note": "FanDuel hasn't posted first-basket odds for this game yet."}
     players = list(everyone) or [{"name": n, "team": t, "prob": p} for n, t, p, _ in top5]
+    # DraftKings: the same matching rules as FanDuel (names, then a unique last name on the same team)
+    dk_game = fd.game_for(dk_games or [], home, away)
+    dk_prices = {name: row["american"] for name, row in
+                 fd.match_prices(dk_game["players"], [(p["name"], p["team"]) for p in players]).items()} \
+        if dk_game and dk_game["players"] else {}
+    game = fd.game_for(fd_games or [], home, away)
+    if not game or not game["players"]:
+        base = {"fanduel": {}, "fanduel_note": "FanDuel hasn't posted first-basket odds for this game yet."
+                if fd_games is not None else "FanDuel odds unavailable right now."}
+        if not dk_prices:
+            return base
+        priced = ev.priced_players(players, dk_prices)
+        best = priced[0] if priced and ev.is_value(priced[0]["ev"]) else None
+        return {**base, "draftkings": dk_prices, "best_book": {n: "DraftKings" for n in dk_prices},
+                "ev": {r["name"]: r["ev"] for r in priced}, "fd_market": None,
+                "best_value": ({**{k: best[k] for k in ("name", "team", "prob", "american", "ev")}, "book": "DraftKings"}
+                               if best else None), "_priced": []}
     matched = fd.match_prices(game["players"], [(p["name"], p["team"]) for p in players])
     prices = {name: row["american"] for name, row in matched.items()}
-    priced = ev.priced_players(players, prices)
+    fd_priced = ev.priced_players(players, prices)          # FanDuel only: what odds_log / paper betting record
+    best_prices, best_book = _best_prices({"FanDuel": prices, "DraftKings": dk_prices})
+    priced = ev.priced_players(players, best_prices)        # value at whichever book pays more
     note = ""
     if not fd.is_complete(game["players"]):
         note = f"FanDuel lists only {len(game['players'])} players so far (lineups not all posted)."
@@ -1069,8 +1113,10 @@ def _fanduel_card(fd_games, home: str, away: str, top5: list, everyone: list = (
     fd_market = {"id": market_id, "runners": {row["selection_id"]: name for name, row in matched.items()
                                               if row.get("selection_id")}} if market_id else None
     return {"fanduel": prices, "fanduel_note": note, "ev": {r["name"]: r["ev"] for r in priced}, "fd_market": fd_market,
-            "best_value": ({k: best[k] for k in ("name", "team", "prob", "american", "ev")} if best else None),
-            "_priced": [r for r in priced if "id" in r]}
+            "draftkings": dk_prices, "best_book": best_book,
+            "best_value": ({**{k: best[k] for k in ("name", "team", "prob", "american", "ev")},
+                            "book": best_book.get(best["name"], "FanDuel")} if best else None),
+            "_priced": [r for r in fd_priced if "id" in r]}
 
 
 def report_without_lineups(con, d: str) -> str:
