@@ -355,7 +355,8 @@ def track_record() -> dict:
     s = picks.summary(nba.db())
     paper = ev.paper_results(nba.db())
     paper["rows"] = paper["rows"][:5]
-    return {"final": s["final"], "overall": s["overall"], "by_type": s["by_type"], "recent": s["games"][:12],
+    return {"final": s["final"], "overall": s["overall"], "last_season": s["last_season"], "by_type": s["by_type"],
+            "recent": s["games"][:12],
             "paper": paper}
 
 

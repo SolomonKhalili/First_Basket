@@ -306,3 +306,4 @@ def test_record_splits_this_season_from_overall():
     assert s["final"]["games"] == 1 and s["final"]["hits"] == 1             # this season: game c only
     assert s["overall"]["games"] == 3 and s["overall"]["hits"] == 2 and s["overall"]["since"] == "20260210"
     assert [g["game_id"] for g in s["games"]] == ["c"]                       # recent list stays this season
+    assert s["last_season"]["games"] == 2 and s["last_season"]["hits"] == 1   # games a + b

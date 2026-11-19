@@ -1485,12 +1485,17 @@ async function renderRecord() {
     $("record").innerHTML = `<div class="section-title">Track record · #1 pick scored first</div>
       <div class="ring-row">
         <div class="ring" id="ring"><span class="num">${pct(rate)}</span></div>
-        <div class="ring-txt"><b>This season</b><span class="num">${f.hits} of ${f.games} games · top 3: ${pct(top3, 0)}</span><br><span>random pick ≈ 10%</span></div>
+        <div class="ring-txt"><b>This season</b> <span class="num">(2026-27)</span><br><span class="num">${f.hits} of ${f.games} games · top 3: ${pct(top3, 0)}</span><br><span>random pick ≈ 10%</span></div>
       </div>
       ${f.games ? rateVerdict(rate, f.games) : ""}
+      ${r.last_season && r.last_season.games ? `<div class="rec-overall" title="Last season, Nov 1, 2025 – June 13, 2026 (play-in, playoffs and Finals included). Each week was predicted by a model that had only seen earlier games; the first ~10 days are left out because there were no earlier games to learn from.">
+        <span class="num big">${pct(r.last_season.hits / r.last_season.games)}</span>
+        <span><b>Last season</b> <span class="num">(${esc(r.last_season.name || "2025-26")}) ${r.last_season.hits.toLocaleString()} of ${r.last_season.games.toLocaleString()} games · playoffs &amp; Finals included · top 3: ${pct(r.last_season.top3 / r.last_season.games, 0)}</span></span>
+      </div>
+      ${rateVerdict(r.last_season.hits / r.last_season.games, r.last_season.games)}` : ""}
       <div class="rec-overall" title="Every game we can grade fairly: last season from ${esc(since)} through the Finals (play-in and playoffs included) plus this season. Each week was predicted by a model that had only seen earlier games; the first ~10 days of last season are left out because there were no earlier games to learn from.">
         <span class="num big">${pct(orate)}</span>
-        <span><b>Overall</b> <span class="num">${o.hits.toLocaleString()} of ${o.games.toLocaleString()} games${since ? ` since ${esc(since)}` : ""} · playoffs &amp; Finals included · top 3: ${pct(otop3, 0)}</span></span>
+        <span><b>All time</b> <span class="num">${o.hits.toLocaleString()} of ${o.games.toLocaleString()} games${since ? ` since ${esc(since)}` : ""} (both seasons) · top 3: ${pct(otop3, 0)}</span></span>
       </div>
       ${o.games ? rateVerdict(orate, o.games) : ""}
       <div class="section-title" style="margin-top:4px">Recent games</div>

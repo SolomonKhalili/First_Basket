@@ -112,6 +112,8 @@ def summary(con) -> dict:
     first = min((r[2] for r in everything.values() if r[2]), default="")
     return {"final": _score([item(r) for r in final.values()]),
             "overall": {**_score([item(r) for r in everything.values()]), "since": first},
+            "last_season": {**_score([item(r) for g, r in everything.items() if g not in final]), "since": first,
+                            "name": LAST_SEASON_NAME},
             "by_type": {k: _score([item(r) for r in v.values()]) for k, v in by_type.items()},
             "by_model": {k: _score([item(r) for r in v.values()]) for k, v in by_model.items()},
             "games": games}
@@ -119,6 +121,7 @@ def summary(con) -> dict:
 
 PREDICTIONS_FILE = "my_predictions.xlsx"               # Excel file with two tabs: Scorecard and Games
 SEASON_START, SEASON_NAME = "20260801", "2026-27"      # the spreadsheet covers this season only
+LAST_SEASON_NAME = "2025-26"
 # Picks re-created by season_backtest.py (games before live picks began) used the real starting fives, i.e. the
 # confirmed lineup; what differs is WHEN the pick was made, shown in its own "Pick made" column.
 LINEUP_NAMES = {"BACKTEST": "Confirmed"}

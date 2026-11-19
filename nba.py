@@ -969,9 +969,10 @@ def predict_today(first_pass: bool = True, teams: set = frozenset(), ui=None) ->
                 summary = sync_data()
         try:
             s = picks.summary(db())
-            f, o = s["final"], s["overall"]
+            f, ls, o = s["final"], s["last_season"], s["overall"]
             acc = (f"Model's #1 pick scored first: {f['hits'] / f['games']:.1%} this season ({f['hits']} of {f['games']}) · "
-                   f"{o['hits'] / o['games']:.1%} overall ({o['games']:,} games) · random = 10%")
+                   f"{ls['hits'] / ls['games']:.1%} last season ({ls['games']:,} games) · "
+                   f"{o['hits'] / o['games']:.1%} all time ({o['games']:,} games) · random = 10%")
         except (OSError, KeyError, ValueError, ZeroDivisionError, sqlite3.Error):
             acc = ""
         ui.header(date.today().strftime("%A, %B %-d, %Y"), summary, acc)
