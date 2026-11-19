@@ -563,6 +563,22 @@ NBA/
 
 ## 10. Change log (newest first)
 
+### 2026-11-18 (later) — where accuracy is lost, and what didn't help
+
+- **Diagnosis** (`experiments/diagnose_stages.py`): stage 1 (right TEAM scores first) is only 58.6% (2026-27) /
+  54.6% (Jan–Apr 2026) — barely above a coin flip; stage 2 (right player given the team) 30.0% / 26.2% (random 20%).
+  With a perfect stage 1 the top pick would hit ~26–30%. Stage 1 is the big gap — and it is the tip-off.
+- **Rejected — team first-possession rates in stage 1** (`stage1_team_test.py`): conversion after winning / stealing
+  after losing the tip, K = 10/30/60: better in 2026-27, worse in Jan–Apr in every version (noise).
+- **Rejected — jumper height** (`tip_height_test.py`, heights from ESPN in `player_heights.json`): as an extra term it
+  calls more tips right (+2–3 points) but log-loss gets worse (overconfident); as the starting guess for jumpers with few
+  tips it helps Jan–Apr (0.6227 → 0.6189) but hurts 2026-27 (0.6277 → 0.6321). Kept the data for later.
+- **Rejected — gradient-boosted trees for stage 2** (`stage2_trees_test.py`, XGBoost pairwise ranking): worse in both
+  periods at every depth (2026-27 21.7% → 18.7%); ~1,400 games are too few for trees. Blend 50/50 also worse.
+- **Conclusion:** the model is close to what this data supports (tip-off ≈ 63% right is the ceiling of tip records).
+  The next real lever is the **sportsbook blend** (~2026-12-20, `market_blend_test.py`), then the **2026-12-08**
+  re-check of the opponent inputs.
+
 ### 2026-11-18 (late) — accuracy pass: two new model inputs adopted
 
 Tested everything on the list the honest way (week by week, only earlier games; L2 chosen on 2025-26):
