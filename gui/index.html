@@ -240,6 +240,9 @@ button { font: inherit; cursor: pointer; border: 0; color: inherit; }
   background: var(--surface-2); border-radius: 99px; padding: 3px 8px; }
 .fact-title { font-size: 13px; font-weight: 650; margin-bottom: 6px; display: flex; justify-content: space-between; }
 .fact-title span { color: var(--muted); font-weight: 400; }
+.sec-title { font-family: var(--display); font-size: 22px; font-weight: 800; text-transform: uppercase; letter-spacing: .02em;
+  margin: 4px 0 10px; display: flex; justify-content: space-between; align-items: baseline; gap: 10px; }
+.sec-title span { font-family: inherit; font-size: 13px; color: var(--muted); font-weight: 400; text-transform: none; letter-spacing: 0; }
 .split { display: flex; height: 8px; border-radius: 99px; overflow: hidden; background: var(--line); }
 .split div { height: 100%; animation: grow 1s cubic-bezier(.2,.7,.2,1) both; animation-delay: calc(var(--i, 0) * 70ms + .15s); }
 
@@ -1227,7 +1230,7 @@ function card(c, i) {
     return `<div class="side ${side}">${name}${trLine}<div class="meta">${side === "away" ? team_ + num : num + team_}</div></div>`;
   };
   const tipBlock = `<div class="fact">
-      <div class="fact-title">Tip-off <span>who jumps for each team</span></div>
+      <div class="sec-title">⛹️ Tip-off <span>who jumps for each team</span></div>
       <div class="tipoff">${jumper(c.away, pAway, pHome, "away")}<span class="vs">vs</span>${jumper(c.home, pHome, pAway, "home")}</div>
       <div class="split"><div style="width:${pAway * 100}%;background:${color(c.away)}"></div><div style="width:${pHome * 100}%;background:${color(c.home)}"></div></div>
     </div>`;
@@ -1274,6 +1277,7 @@ function card(c, i) {
     <div class="card-body" style="--i:${i}">
       <div class="verdict"></div>
       <div class="facts tip-top" style="--i:${i}">${tipBlock}</div>
+      <div class="sec-title">🏀 First basket prediction</div>
       <div class="hero">
         <div class="shot">${topId ? `<img src="${headshot(topId)}" alt="" loading="lazy" onerror="this.remove()">` : ""}<span class="initials">${initials(top[0])}</span></div>
         <div class="who"><div class="label">Top pick</div><div class="name">${esc(top[0])}</div><div class="team">${logo(top[1], 16)}${esc(top[1])}</div>${heroRec}</div>
