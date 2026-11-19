@@ -1542,7 +1542,12 @@ function bookSection(c, book, recLine, shortName) {
     <div class="book-h">${book}</div>
     <div class="sub-h">🏀 First basket <small>— top 5</small></div>
     <div class="tscroll"><table class="bk-table bk3">${head("Player")}<tbody>${rows || `<tr><td colspan="4">${missing(c, book)}</td></tr>`}</tbody></table></div>
-    <div class="tlegend"><b>2/13</b> under a name = scored first in 2 of his 13 games <b>this season</b>.</div>
+    ${(() => {                          // explain the small "TEAM · 2/13" with the table's own first player
+      const ex = list.find(([n]) => ((c.season || {})[n] || [0, 0])[1] > 0);
+      if (!ex) return "";
+      const [n, tm] = ex, [fb, gp] = c.season[n];
+      return `<div class="tlegend">Example: <b>${esc(tm)} · ${fb}/${gp}</b> under ${esc(shortName(n))} = he scored first in <b>${fb} of his ${gp}</b> games this season.</div>`;
+    })()}
     ${teamRows ? `${teamHero(c, c.first_team || {}, dkTeamP)}<div class="sub-h">Both teams</div>
     <div class="tscroll"><table class="bk-table bk3">${head("Team")}<tbody>${teamRows}</tbody></table></div>` : ""}
   </div>`;
