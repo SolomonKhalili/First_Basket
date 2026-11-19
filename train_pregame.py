@@ -229,10 +229,12 @@ try:
             if str(pl["player_id"]) == str(_fg.get(gid)):
                 Y_FG[k, j] = 1
     if Y_FG.sum() > 0.9 * Y.sum():                  # only when first_fg covers (nearly) every game
-        _Y = Y
-        Y = Y_FG
-        team_fg, w_fg, mu_fg, sd_fg = fit2(all_idx, l2)
-        Y = _Y
+        _Y, _hf = Y, home_first
+        Y = Y_FG                                        # field-goal labels for BOTH stages: which team made the first
+        home_first = (Y_FG * home).sum(1) == 1          # field goal (team stage), then which of its starters (player)
+        fg_idx = all_idx[Y_FG[all_idx].sum(1) == 1]     # games where a starter made the first field goal
+        team_fg, w_fg, mu_fg, sd_fg = fit2(fg_idx, l2)
+        Y, home_first = _Y, _hf
         json.dump({"type": "two_stage", "labels": "first_field_goal", "features": pm.FEATURES,
                    "player_features": pm.PLAYER_FEATURES, "team": team_fg, "w": w_fg.tolist(), "mu": mu_fg.tolist(),
                    "sd": sd_fg.tolist(), "l2": l2, "train_games": int(len(all_idx)),
