@@ -66,7 +66,6 @@ session: §11 step 0. Full details of every change are in §10, newest first.)*
 - **~2026-12-20 (150+ finished games with saved odds):** test blending in sportsbook odds
   (`experiments/market_blend_test.py`, §10 11/18 "accuracy pass"). Log-loss decides.
 - **Around the All-Star break:** re-test adding 2024-25 tip-offs (`old_tips`, §7.1 item 5).
-- **Optional tidy-up:** `.claude/worktrees/` on the Mac holds 9 old project copies that can be deleted.
 
 **What was done, and when** (one line each; details in §10)
 - **11/07–11/09:** first version of the bot (several 11/09 "done" items turned out not to exist — fixed 11/17).
