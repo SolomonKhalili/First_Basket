@@ -1395,13 +1395,16 @@ def _best_value(players: list, fd_prices: dict, dk_prices: dict) -> list:
     """Each player's best deal: FanDuel at his first-points chance, DraftKings at his first-field-goal chance
     (prob_fg; without it DraftKings isn't valued). -> rows {name, team, prob, american, ev, book}, best EV first."""
     out = []
+    # value only for a book's top 5 (FanDuel by first-points chance, DraftKings by first-field-goal chance)
+    fd_top = {p["name"] for p in sorted(players, key=lambda p: -p["prob"])[:5]}
+    dk_top = {p["name"] for p in sorted((p for p in players if p.get("prob_fg") is not None), key=lambda p: -p["prob_fg"])[:5]}
     for p in players:
         options = []
-        if p["name"] in fd_prices:
+        if p["name"] in fd_prices and p["name"] in fd_top:
             a = fd_prices[p["name"]]
             options.append({"prob": p["prob"], "american": a, "book": "FanDuel",
                             "ev": p["prob"] * ev.profit_per_dollar(a) - (1 - p["prob"])})
-        if p["name"] in dk_prices and p.get("prob_fg") is not None:
+        if p["name"] in dk_prices and p.get("prob_fg") is not None and p["name"] in dk_top:
             a, q = dk_prices[p["name"]], p["prob_fg"]
             options.append({"prob": q, "american": a, "book": "DraftKings", "ev": q * ev.profit_per_dollar(a) - (1 - q)})
         if options:

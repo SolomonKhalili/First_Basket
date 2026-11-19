@@ -88,7 +88,7 @@ def trained_through_yesterday(project):
     """Training matrices cover one game played 2 days ago."""
     add_game(project, "trained", ymd(2))
     json.dump(["trained"], open("game_ids.json", "w"))
-    json.dump({}, open("pregame_model_fg.json", "w"))           # the DraftKings (field-goal) model exists too
+    json.dump({"team_labels": "first_field_goal"}, open("pregame_model_fg.json", "w"))   # the DraftKings (field-goal) model exists too
     return project
 
 
@@ -531,3 +531,11 @@ def test_book_status_tells_not_offered_from_not_posted_from_unavailable():
     assert nba.book_status(games, "MIL", "POR") == "not_posted"
     assert nba.book_status(games, "SA", "LAC") == "not_posted"
     assert nba.book_status(None, "MEM", "GS") == "unavailable"
+
+
+def test_retrain_redoes_an_old_kind_field_goal_model(trained_through_yesterday, monkeypatch):
+    json.dump({}, open("pregame_model_fg.json", "w"))           # old file: its team part learned from first points
+    calls = []
+    monkeypatch.setattr(subprocess, "run", fake_run({}, calls))
+    nba._retrain_if_needed(trained_through_yesterday)
+    assert any("train_pregame.py" in " ".join(c) for c in calls)

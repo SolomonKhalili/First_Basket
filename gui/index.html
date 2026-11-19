@@ -1616,13 +1616,19 @@ function applySavedDK(c) {                   // a started game: its last saved D
   if (Object.keys(c.draftkings).length) recompute(c);
 }
 
+/* Value is only shown for a book's top 5 players (FanDuel: first-points chances; DraftKings: first-field-goal chances) */
+function top5Names(c, book) {
+  const all = c.probs || c.picks.map(([n, t, p]) => [n, t, p]), fg = c.probs_fg || {};
+  const list = book === "FanDuel" ? all.map(([n, , p]) => [n, p]) : all.filter(([n]) => fg[n] !== undefined).map(([n]) => [n, fg[n]]);
+  return new Set(list.sort((a, b) => b[1] - a[1]).slice(0, 5).map(([n]) => n));
+}
 function recompute(c) {                      // best deal per starter: FanDuel at his first-points chance,
   const players = c.probs || c.picks.map(([n, t, p]) => [n, t, p]);   // DraftKings at his first-FIELD-GOAL chance
-  const fg = c.probs_fg || {}, book = {}, priced = [];
+  const fg = c.probs_fg || {}, book = {}, priced = [], fdTop = top5Names(c, "FanDuel"), dkTop = top5Names(c, "DraftKings");
   for (const [name, team, prob] of players) {
     const opts = [];
-    if ((c.fanduel || {})[name] !== undefined) { const a = c.fanduel[name]; opts.push({ book: "FanDuel", american: a, prob, ev: prob * fdProfit(a) - (1 - prob) }); }
-    if ((c.draftkings || {})[name] !== undefined && fg[name] !== undefined) { const a = c.draftkings[name], q = fg[name];
+    if ((c.fanduel || {})[name] !== undefined && fdTop.has(name)) { const a = c.fanduel[name]; opts.push({ book: "FanDuel", american: a, prob, ev: prob * fdProfit(a) - (1 - prob) }); }
+    if ((c.draftkings || {})[name] !== undefined && fg[name] !== undefined && dkTop.has(name)) { const a = c.draftkings[name], q = fg[name];
       opts.push({ book: "DraftKings", american: a, prob: q, ev: q * fdProfit(a) - (1 - q) }); }
     if (!opts.length) continue;
     const best = opts.sort((x, y) => y.ev - x.ev)[0];
@@ -2435,7 +2441,7 @@ function bestBets() {
       let best = null;
       for (const [book, ps] of Object.entries(books)) {
         const a = ps[name];
-        if (a === undefined || a === null) continue;
+        if (a === undefined || a === null || !top5Names(c, book).has(name)) continue;   // value only for the top 5
         const prob = book === "DraftKings" ? (c.probs_fg || {})[name] : prob0;   // DraftKings: first field goal
         if (prob === undefined) continue;
         const ev = prob * payout(a) - (1 - prob);
