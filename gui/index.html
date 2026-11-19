@@ -147,10 +147,10 @@ button { font: inherit; cursor: pointer; border: 0; color: inherit; }
 .error.on { display: block; }
 
 /* ── Layout ───────────────────────────────── */
-.layout { display: grid; grid-template-columns: 1fr 300px; gap: 20px; margin-top: 22px; align-items: start; }
+.layout { display: grid; grid-template-columns: minmax(0, 860px) 320px; justify-content: center; gap: 20px; margin-top: 22px; align-items: start; }
 @media (max-width: 1000px) { .layout { grid-template-columns: 1fr; } }
 .layout > main { min-width: 0; }             /* let the column shrink instead of pushing cards off-screen */
-.cards { display: grid; grid-template-columns: 1fr; gap: 20px; max-width: 760px; }   /* one game at a time, top to bottom */
+.cards { display: grid; grid-template-columns: 1fr; gap: 20px; }   /* one game at a time, top to bottom */
 @media (max-width: 520px) { .cards { grid-template-columns: 1fr; } .wrap { padding: 16px 12px 48px; } }
 .empty { color: var(--muted); padding: 40px 0; text-align: center; }
 
@@ -1370,8 +1370,8 @@ function card(c, i) {
       ${bookSection(c, bookView[c.matchup] || "FanDuel", recLine, shortName)}
       ${c.fd_closed ? `<div class="small-note">FanDuel has closed first-basket betting (tip-off is near) — its last prices are shown faded.</div>`
         : c.fanduel_note ? `<div class="small-note">${esc(c.fanduel_note)}</div>` : ""}
-      ${c.injury_list ? injuryBlock(c) : ""}
       <details class="inj-sec"><summary>👥 Starters <small>${c.label === "CONFIRMED" ? "confirmed" : "expected"}</small></summary><div class="starters">${starterLine(c.away, c.away_starters)}${starterLine(c.home, c.home_starters)}</div></details>
+      ${c.injury_list ? injuryBlock(c) : ""}
       ${(c.notes || []).length ? `<ul class="notes">${c.notes.map((n) => `<li>${esc(n)}</li>`).join("")}</ul>` : ""}
     </div>
   </article>`;
