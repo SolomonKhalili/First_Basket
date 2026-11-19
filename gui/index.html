@@ -2299,6 +2299,7 @@ async function loadTab(tab, fresh = false) {
 }
 
 function openData(tab = dstate.tab) {
+  if (typeof closeViews === "function") closeViews();   // 🩹 Injuries / 👥 Starters pages
   dstate.tab = tab;
   document.body.classList.add("data-mode");
   $("dataView").hidden = false;
@@ -2723,6 +2724,7 @@ function renderBets() {
   $("betList").innerHTML = html;
 }
 async function openBets() {
+  if (typeof closeViews === "function") closeViews();   // 🩹 Injuries / 👥 Starters pages
   closeData(); if ($("oddsView") && !$("oddsView").hidden) $("oddsView").hidden = true;
   document.body.classList.add("bets-mode");
   $("pSlip").hidden = true;
@@ -2969,6 +2971,7 @@ function moveSize(row) {                          // biggest change in chance at
 }
 let oddsData = null, oddsTab = "player";
 async function openOdds() {
+  if (typeof closeViews === "function") closeViews();   // 🩹 Injuries / 👥 Starters pages
   closeData(); if (!$("betsView").hidden) closeBets();
   document.body.classList.add("bets-mode");
   $("oddsView").hidden = false; $("betsView").hidden = true;
