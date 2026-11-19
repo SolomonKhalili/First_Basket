@@ -785,6 +785,11 @@ body.bets-mode .dayswitch, body.bets-mode #yestSum, body.bets-mode #dataView { d
 .ft-note { margin: 8px 2px 0; font-size: 12.5px; color: var(--muted); line-height: 1.45; } .ft-note b { color: var(--text); }
 .hero-bk { font-size: 12px; color: var(--muted); font-weight: 700; margin-top: -2px; } .hero-bk small { font-weight: 400; }
 .hero-dk { font-size: 26px; font-weight: 800; color: #86efac; margin-top: 6px; line-height: 1; }
+.team-hero { margin: 14px 0 4px; }
+.team-hero .shot { place-items: center; padding-bottom: 12px; }
+.team-hero .shot img { width: 84px; height: 84px; object-fit: contain; }
+@media (max-width: 520px) { .team-hero .shot img { width: 64px; height: 64px; } }
+.team-hero .initials { font-size: 20px; }
 </style>
 </head>
 <body>
@@ -1327,6 +1332,27 @@ $("cards").addEventListener("click", (ev) => {             // switch a game betw
   el.outerHTML = card(cards[i], i).replace('class="card enter"', 'class="card"');
   try { markBetRows(); } catch (e) { /* bets not loaded yet */ }
 });
+const TEAM_NAMES = { ATL: "Atlanta Hawks", BOS: "Boston Celtics", BKN: "Brooklyn Nets", CHA: "Charlotte Hornets", CHI: "Chicago Bulls",
+  CLE: "Cleveland Cavaliers", DAL: "Dallas Mavericks", DEN: "Denver Nuggets", DET: "Detroit Pistons", GS: "Golden State Warriors", GSW: "Golden State Warriors",
+  HOU: "Houston Rockets", IND: "Indiana Pacers", LAC: "LA Clippers", LAL: "Los Angeles Lakers", MEM: "Memphis Grizzlies", MIA: "Miami Heat",
+  MIL: "Milwaukee Bucks", MIN: "Minnesota Timberwolves", NO: "New Orleans Pelicans", NOP: "New Orleans Pelicans", NY: "New York Knicks", NYK: "New York Knicks",
+  OKC: "Oklahoma City Thunder", ORL: "Orlando Magic", PHI: "Philadelphia 76ers", PHX: "Phoenix Suns", POR: "Portland Trail Blazers",
+  SAC: "Sacramento Kings", SA: "San Antonio Spurs", SAS: "San Antonio Spurs", TOR: "Toronto Raptors", UTA: "Utah Jazz", UTAH: "Utah Jazz",
+  WAS: "Washington Wizards", WSH: "Washington Wizards" };
+/* Big "Top team" box above "First team to score" — same style as the top pick box: logo, FanDuel % and DraftKings % */
+function teamHero(c, fdP, dkP) {
+  const teams = [c.away, c.home].filter((t) => fdP[t] !== undefined);
+  if (teams.length < 2) return "";
+  const top = teams.sort((a, b) => fdP[b] - fdP[a])[0];
+  const fdOdds = ((c.team_first_books || {}).FanDuel || {})[top], dkOdds = ((c.team_first_books || {}).DraftKings || {})[top];
+  return `<div class="hero team-hero" style="--top-c:${color(top)}">
+      <div class="shot"><img src="${logoUrl(top).replace("w=96&h=96", "w=200&h=200")}" alt="" loading="lazy" onerror="this.remove()"><span class="initials">${esc(top)}</span></div>
+      <div class="who"><div class="label">Top team</div><div class="name">${esc(TEAM_NAMES[top] || top)}</div><div class="team">🏀 Most likely to score first</div></div>
+      <div class="big"><div class="pct num">${pct(fdP[top])}</div><div class="hero-bk">FanDuel <small>incl. free throws</small></div>
+        ${dkP[top] !== undefined ? `<div class="hero-dk num">${pct(dkP[top])}</div><div class="hero-bk">DraftKings <small>excl. free throws</small></div>` : ""}
+        <div class="sub num">${[fdOdds !== undefined ? `FD odds <b>${american(fdOdds)}</b>` : "", dkOdds !== undefined ? `DK odds <b>${american(dkOdds)}</b>` : ""].filter(Boolean).join(" · ")}</div></div>
+    </div>`;
+}
 function bookSection(c, book, recLine, shortName) {
   const isFD = book === "FanDuel", short = isFD ? "FD" : "DK";
   const fg = c.probs_fg || {}, prices = (isFD ? c.fanduel : c.draftkings) || {};
@@ -1350,6 +1376,8 @@ function bookSection(c, book, recLine, shortName) {
   if (isFD) Object.assign(teamP, c.first_team || {});
   else for (const [n, t] of all) if (fg[n] !== undefined) teamP[t] = (teamP[t] || 0) + fg[n];
   const teams = [c.away, c.home].filter((t) => teamP[t] !== undefined);
+  const dkTeamP = {};
+  for (const [n, t] of all) if (fg[n] !== undefined) dkTeamP[t] = (dkTeamP[t] || 0) + fg[n];
   const teamRows = teams.map((t) => `<tr><td><div class="player">${logo(t, 18)}<b>${esc(t)}</b></div></td>
       <td class="r num">${pctCell(teamP[t])}</td><td class="r num">${ourCell(teamP[t])}</td><td class="r">${bookCell(teamOdds[t], teamP[t])}</td></tr>`).join("");
   const head = (first) => `<thead><tr><th>${first}</th><th class="r">Chance</th><th class="r">Our odds</th><th class="r">${short} odds</th></tr></thead>`;
@@ -1357,7 +1385,7 @@ function bookSection(c, book, recLine, shortName) {
     <div class="book-h">${book} <small>${isFD ? "including free throws" : "excluding free throws"}</small></div>
     <div class="sub-h">🏀 First basket <small>— top 5</small></div>
     <div class="tscroll"><table class="bk-table bk3">${head("Player")}<tbody>${rows || `<tr><td colspan="4">${missing(c, book)}</td></tr>`}</tbody></table></div>
-    ${teamRows ? `<div class="sub-h">🏀 First team to score <small>(${isFD ? "including" : "excluding"} free throws)</small></div>
+    ${teamRows ? `${teamHero(c, c.first_team || {}, dkTeamP)}<div class="sub-h">🏀 First team to score <small>(${isFD ? "including" : "excluding"} free throws)</small></div>
     <div class="tscroll"><table class="bk-table bk3">${head("Team")}<tbody>${teamRows}</tbody></table></div>` : ""}
   </div>`;
 }
