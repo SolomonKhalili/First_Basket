@@ -519,6 +519,7 @@ body.viewer #runAll, body.viewer #runSelected, body.viewer #ddown { display: non
 .tscroll th, .tscroll td { padding-left: 8px; padding-right: 8px; }
 .tscroll tbody tr:nth-child(even) td { background: color-mix(in srgb, var(--surface-2) 60%, transparent); }
 .tscroll tbody tr.scored td { background: var(--good-soft); }
+.fb-tag { display: block; margin-top: 3px; font-size: 11px; font-weight: 800; color: var(--good); white-space: nowrap; }
 .tscroll td.r, .tscroll th.r { text-align: center; }   /* a wide odds table swipes sideways, never cut off */
 th .short { display: none; }
 .nshort { display: none; }
@@ -991,14 +992,18 @@ function updateCardsLive() {
 
     const v = el.querySelector(".verdict");
     el.querySelectorAll("tr.scored").forEach((r) => r.classList.remove("scored"));
+    el.querySelectorAll(".fb-tag").forEach((t) => t.remove());
     if (g.first_basket) {
       const r = g.result || "miss";
       const text = { hit: `✓ ${esc(g.first_basket.name)} scored first — our top pick!`,
                      top3: `🏀 ${esc(g.first_basket.name)} scored first — ${g.rank ? `our #${g.rank} pick` : "in our top 3"}`,
                      miss: `🏀 ${esc(g.first_basket.name)} scored first${g.rank ? ` — our #${g.rank} pick` : ""}` }[r];
       if (v.dataset.k !== r + g.first_basket.name) { v.className = `verdict on ${r}`; v.innerHTML = text; v.dataset.k = r + g.first_basket.name; }
-      const row = [...el.querySelectorAll("tbody tr")].find((t) => t.dataset.name === g.first_basket.name);
-      if (row) row.classList.add("scored");
+      const row = [...el.querySelectorAll("tbody tr")].find((t) => normName(t.dataset.name) === normName(g.first_basket.name));
+      if (row) {                                   // green row + say it in words
+        row.classList.add("scored");
+        row.querySelector(".pn")?.insertAdjacentHTML("beforeend", `<span class="fb-tag">🏀 Scored first</span>`);
+      }
     } else if (g.status === 2) {
       if (v.dataset.k !== "wait") { v.className = "verdict on wait"; v.textContent = "Game on — waiting for the first basket…"; v.dataset.k = "wait"; }
     } else { v.className = "verdict"; v.dataset.k = ""; }
