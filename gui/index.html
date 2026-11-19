@@ -929,7 +929,7 @@ details.oc[open] { grid-column: 1 / -1; }
 
   <div class="layout">
     <main>
-      <section class="bestbets" id="bestBets" hidden></section>
+      <section class="bestbets" id="bestBets" hidden style="display:none"></section>
       <div class="cards" id="cards"><div class="empty">Press <b>All games</b> to run the model.</div></div>
     </main>
     <aside class="side">
@@ -1320,7 +1320,6 @@ function card(c, i) {
           ${(c.probs_fg || {})[top[0]] !== undefined ? `<div><div class="pct num" data-v="${c.probs_fg[top[0]]}">${pct(c.probs_fg[top[0]])}</div><div class="hero-bk">Excl. free throws<small>DraftKings rule</small></div></div>` : ""}</div>
           <div class="sub num">${[fd[top[0]] !== undefined ? `<span class="book-line">FD odds <b>${american(fd[top[0]])}</b></span>` : "", dk[top[0]] !== undefined ? `<span class="book-line">DK odds <b>${american(dk[top[0]])}</b></span>` : ""].filter(Boolean).join("")}</div></div>
       </div>
-      ${valueLine}
       ${bookTabs(c)}
       ${bookSection(c, bookView[c.matchup] || "FanDuel", recLine, shortName)}
       ${c.fd_closed ? `<div class="small-note">FanDuel has closed first-basket betting (tip-off is near) — its last prices are shown faded.</div>`
@@ -2479,6 +2478,8 @@ function bestBets() {
 }
 function renderBestBets() {
   const el = $("bestBets");
+  if (el) el.hidden = true;
+  return;                                   // removed: 💰 tags in the tables are enough
   if (!el) return;
   if (viewDay !== "today" || !lastResult) { el.hidden = true; return; }
   const list = bestBets();
