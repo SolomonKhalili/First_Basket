@@ -221,12 +221,24 @@ ESPN_PROPS = ("https://sports.core.api.espn.com/v2/sports/basketball/leagues/nba
               "/odds/100/propBets?lang=en&region=us&limit=1000&page={p}")        # provider 100 = DraftKings
 
 
-def parse_espn_props(items: list, home: str, away: str, who: dict) -> dict:
+def parse_espn_props(items: list, home: str, away: str, who: dict, teams: dict | None = None) -> dict:
     """Pure (testable). ESPN propBets items -> one game in parse_first_points' shape, plus each player's
     "open" price and "updated" time. who: ESPN athlete id -> (name, team)."""
-    rows = []
+    rows, team_first, team_open = [], {}, {}
     for i in items:
-        if (i.get("type") or {}).get("name") != "First Basket":
+        kind = (i.get("type") or {}).get("name")
+        if kind == "First Team to Score":                  # team market: {team code: price}, with the opening price
+            tid = str((i.get("team") or {}).get("$ref", "")).split("/teams/")[-1].split("?")[0]
+            code = (teams or {}).get(tid)
+            am = (i.get("odds") or {}).get("american") or {}
+            try:
+                if code:
+                    team_first[code] = int(str(am.get("value", "")).replace("+", ""))
+                    team_open[code] = int(str(am.get("open", am.get("value", ""))).replace("+", ""))
+            except ValueError:
+                pass
+            continue
+        if kind != "First Basket":
             continue
         aid = str((i.get("athlete") or {}).get("$ref", "")).split("/athletes/")[-1].split("?")[0]
         name, team = who.get(aid, ("", ""))
@@ -247,7 +259,7 @@ def parse_espn_props(items: list, home: str, away: str, who: dict) -> dict:
     import fanduel_odds as fd
     rows.sort(key=lambda r: r["decimal"])
     return {"home_code": home, "away_code": away, "players": rows, "margin": fd.margin(rows) if rows else None,
-            "source": "ESPN"}
+            "source": "ESPN", "team_first": team_first, "team_first_open": team_open}
 
 
 def fetch_via_espn(games: list, con) -> list:
@@ -255,6 +267,12 @@ def fetch_via_espn(games: list, con) -> list:
     who = {}
     for pid, name, team in con.execute("SELECT player_id, player_name, team FROM lineups ORDER BY rowid"):
         who[str(pid)] = (name, team)                        # latest team wins (trades)
+    try:                                                    # ESPN team id -> code (e.g. "9" -> "GS")
+        sports = requests.get("https://site.api.espn.com/apis/site/v2/sports/basketball/nba/teams", timeout=20).json()
+        teams = {str(x["team"]["id"]): x["team"]["abbreviation"]
+                 for x in sports["sports"][0]["leagues"][0]["teams"]}
+    except Exception:  # noqa: BLE001
+        teams = {}
     out = []
     for g in games:
         items, page = [], 1
@@ -267,8 +285,8 @@ def fetch_via_espn(games: list, con) -> list:
             if page >= int(data.get("pageCount") or 1):
                 break
             page += 1
-        game = parse_espn_props(items, g["home_team"], g["away_team"], who)
-        if game["players"]:
+        game = parse_espn_props(items, g["home_team"], g["away_team"], who, teams)
+        if game["players"] or game["team_first"]:
             out.append(game)
     return out
 
@@ -296,5 +314,27 @@ def log_espn(con, day: str, games: list) -> int:
             if not last or last[0] != r["american"]:
                 con.execute("INSERT OR IGNORE INTO dk_odds_log VALUES (?, ?, ?, ?, ?, ?)",
                             (day, m, at, r["player"], r["team"], r["american"]))
+        for team, a in (g.get("team_first") or {}).items():             # team to score first, same idea
+            log_team_first(con, day, m, "DraftKings", team, a, opened=(g.get("team_first_open") or {}).get(team), at=None)
     con.commit()
     return con.total_changes - before
+
+
+TEAM_FIRST_SCHEMA = """CREATE TABLE IF NOT EXISTS team_first_log (
+    game_date TEXT, matchup TEXT, logged_at TEXT, book TEXT, team TEXT, american INTEGER,
+    PRIMARY KEY (game_date, matchup, logged_at, book, team))"""
+
+
+def log_team_first(con, day: str, matchup: str, book: str, team: str, american: int, opened=None, at=None) -> None:
+    """Team to score first price log (both books): the opening price (stamped 00:00:00, if the book gives it) and
+    every change after that. at: New York "YYYY-MM-DD HH:MM:SS" (default now)."""
+    import time as _t
+    con.execute(TEAM_FIRST_SCHEMA)
+    if opened is not None:
+        con.execute("INSERT OR IGNORE INTO team_first_log VALUES (?, ?, ?, ?, ?, ?)",
+                    (day, matchup, f"{day[:4]}-{day[4:6]}-{day[6:]} 00:00:00", book, team, int(opened)))
+    last = con.execute("SELECT american FROM team_first_log WHERE game_date = ? AND matchup = ? AND book = ? AND team = ? "
+                       "ORDER BY logged_at DESC LIMIT 1", (day, matchup, book, team)).fetchone()
+    if not last or last[0] != int(american):
+        con.execute("INSERT OR IGNORE INTO team_first_log VALUES (?, ?, ?, ?, ?, ?)",
+                    (day, matchup, at or _t.strftime("%Y-%m-%d %H:%M:%S"), book, team, int(american)))

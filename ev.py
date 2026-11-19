@@ -229,13 +229,16 @@ def odds_moves(con) -> list:
     times changed]. "closed" = the last price saved (before tip-off once the game has started). Both books' logs."""
     ensure_table(con)
     seen = {}
-    for book, table in (("FanDuel", "odds_log"), ("DraftKings", "dk_odds_log")):
+    for book, table in (("FanDuel", "odds_log"), ("DraftKings", "dk_odds_log"), ("team", "team_first_log")):
         try:
-            q = con.execute(f"SELECT game_date, matchup, player_name, american, logged_at FROM {table} ORDER BY logged_at")
+            q = con.execute(f"SELECT game_date, matchup, player_name, american, logged_at FROM {table} ORDER BY logged_at") \
+                if book != "team" else con.execute(
+                "SELECT game_date, matchup, team || ' — team scores first', american, logged_at, book FROM team_first_log "
+                "ORDER BY logged_at")
         except Exception:  # noqa: BLE001 — table not there yet
             continue
-        for d, m, name, a, at in q:
-            r = seen.setdefault((d, m, name, book), [a, a, 0, [(at, a)]])
+        for d, m, name, a, at, *bk in q:
+            r = seen.setdefault((d, m, name, bk[0] if bk else book), [a, a, 0, [(at, a)]])
             if a != r[1]:
                 r[2] += 1
                 r[3].append((at, a))

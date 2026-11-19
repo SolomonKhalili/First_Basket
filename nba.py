@@ -1165,7 +1165,7 @@ def predict_today(first_pass: bool = True, teams: set = frozenset(), ui=None) ->
             "tip_record": tip_record,             # each jumper's tips won / tips taken this season
             "first_team": first_team,
             "opening": ev.opening_prices(con, game_date, matchup),   # first price of the day at each book (↓/↑)
-            **_team_first_odds(fd_games, home_team, away_team, first_team),
+            **_team_first_odds(fd_games, home_team, away_team, first_team, dk_games, con, game_date),
             "home": home_team, "away": away_team,
             "home_starters": home_starters, "away_starters": away_starters,
             "injuries": injuries, "notes": notes,
@@ -1255,7 +1255,17 @@ def _draftkings_prices(games: list, warn: list, ui=None):
         import display as ui
     try:
         with ui.console.status("Getting DraftKings first-basket odds…"):
-            return dk.fetch_first_basket_odds()
+            direct = dk.fetch_first_basket_odds()
+        try:                                 # DraftKings' team market + official opening prices come via ESPN (logged)
+            espn = dk.fetch_via_espn(games, db())
+            dk.log_espn(db(), date.today().strftime("%Y%m%d"), espn)
+            by = {(g["home_code"], g["away_code"]): g for g in espn}
+            for g in direct:
+                e = by.get((g["home_code"], g["away_code"])) or {}
+                g["team_first"], g["team_first_open"] = e.get("team_first", {}), e.get("team_first_open", {})
+        except Exception:  # noqa: BLE001
+            pass
+        return direct
     except Exception as e:                 # odds are extra: never stop the predictions over them
         snap, age = dk.load_snapshot()    # the cloud: DraftKings refuses it — a Mac/browser price from minutes ago
         try:                              # ...and DraftKings' prices as ESPN publishes them (no Mac needed; logged)
@@ -1283,15 +1293,38 @@ def _best_prices(books: dict) -> tuple:
     return best, where
 
 
-def _team_first_odds(fd_games, home: str, away: str, first_team) -> dict:
-    """FanDuel's "Team to Score First" price for each team and its value (EV per $1) at our chance; {} if none."""
+def _team_first_odds(fd_games, home: str, away: str, first_team, dk_games=None, con=None, day: str = "") -> dict:
+    """ "Team to Score First" at both books: prices {book: {team: american}}, the day's opening prices (for ↓/↑),
+    the better price per team and its value (EV per $1) at our chance. Every price is also logged (team_first_log)."""
+    import draftkings_odds as dk
     import fanduel_odds as fd
-    game = fd.game_for(fd_games or [], home, away)
-    prices = {t: a for t, a in ((game or {}).get("team_first") or {}).items() if t in (home, away)}
-    if not prices or not first_team:
+    books = {}
+    for book, games in (("FanDuel", fd_games), ("DraftKings", dk_games)):
+        g = fd.game_for(games or [], home, away)
+        p = {t: a for t, a in ((g or {}).get("team_first") or {}).items() if t in (home, away)}
+        if p:
+            books[book] = p
+    if con is not None and day:
+        for book, p in books.items():
+            if book == "FanDuel":                       # DraftKings' are logged with ESPN's times (dk.log_espn)
+                for team, a in p.items():
+                    dk.log_team_first(con, day, f"{away} @ {home}", book, team, a)
+        con.commit()
+    if not books or not first_team:
         return {}
-    return {"team_first_odds": prices,
-            "team_first_ev": {t: first_team[t] * ev.profit_per_dollar(a) - (1 - first_team[t]) for t, a in prices.items()}}
+    best, where = {}, {}
+    for book, p in books.items():
+        for team, a in p.items():
+            if team not in best or ev.profit_per_dollar(a) > ev.profit_per_dollar(best[team]):
+                best[team], where[team] = a, book
+    opening = {}
+    if con is not None and day:
+        con.execute(dk.TEAM_FIRST_SCHEMA)
+        for book, team, a in con.execute("SELECT book, team, american FROM team_first_log WHERE game_date = ? AND matchup = ? "
+                                         "ORDER BY logged_at", (day, f"{away} @ {home}")):
+            opening.setdefault(book, {}).setdefault(team, a)
+    return {"team_first_odds": best, "team_first_book": where, "team_first_books": books, "team_first_open": opening,
+            "team_first_ev": {t: first_team[t] * ev.profit_per_dollar(a) - (1 - first_team[t]) for t, a in best.items()}}
 
 
 def _fanduel_card(fd_games, home: str, away: str, top5: list, everyone: list = (), dk_games=None) -> dict:

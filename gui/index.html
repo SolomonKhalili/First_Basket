@@ -700,6 +700,7 @@ body.bets-mode .dayswitch, body.bets-mode #yestSum, body.bets-mode #dataView { d
 .tscroll tbody tr.pick2 td:nth-child(2) { box-shadow: inset 3px 0 0 #60a5fa; }
 .tscroll tbody tr.pick2 .nm { color: #93c5fd; font-weight: 700; }
 .tscroll tbody tr.scored td { background: var(--good-soft) !important; }
+.tf-table { margin-top: 8px; width: 100%; font-size: 13px; border-collapse: collapse; } .tf-table th, .tf-table td { padding: 4px 6px; text-align: center; color: var(--muted); } .tf-table td:first-child { text-align: left; } .tf-table b { color: var(--text); } .tf-table b.g { color: var(--good); } .tf-table .tf-best { box-shadow: inset 0 0 0 1.5px var(--gold); border-radius: 6px; padding: 0 4px; } .tf-table .mv { display: inline; margin-left: 3px; }
 </style>
 </head>
 <body>
@@ -1183,16 +1184,25 @@ function card(c, i) {
   </article>`;
 }
 
-/* FanDuel's "Team to Score First" price vs our chance, in plain words */
+/* "Team to Score First" at both books vs our chance, in plain words (★ = the better price; ↓/↑ since opening) */
 function teamFirstLine(c) {
-  const o = c.team_first_odds, v = c.team_first_ev || {};
-  if (!o || !Object.keys(o).length) return "";
+  const books = c.team_first_books || (c.team_first_odds ? { FanDuel: c.team_first_odds } : null), v = c.team_first_ev || {};
+  if (!books || !Object.keys(books).length) return "";
+  const where = c.team_first_book || {}, open = c.team_first_open || {};
+  const cell = (book, t) => {
+    const a = (books[book] || {})[t];
+    if (a === undefined) return "–";
+    const o = (open[book] || {})[t], mv = o === undefined || o === a ? "" : payout(a) < payout(o)
+      ? `<span class="mv dn" title="${book} opened at ${american(o)}: payout dropped">↓</span>` : `<span class="mv up" title="${book} opened at ${american(o)}: payout rose">↑</span>`;
+    const star = Object.keys(books).length > 1 && where[t] === book;
+    return `<b class="${star ? "tf-best" : ""} ${v[t] >= VALUE_MIN && where[t] === book ? "g" : ""}">${star ? "★" : ""}${american(a)}</b>${mv}`;
+  };
+  const rows = Object.keys(books).map((book) => `<tr><td>${book}</td><td>${cell(book, c.away)}</td><td>${cell(book, c.home)}</td></tr>`).join("");
   const best = [c.away, c.home].filter((t) => v[t] >= VALUE_MIN).sort((a, b) => v[b] - v[a])[0];
-  const price = (t) => o[t] === undefined ? "–" : `<b class="${v[t] >= VALUE_MIN ? "g" : ""}">${american(o[t])}</b>`;
-  return `<div class="tf-line">FanDuel pays: ${esc(c.away)} ${price(c.away)} · ${esc(c.home)} ${price(c.home)}</div>
+  return `<table class="tf-table"><tr><th></th><th>${esc(c.away)}</th><th>${esc(c.home)}</th></tr>${rows}</table>
     <div class="tf-verdict ${best ? "pos" : ""}">${best
-      ? `💰 <b>Good bet: ${esc(best)} to score first</b> — FanDuel pays more than it should (about ${cents(v[best])} profit per $1 over time).`
-      : `No good bet here — FanDuel pays too little on both teams.`}</div>`;
+      ? `💰 <b>Good bet: ${esc(best)} to score first</b> on ${esc(where[best] || "FanDuel")} — it pays more than it should (about ${cents(v[best])} profit per $1 over time).`
+      : `No good bet here — both books pay too little on both teams.`}</div>`;
 }
 function countUp(el) {
   const v = parseFloat(el.dataset.v);
@@ -2153,7 +2163,7 @@ function bestBets() {
     }
     const tf = c.team_first_odds || {}, tv = c.team_first_ev || {};     // team to score first (FanDuel)
     for (const t of Object.keys(tf)) if (tv[t] >= VALUE_MIN && c.first_team)
-      out.push({ c, name: `${t} to score first`, team: t, prob: c.first_team[t], book: "FanDuel", american: tf[t], ev: tv[t], teamBet: true });
+      out.push({ c, name: `${t} to score first`, team: t, prob: c.first_team[t], book: (c.team_first_book || {})[t] || "FanDuel", american: tf[t], ev: tv[t], teamBet: true });
   }
   return out.sort((a, b) => b.ev - a.ev);
 }

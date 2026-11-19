@@ -86,3 +86,19 @@ def test_draftkings_via_espn_feed():
     assert g["home_code"] == "MEM" and len(g["players"]) == 1
     p = g["players"][0]
     assert (p["player"], p["team"], p["american"], p["open"]) == ("Ty Jerome", "MEM", 499, 559)
+
+
+def test_team_first_from_espn_and_log():
+    import sqlite3
+    import draftkings_odds as dk
+    items = [{"team": {"$ref": "http://x/teams/9?lang=en"}, "type": {"name": "First Team to Score"},
+              "odds": {"american": {"value": "+105", "open": "+120"}}},
+             {"team": {"$ref": "http://x/teams/29?lang=en"}, "type": {"name": "First Team to Score"},
+              "odds": {"american": {"value": "-145", "open": "-160"}}}]
+    g = dk.parse_espn_props(items, "MEM", "GS", {}, {"9": "GS", "29": "MEM"})
+    assert g["team_first"] == {"GS": 105, "MEM": -145} and g["team_first_open"] == {"GS": 120, "MEM": -160}
+    con = sqlite3.connect(":memory:")
+    dk.log_team_first(con, "20261119", "GS @ MEM", "DraftKings", "GS", 105, opened=120)
+    dk.log_team_first(con, "20261119", "GS @ MEM", "DraftKings", "GS", 105)          # same price: not logged again
+    rows = con.execute("SELECT logged_at, american FROM team_first_log ORDER BY logged_at").fetchall()
+    assert [a for _, a in rows] == [120, 105] and rows[0][0].endswith("00:00:00")
