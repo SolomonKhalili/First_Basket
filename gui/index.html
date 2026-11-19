@@ -1467,9 +1467,9 @@ function rateVerdict(rate, games) {
   const p = rate * 100;
   const [grade, cls, why] =
       p < 12 ? ["Poor", "bad", "about the same as guessing (10%)"]
-    : p < 15 ? ["Weak", "warn", "no better than just picking the starter who plays the most minutes (~14%)"]
-    : p < 17.7 ? ["Decent", "ok", "beats guessing (10%) and the most-minutes pick (~14%), but not yet a published pro model (17.7%)"]
-    : p < 22 ? ["Good", "good", "beats guessing (10%), the most-minutes pick (~14%) and a published pro model (17.7%)"]
+    : p < 15 ? ["Weak", "warn", "no better than the simple rule \"always bet the starter who plays the most minutes\" (~14%)"]
+    : p < 17.7 ? ["Decent", "ok", "beats guessing (10%) and the simple rule \"always bet the starter who plays the most minutes\" (~14%), but not yet a published pro model (17.7%)"]
+    : p < 22 ? ["Good", "good", "beats guessing (10%), the simple rule \"always bet the starter who plays the most minutes\" (~14%) and a published pro model (17.7%)"]
     : ["Excellent", "good", "well above a published pro model (17.7%); the realistic ceiling is ~26–30%"];
   const pm = games ? Math.round(196 * Math.sqrt(rate * (1 - rate) / games)) : 0;   // ≈95% range, in points
   const note = games < 400 && pm ? ` Only ${games} games so far, so it can still swing about ±${pm} points.` : "";
