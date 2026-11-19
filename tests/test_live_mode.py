@@ -117,3 +117,17 @@ def test_quick_odds_logs_prices_and_the_close(monkeypatch):
     monkeypatch.setattr(fd, "fetch_prices", lambda ids: [{"marketId": "m1", "marketStatus": "SUSPENDED"}])
     publish.quick_odds(result, con)
     assert con.execute("SELECT closed_at IS NOT NULL FROM market_times WHERE book='FanDuel'").fetchone()[0] == 1
+
+
+def test_republish_page_uses_the_sites_current_data(tmp_path, monkeypatch):
+    import io
+    import json
+    import urllib.request
+    import publish
+    data = {"v": 1, "iv": "IV", "ct": "CT", "users": {}}
+    monkeypatch.setattr(urllib.request, "urlopen", lambda url, timeout=0: io.BytesIO(json.dumps(data).encode()))
+    monkeypatch.setattr(publish, "load_site_users", lambda: {"u": {"x": 1}})
+    monkeypatch.delenv("SITE_REMOTE", raising=False)
+    assert publish.republish_page(tmp_path) is True
+    d = json.loads((tmp_path / "data.json").read_text())
+    assert d["iv"] == "IV" and d["ct"] == "CT" and "u" in d["users"] and (tmp_path / "index.html").exists()

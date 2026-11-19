@@ -366,6 +366,25 @@ def publish_site(out: Path, result) -> None:
         push_dir(out, remote, os.environ.get("SITE_BRANCH", "gh-pages"), f"Picks {datetime.now(ET):%Y-%m-%d %H:%M}")
 
 
+SITE_URL = "https://solomonkhalili.github.io/first-basket/"
+
+
+def republish_page(out: Path) -> bool:
+    """A new run (new code) republishes the PAGE straight away with the website's current data — so design changes
+    show within a minute or two instead of waiting for the full update. The data follows with the first update."""
+    import urllib.request
+    try:
+        with urllib.request.urlopen(SITE_URL + f"data.json?t={int(time.time())}", timeout=20) as r:
+            current = json.loads(r.read())
+        build_site({"iv": current["iv"], "ct": current["ct"]}, load_site_users(), out)
+        remote = os.environ.get("SITE_REMOTE")
+        if remote:
+            push_dir(out, remote, os.environ.get("SITE_BRANCH", "gh-pages"), f"Page {datetime.now(ET):%Y-%m-%d %H:%M}")
+        return True
+    except Exception:  # noqa: BLE001 — no site yet / offline: the normal update publishes
+        return False
+
+
 def save_state() -> None:
     """Keep the data for the next run (the private repo's "state" branch)."""
     import shutil
@@ -401,6 +420,9 @@ def live(out: Path, once: bool = False) -> int:
     settings = lambda: json.dumps(load_site_users(), sort_keys=True) + (  # noqa: E731 — accounts + relay address
         RELAY_FILE.read_text() if RELAY_FILE.exists() else "")
     users_seen = settings()
+    if not once and republish_page(out):                  # new design live right away (data follows)
+        say("page republished with the new code")
+        last_pub = time.time()
     while True:
         print(f"\n=== check {datetime.now(ET):%Y-%m-%d %H:%M:%S} ===")
         if os.environ.get("STATE_REMOTE"):               # accounts added/removed since the run started
