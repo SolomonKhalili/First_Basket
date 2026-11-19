@@ -103,4 +103,5 @@ def test_extended_history_adds_2024_25_tips_only_when_asked():
     assert normal < 0.5 < extended                 # only the extended call knows BIG's record
     assert tm.jumper_rate(con, "big", "20261101") < 0.5 < tm.jumper_rate(con, "big", "20261101", extended=True)
     # no old_tips table at all -> extended quietly behaves like normal
-    assert tm.home_win_prob(make_db(), "NY", "BOS", "20261101", extended=True) == pytest.approx(tm.DEFAULT_HCA)
+    # no history: just the home edge (the extended call blends in the rating's own small home edge)
+    assert tm.home_win_prob(make_db(), "NY", "BOS", "20261101", extended=True) == pytest.approx(tm.DEFAULT_HCA, abs=0.005)

@@ -125,15 +125,49 @@ def home_advantage(con, before: str, extended: bool = False) -> float:
     return (wins + HCA_WEIGHT * DEFAULT_HCA) / (n + HCA_WEIGHT)
 
 
+# Opponent-strength rating (Elo) for the tip-off call shown to the owner (extended=True): every opening tip moves both
+# jumpers' ratings, more for beating a strong jumper — so who you beat counts, not just how often you won.
+# Tested 2026-11-19 (point-in-time, 1,238 games): blended 50/50 with the rate model, K=24 was better in BOTH seasons
+# (log-loss 2025-26 0.6275 -> 0.6274, 2026-27 0.6310 -> 0.6273; tip winners 64.6 -> 64.5%, 67.0 -> 67.9%).
+# A plain head-to-head adjustment was worse at every weight (most pairs meet only 1-2 times). The first-basket
+# model's tip input (extended=False) is unchanged.
+ELO_K, ELO_HOME, ELO_BLEND = 24, 15, 0.5
+_elo_cache: dict = {}
+
+
+def elo_ratings(con, before: str, extended: bool = True) -> dict:
+    """{player_id: rating} from every opening tip before `before` (YYYYMMDD), start 1500."""
+    key = (before, extended, con.execute(f"SELECT COUNT(*) FROM {_tips(con, extended)}").fetchone()[0])
+    if key in _elo_cache:
+        return _elo_cache[key]
+    R = {}
+    for th, tw, wp, lp in con.execute(
+            f"""SELECT home_team, tip_winner_team, tip_winner_player_id, tip_loser_player_id FROM {_tips(con, extended)}
+                WHERE tip_winner_team IS NOT NULL AND game_date < ? AND COALESCE(tip_winner_player_id, '') != ''
+                  AND COALESCE(tip_loser_player_id, '') != '' ORDER BY game_date, game_id""", (before,)):
+        adj = ELO_HOME if tw == th else -ELO_HOME
+        rw, rl = R.get(wp, 1500.0), R.get(lp, 1500.0)
+        e = 1 / (1 + 10 ** ((rl - rw - adj) / 400))
+        R[wp], R[lp] = rw + ELO_K * (1 - e), rl - ELO_K * (1 - e)
+    _elo_cache.clear()
+    _elo_cache[key] = R
+    return R
+
+
 def home_win_prob(con, home: str, away: str, before, home_starters=None, away_starters=None,
                   home_center=None, away_center=None, extended: bool = False) -> float:
     """P(home team wins the opening tip), using only games before `before` (YYYYMMDD).
     `home_center` / `away_center`: the starter NBA.com lists at C, when known.
     `extended`: also count the 2024-25 tips (tip-off call shown to the owner only — see _tips)."""
     before = str(before).replace("-", "")[:8]
-    rh = jumper_rate(con, team_jumper(con, home, before, home_starters, home_center, extended), before, extended)
-    ra = jumper_rate(con, team_jumper(con, away, before, away_starters, away_center, extended), before, extended)
+    jh = team_jumper(con, home, before, home_starters, home_center, extended)
+    ja = team_jumper(con, away, before, away_starters, away_center, extended)
+    rh, ra = jumper_rate(con, jh, before, extended), jumper_rate(con, ja, before, extended)
     z = _logit(rh) - _logit(ra) + _logit(home_advantage(con, before, extended))
+    if extended:                     # the shown call: blend in the opponent-strength rating
+        R = elo_ratings(con, before, extended)
+        pe = 1 / (1 + 10 ** ((R.get(str(ja or ""), 1500.0) - R.get(str(jh or ""), 1500.0) - ELO_HOME) / 400))
+        z = (1 - ELO_BLEND) * z + ELO_BLEND * _logit(pe)
     return 1 / (1 + math.exp(-z))
 
 
