@@ -22,3 +22,6 @@ HEALTH.md
 .HEALTH.md.writing
 launcher/.last_full_check
 launcher/.app_updating
+
+# deep-research working notes (report itself is committed under reports/)
+research_notes/
