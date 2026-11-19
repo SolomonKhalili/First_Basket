@@ -726,6 +726,26 @@ NBA/
   one row per player per status per day. Enables a later test (~mid-January, 6–8 weeks of data): do starters who were
   Questionable / just returned from injury score first less often?
 
+### 2026-11-19 (evening) — tip-off upgrades and a full idea re-check
+
+- **Adopted — tip-off call: this season's tips count double** (`tip_model.SEASON_WEIGHT`, shown call only): 2x was the
+  only weight (1/2/3/5/8) with better log-loss in both seasons (0.6297 → 0.6275, 0.6321 → 0.6310).
+- **Adopted — tip-off call: "who you beat" rating (Elo)** blended 50/50 (`tip_model.elo_ratings`, K=24, home 15):
+  0.6275 → 0.6274 and 0.6310 → 0.6273; tip winners 67.0% → 67.9% this season. Clingan 12th of 200, Sims 69th.
+- **Rejected (on top of the live call):** head-to-head (worse at every weight), record vs that team, this-/last-season-only
+  rates, all six signals weighted together (0.6394 / 0.6356). Height prior re-tested: more tips called right (+0.9/+1.4)
+  but 2026-27 log-loss worse — re-test at the All-Star break. Jumper choice: 93.5% / 94.9% right; height rules fixed
+  last season but broke this one.
+- **Rejected — free-throw drawing (FTA per 36) in step 2** (`experiments/ft_draw_test.py`): 2.2377 → 2.2381 and
+  2.2725 → 2.2739.
+- **DraftKings blend tested early** (`experiments/dk_blend_test.py`, 307 games with DraftKings prices since Jan 2026,
+  first-FG labels): our field-goal model alone **beats DraftKings' own prices** in both seasons (2.2133 vs 2.2275,
+  2.2422 vs 2.2578); best blend (80/20) gains 0.0003 — noise, not adopted. FanDuel blend still ~2026-12-20.
+- **Backup players:** a questionable starter's likely replacement is re-scored with the whole lineup (`nba.py`
+  `score_lineup`, `backups` / `backup_chance` on each card) and gets a table row when he'd make that book's top 5.
+- **In progress:** full 2024-25 season downloaded into a COPY of the project to test training on it (never into the
+  real database unless it wins in both periods).
+
 ### 2026-11-18 (later) — where accuracy is lost, and what didn't help
 
 - **Diagnosis** (`experiments/diagnose_stages.py`): stage 1 (right TEAM scores first) is only 58.6% (2026-27) /
