@@ -289,9 +289,30 @@ def tip_jumpball(actions: list[dict]) -> Optional[dict]:
 # ──────────────────────────────────────────────
 # INGESTION
 # ──────────────────────────────────────────────
+def nba_com_backup(game_id: str, con) -> list:
+    """ESPN has no plays for this game: if it's a play-in/playoff game, read it from NBA.com instead (nba_com.py),
+    storing its starters too. Returns the actions ([] if not possible)."""
+    if str(game_id) not in postseason_ids(con):
+        return []
+    row = con.execute("SELECT game_date, home_team, away_team FROM games WHERE game_id = ?", (str(game_id),)).fetchone()
+    if not row:
+        return []
+    import nba_com
+    d, h, a = row
+    nid = nba_com.playoff_game_id(int(d[:4]) - 1, d, h, a)
+    g = nba_com.game(game_id, nid, con) if nid else None
+    if not g or g["unmatched"]:
+        return []                                  # a player we can't match to ESPN: better no label than a wrong one
+    st.save_lineups(con, g["lineups"])
+    con.execute("UPDATE games SET home_score = ?, away_score = ? WHERE game_id = ?",
+                (g["home_score"], g["away_score"], str(game_id)))
+    print(f"  🔁 {a} @ {h} {d}: read from NBA.com (ESPN has no play-by-play)")
+    return g["actions"]
+
+
 def ingest_game(game_id: str, con):
     """Fetch PBP, extract first basket + tip, store."""
-    actions = get_pbp(game_id)
+    actions = get_pbp(game_id) or nba_com_backup(game_id, con)
     if not actions:
         return
 
@@ -420,7 +441,22 @@ def _played(df):
     and cancelled games as "post" (over), so "completed" must be true too (2026-11-19: 4 postponed games had been
     stored as finished)."""
     completed = df['status_type_completed'].fillna(False).astype(bool) if 'status_type_completed' in df else True
-    return (df['status_type_state'] == 'post') & (df['season_type'] == 2) & completed
+    return (df['status_type_state'] == 'post') & df['season_type'].isin(PLAYED_TYPES) & completed
+
+
+PLAYED_TYPES = (2, 3, 5)               # ESPN season types: 2 regular season, 3 playoffs (+ Finals), 5 play-in
+GAME_TYPES_SCHEMA = "CREATE TABLE IF NOT EXISTS game_types (game_id TEXT PRIMARY KEY, season_type INTEGER)"
+
+
+def note_type(con, gid, season_type) -> None:
+    """Remember whether a game was regular season (2), play-in (5) or playoffs (3): training leaves the last two out."""
+    con.execute(GAME_TYPES_SCHEMA)
+    con.execute("INSERT OR REPLACE INTO game_types VALUES (?, ?)", (str(gid), int(season_type)))
+
+
+def postseason_ids(con) -> set:
+    con.execute(GAME_TYPES_SCHEMA)
+    return {g for (g,) in con.execute("SELECT game_id FROM game_types WHERE season_type IN (3, 5)")}
 
 
 GAP_DROP = {"STATUS_POSTPONED", "STATUS_CANCELED", "STATUS_CANCELLED", "STATUS_FORFEIT", "STATUS_SUSPENDED"}
@@ -428,11 +464,13 @@ GAP_DROP = {"STATUS_POSTPONED", "STATUS_CANCELED", "STATUS_CANCELLED", "STATUS_F
 
 def gap_action(espn_found: bool, status_name: str, completed: bool) -> str:
     """Pure (testable). A stored game with no first basket: what does ESPN say now?
-    -> "drop" (never played: postponed / cancelled / no longer listed — its makeup game has its own id),
-       "fill" (played: fetch its play-by-play again) or "wait" (not decided yet)."""
-    if not espn_found or status_name in GAP_DROP:
+    -> "drop" (ESPN says postponed / cancelled — its makeup game has its own id),
+       "fill" (played: fetch its play-by-play again — from NBA.com if ESPN has none) or "wait".
+    ESPN not answering about a game is NOT proof it wasn't played (2026-11-19: four real 2026 playoff games, which
+    ESPN's summary answers "not found" for, were wrongly removed and then restored) — so that means "fill"."""
+    if status_name in GAP_DROP:
         return "drop"
-    return "fill" if completed else "wait"
+    return "fill" if completed or not espn_found else "wait"
 
 
 def repair_old_gaps(con, recheck_days: int = 7) -> dict:
@@ -475,6 +513,49 @@ def repair_old_gaps(con, recheck_days: int = 7) -> dict:
     return done
 
 
+SEASONS_TO_AUDIT = {"2025-26": ("20251021", "20260613")}    # first day .. Finals: checked once, every day
+
+
+def audit_season(con, key: str, start: str, end: str) -> int:
+    """Once per season: compare every day's ESPN schedule with the database and file any finished game that's missing
+    (regular season, play-in, playoffs, Finals). Recorded in table audits. Returns how many games were added."""
+    con.execute("CREATE TABLE IF NOT EXISTS audits (key TEXT PRIMARY KEY, done TEXT)")
+    if con.execute("SELECT 1 FROM audits WHERE key = ?", (key,)).fetchone():
+        return 0
+    have = {g for (g,) in con.execute("SELECT game_id FROM games")}
+    d, last = date.fromisoformat(f"{start[:4]}-{start[4:6]}-{start[6:]}"), f"{end[:4]}-{end[4:6]}-{end[6:]}"
+    added, failed = 0, 0
+    while d.isoformat() <= last:
+        day = d.strftime("%Y%m%d")
+        try:
+            df = espn_nba_scoreboard(dates=[day], return_as_pandas=True)
+        except Exception:  # noqa: BLE001
+            df, failed = None, failed + 1
+        if df is not None and len(df):
+            for _, r in df[_played(df)].iterrows():
+                gid, home, away = str(r['game_id']), str(r['home_abbreviation']), str(r['away_abbreviation'])
+                if home not in NBA_TEAMS or away not in NBA_TEAMS:
+                    continue
+                note_type(con, gid, r['season_type'])
+                if gid in have:
+                    continue
+                con.execute("INSERT OR IGNORE INTO games (game_id, game_date, home_team, away_team, status) "
+                            "VALUES (?, ?, ?, ?, 3)", (gid, day, home, away))
+                ingest_game(gid, con)
+                if not con.execute("SELECT 1 FROM lineups WHERE game_id = ?", (gid,)).fetchone():
+                    st.store_game_lineup(con, gid)
+                added += 1
+            con.commit()
+        d += timedelta(days=1)
+        time.sleep(SLEEP)
+    if not failed:                                  # a day ESPN didn't answer: check the whole season again next time
+        con.execute("INSERT OR REPLACE INTO audits VALUES (?, ?)", (key, date.today().isoformat()))
+    con.commit()
+    if added:
+        print(f"  🩹 {key}: {added} missing game{'s' * (added != 1)} filed")
+    return added
+
+
 def catchup_missing_games():
     """Fetch games from the last stored DB date → yesterday. The last stored date is re-checked
     (games still in progress when it was stored); games already stored with a label are skipped."""
@@ -509,6 +590,7 @@ def catchup_missing_games():
                 if home not in NBA_TEAMS or away not in NBA_TEAMS or gid in have:
                     continue
                 con.execute("INSERT OR IGNORE INTO games (game_id, game_date, home_team, away_team, status) VALUES (?, ?, ?, ?, 3)", (gid, day[:10], home, away))
+                note_type(con, gid, r['season_type'])
                 ingest_game(gid, con)
                 st.store_game_lineup(con, gid)
                 total += 1
@@ -538,6 +620,7 @@ def file_finished_games(day: str) -> int:
             con.execute("INSERT OR IGNORE INTO games (game_id, game_date, home_team, away_team, status) "
                         "VALUES (?, ?, ?, ?, 3)", (gid, day, home, away))
             con.execute("UPDATE games SET status = 3 WHERE game_id = ?", (gid,))
+            note_type(con, gid, r['season_type'])
             ingest_game(gid, con)
             st.store_game_lineup(con, gid)
             added += 1
@@ -742,6 +825,8 @@ def sync_data() -> str:
     for (gid,) in con.execute("""SELECT game_id FROM games WHERE game_date >= ?
                                  AND game_id NOT IN (SELECT DISTINCT game_id FROM lineups)""", (recent,)).fetchall():
         st.store_game_lineup(con, gid)
+    for key, (a, b) in SEASONS_TO_AUDIT.items():  # whole past seasons vs ESPN's schedule (once each)
+        audit_season(con, key, a, b)
     repair_old_gaps(con)                       # older games still missing a first basket (once a week each)
     try:                                       # last season's re-created picks for the "overall" record (once)
         import season_backtest

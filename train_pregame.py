@@ -82,7 +82,15 @@ M = np.array(rows).reshape(len(gids), 10, -1)   # games x starters x features
 Y = y.reshape(len(gids), 10)
 MINUTES = X.reshape(len(gids), 10, -1)[:, :, J["minutes_per_game"]]
 
-season = np.array(["old" if d <= REG_SEASON_END else "new" if d >= NEW_SEASON_START else "playoffs" for d in dates])
+try:                                   # play-in / playoff games of any season (nba.game_types), not just by date
+    import sqlite3 as _sq
+    _con = _sq.connect("nba_first_basket.db")
+    _con.execute("CREATE TABLE IF NOT EXISTS game_types (game_id TEXT PRIMARY KEY, season_type INTEGER)")
+    POSTSEASON = {g for (g,) in _con.execute("SELECT game_id FROM game_types WHERE season_type IN (3, 5)")}
+except Exception:  # noqa: BLE001
+    POSTSEASON = set()
+season = np.array(["playoffs" if g in POSTSEASON else "old" if d <= REG_SEASON_END else "new" if d >= NEW_SEASON_START
+                   else "playoffs" for g, d in zip(gids, dates)])
 dates = np.array(dates)
 
 

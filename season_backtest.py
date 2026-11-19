@@ -100,8 +100,14 @@ def fill_last_season(con) -> int:
     cloud fills in the "overall" record by itself. Returns how many picks were added (0 = already there)."""
     picks.ensure_table(con)
     con.execute("CREATE TABLE IF NOT EXISTS backtest_meta (key TEXT PRIMARY KEY, value TEXT)")
+    import json
+    try:                                          # games in the training data: when that grows (a restored game),
+        n = len(json.load(open("game_ids.json")))  # last season is graded again so it's included
+    except (OSError, ValueError):
+        n = 0
+    plan = f"{LAST_SEASON_PLAN}:{n}"
     done = con.execute("SELECT value FROM backtest_meta WHERE key = 'last_season'").fetchone()
-    if done and done[0] == LAST_SEASON_PLAN:
+    if done and done[0] == plan:                  # same games as last time: nothing to do (re-grades ~8 s a night)
         return 0
     con.execute("DELETE FROM pick_log WHERE lineup_type = ? AND game_date < ?", (LABEL, picks.SEASON_START))
     ns = load_training()
@@ -111,7 +117,7 @@ def fill_last_season(con) -> int:
     live = {g for (g,) in con.execute("SELECT DISTINCT game_id FROM pick_log WHERE lineup_type != ?", (LABEL,))}
     made, hits = recreate(con, ns, last_season_games(season, dates), live, pm.load().get("l2", 1e-3), info, names,
                           season != "playoffs")
-    con.execute("INSERT OR REPLACE INTO backtest_meta VALUES ('last_season', ?)", (LAST_SEASON_PLAN,))
+    con.execute("INSERT OR REPLACE INTO backtest_meta VALUES ('last_season', ?)", (plan,))
     con.commit()
     print(f"  📈 Last season's record filled in: {made} games, #1 pick right in {hits / max(made, 1):.1%}")
     return made

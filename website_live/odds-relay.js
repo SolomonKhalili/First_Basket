@@ -32,7 +32,7 @@ async function keepJobRunning(env, dryRun = false) {
   const last = runs.length ? new Date(Math.max(...runs.map((x) => Date.parse(x.created_at)))) : null;
   const ageMin = last ? (now - last) / 60000 : Infinity;
   let kind = null;
-  if (hour >= 9 && ageMin > 25) kind = "live";
+  if (hour >= 9 && ageMin > 10) kind = "live";   // 10 min: a quick manual update must not hold the live job back (2026-11-19)
   else if (hour >= 4 && hour < 9 && (!last || et(last, { day: "numeric" }) !== day || et(last, { hour: "numeric" }) % 24 < 4)) kind = "once";
   if (!kind) return "nothing to do" + perm;
   if (dryRun) return `would start ${kind} (last run ${Math.round(ageMin)} min ago, ${hour}:00 ET)` + perm;

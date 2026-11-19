@@ -66,6 +66,8 @@ def test_sync_retries_recent_gaps_drops_orphans_and_rewrites_the_csv(project, mo
     fetched = []
     monkeypatch.setattr(st, "store_official_lineups", lambda c, d: fetched.append(d))
     monkeypatch.setattr(nba, "SLEEP", 0)
+    monkeypatch.setattr(nba, "audit_season", lambda *a: 0)          # (whole-season check: network, tested apart)
+    monkeypatch.setattr(nba, "repair_old_gaps", lambda c: {})
 
     summary = nba.sync_data()
 
@@ -446,7 +448,7 @@ def test_tip_jumpball_skips_an_empty_entry_before_the_real_one():
 def test_old_gap_decisions():
     """A stored game with no first basket: never played -> remove; played -> fill in; undecided -> wait."""
     from nba import gap_action
-    assert gap_action(False, "", False) == "drop"                    # ESPN no longer lists it (unneeded playoff game)
+    assert gap_action(False, "", False) == "fill"                    # ESPN didn't answer: NOT proof it wasn't played
     assert gap_action(True, "STATUS_POSTPONED", False) == "drop"
     assert gap_action(True, "STATUS_CANCELED", False) == "drop"
     assert gap_action(True, "STATUS_FINAL", True) == "fill"
@@ -458,7 +460,7 @@ def test_postponed_games_are_not_counted_as_played():
     from nba import _played
     df = pd.DataFrame({"status_type_state": ["post", "post", "in", "post"], "season_type": [2, 2, 2, 3],
                        "status_type_completed": [True, False, False, True]})
-    assert list(_played(df)) == [True, False, False, False]          # final / postponed / live / playoffs
+    assert list(_played(df)) == [True, False, False, True]           # final / postponed / live / playoff final
 
 
 def test_summary_plays_read_like_the_library():
@@ -471,3 +473,23 @@ def test_summary_plays_read_like_the_library():
     p = flatten_summary(s)["plays"][0]
     assert p["team.id"] == "12" and p["awayTeamAbbrev"] == "LAC" and p["participants.0.athlete.id"] == "3992"
     assert p["clock.displayValue"] == "11:32" and p["period.number"] == 1 and p["scoringPlay"] is True
+
+
+def test_nba_com_plays_translate_like_espn():
+    """NBA.com backup (ESPN has no plays for a few 2026 playoff games): same shape nba.get_pbp makes."""
+    import nba
+    import nba_com
+    who = {1: {"id": "e1", "name": "Jalen Duren", "team": "DET"}, 2: {"id": "e2", "name": "Wendell Carter Jr.", "team": "ORL"},
+           3: {"id": "e3", "name": "Cade Cunningham", "team": "DET"}}
+    acts = nba_com.to_actions("401", [
+        {"actionType": "jumpball", "period": 1, "clock": "PT11M58.00S", "teamTricode": "DET", "personId": 9,
+         "jumpBallWonPersonId": 1, "jumpBallLostPersonId": 2},
+        {"actionType": "2pt", "subType": "Layup", "descriptor": "driving", "period": 1, "clock": "PT11M41.00S",
+         "teamTricode": "DET", "personId": 3, "shotResult": "Missed"},
+        {"actionType": "freethrow", "subType": "1 of 2", "period": 1, "clock": "PT11M20.00S", "teamTricode": "NYK",
+         "personId": 3, "shotResult": "Made"}], who)
+    tip = nba.tip_jumpball(acts)
+    assert (tip["tip_winner_player_id"], tip["tip_loser_player_id"], tip["tip_winner_team"]) == ("e1", "e2", "DET")
+    assert nba.first_shots(acts)["DET"]["personId"] == "e3"               # missed layup = first shot
+    fb = nba.first_basket(acts)
+    assert fb["clock"] == "11:20" and fb["teamTricode"] == "NY" and fb["actionType"] == "free_throw"

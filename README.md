@@ -67,7 +67,7 @@ python3 gui.py                      # the same picks in your web browser (cards,
 
 If you already have the database and `pregame_model.json`, you only need the last two commands.
 
-Run the tests any time: `python3 -m pytest` (230 tests, all in the `tests/` folder).
+Run the tests any time: `python3 -m pytest` (231 tests, all in the `tests/` folder).
 
 ---
 
@@ -203,7 +203,7 @@ NBA/
 ├── train_pregame.py        # retrains pregame_model.json and runs the week-by-week test
 ├── build_features.py       # builds training matrices and player game logs
 ├── picks.py                # pick log + track record (`eval`)
-├── tests/                  # 230 tests (python3 -m pytest)
+├── tests/                  # 231 tests (python3 -m pytest)
 ├── first_basket_data.csv   # every past game: who scored first (auto-regenerated; don't edit by hand)
 ├── my_predictions.xlsx     # open this: Scorecard, Games (our picks vs results), Lineups (expected vs confirmed vs actual)
 ├── nba_first_basket.db     # SQLite database
