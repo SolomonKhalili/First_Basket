@@ -815,7 +815,7 @@ body.bets-mode .dayswitch, body.bets-mode #yestSum, body.bets-mode #dataView { d
 .team-hero .initials { font-size: 20px; }
 .ogame-h { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; } .ogame-h small { font-family: var(--body, inherit); font-size: 12px; color: var(--muted); font-weight: 500; text-transform: none; margin-left: auto; }
 .oname .face { width: 30px; height: 30px; }
-details.oc { padding: 0; } details.oc summary { list-style: none; cursor: pointer; display: grid; gap: 2px; padding: 8px; }
+details.oc { padding: 0; } details.oc summary { list-style: none; cursor: pointer; display: block; padding: 8px; } .osum { display: grid; gap: 2px; }
 details.oc summary::-webkit-details-marker { display: none; }
 details.oc[open] { outline: 1px solid var(--accent); }
 .ot.up, .tl-w.up { color: var(--good); } .ot.dn, .tl-w.dn { color: #f87171; } .otap { color: var(--accent); font-weight: 700; }
@@ -829,6 +829,7 @@ details.oc[open] .otap { visibility: hidden; }
 details.oc > summary::marker { content: ""; }
 details.oc[open] { grid-column: 1 / -1; }
 .otl { max-height: 340px; overflow-y: auto; }
+.otabs { margin-bottom: 6px; }
 </style>
 </head>
 <body>
@@ -1798,6 +1799,7 @@ $("dayYest").addEventListener("click", showYesterday);
 $("dayToday").addEventListener("click", showToday);
 
 function renderResult(res) {
+  setTimeout(() => { if (!$("oddsView").hidden) drawOdds(); }, 0);   // odds tracker open: redraw with the picks
   if (!res) return;
   lastResult = res;
   if (viewDay === "yesterday") return;                      // keep yesterday on screen; today redraws on switch back
@@ -2821,41 +2823,56 @@ function oddsCell(matchup, kind, name, book, pts) {
       : v < 0 ? `<span class="tl-w dn">🔴 Worse <small>from ${american(pts[k - 1][1])}</small></span>` : `<span class="tl-w">Same</span>`;
     return `<li><span class="tl-t">${esc(localTime(tm))}</span><b class="tl-a num">${american(a)}</b>${what}</li>`;
   }).reverse().join("");
-  return `<details class="oc"><summary><span class="ob">${book}</span>
+  return `<details class="oc"><summary><div class="osum"><span class="ob">${book}</span>
       <span class="on num">${american(open)} → <b>${american(now)}</b></span>${spark(pts)}
-      <span class="oo">${tag} · ${n} change${n === 1 ? "" : "s"} <span class="otap">▾ times</span></span></summary>
+      <span class="oo">${tag} · ${n} change${n === 1 ? "" : "s"} <span class="otap">▾ times</span></span></div></summary>
     <ol class="otl">${lines}</ol></details>`;
 }
 function moveSize(row) {                          // biggest change in chance at either book (for sorting)
   return Math.max(0, ...Object.values(row.books || {}).map((p) => p.length ? Math.abs(impliedP(p[p.length - 1][1]) - impliedP(p[0][1])) : 0));
 }
+let oddsData = null, oddsTab = "player";
 async function openOdds() {
   closeData(); if (!$("betsView").hidden) closeBets();
   document.body.classList.add("bets-mode");
   $("oddsView").hidden = false; $("betsView").hidden = true;
   if (location.hash !== "#odds") history.replaceState(null, "", "#odds");
   window.scrollTo(0, 0);
-  try {
-    const d = await getJSON("/api/odds_track");
-    for (let k = 0; k < 40 && !lastResult?.cards; k++) await new Promise((r) => setTimeout(r, 250));   // wait for today's picks
-    if (!d.games?.length) { $("oddsList").innerHTML = `<div class="dempty">No odds saved yet today.</div>`; return; }
-    $("oddsList").innerHTML = d.games.map((g) => {
-      const c = (lastResult?.cards || []).find((x) => x.matchup === g.matchup);
-      const rank = Object.fromEntries(((c && (c.probs || c.picks)) || []).map(([n], k) => [n, k]));
-      const ids = Object.fromEntries([...((c && c.home_starters) || []), ...((c && c.away_starters) || [])].map((s) => [s.name, s.player_id]));
-      const players = [...g.players].filter((p) => !c || rank[p.name] !== undefined).sort((a, b) => (rank[a.name] ?? 99) - (rank[b.name] ?? 99) || moveSize(b) - moveSize(a)).map((p) => `<div class="orow">
+  try { oddsData = await getJSON("/api/odds_track"); drawOdds(); }
+  catch (e) { $("oddsList").innerHTML = `<div class="dempty">Couldn't load the odds right now — try again in a minute.</div>`; }
+}
+function drawOdds() {
+  const d = oddsData;
+  if (!d) return;
+  if (!d.games?.length) { $("oddsList").innerHTML = `<div class="dempty">No odds saved yet today.</div>`; return; }
+  const tabs = `<div class="btabs bk-tabs otabs" role="tablist">${[["player", "🏀 First basket"], ["team", "🏀 First team to score"]].map(([k, l]) =>
+    `<button type="button" data-otab="${k}" class="${k === oddsTab ? "on" : ""}" role="tab">${l}</button>`).join("")}</div>
+    <div class="ft-note">${oddsTab === "player" ? "ℹ️ <b>FanDuel: including free throws.</b> <b>DraftKings: excluding free throws.</b>"
+      : "ℹ️ <b>FanDuel “Team to Score First”: including free throws.</b> <b>DraftKings “Team to Score 1st FG”: excluding free throws.</b>"}</div>`;
+  const games = d.games.map((g) => {
+    const c = (lastResult?.cards || []).find((x) => x.matchup === g.matchup);
+    const [aw, hm] = g.matchup.split(" @ ");
+    const head = `<div class="ogame-h">${logo(aw, 26)}${esc(aw)} <span class="at">@</span> ${logo(hm, 26)}${esc(hm)}${c ? `<small>${esc(cardStart(c))}</small>` : ""}</div>`;
+    if (oddsTab === "team") {
+      const teams = (g.teams || []).map((tm) => `<div class="orow">
+          <div class="oname">${logo(tm.team, 26)}<b>${esc(TEAM_NAMES[tm.team] || tm.team)}</b></div>
+          <div class="ocells">${oddsCell(g.matchup, "team", tm.team, "FanDuel", tm.books.FanDuel)}${oddsCell(g.matchup, "team", tm.team, "DraftKings", tm.books.DraftKings)}</div></div>`).join("");
+      return `<div class="ogame">${head}${teams || `<div class="dempty">No team odds saved for this game yet.</div>`}</div>`;
+    }
+    const rank = Object.fromEntries(((c && (c.probs || c.picks)) || []).map(([n], k) => [n, k]));
+    const ids = Object.fromEntries([...((c && c.home_starters) || []), ...((c && c.away_starters) || [])].map((s) => [s.name, s.player_id]));
+    const players = [...g.players].filter((p) => !c || rank[p.name] !== undefined)
+      .sort((a, b) => (rank[a.name] ?? 99) - (rank[b.name] ?? 99) || moveSize(b) - moveSize(a)).map((p) => `<div class="orow">
           <div class="oname">${ids[p.name] ? `<img class="face" src="${headshot(ids[p.name])}" alt="" loading="lazy" onerror="this.remove()">` : logo(p.team || "", 18)}<b>${esc(p.name)}</b><small>${esc(p.team || "")}</small></div>
           <div class="ocells">${oddsCell(g.matchup, "player", p.name, "FanDuel", p.books.FanDuel)}${oddsCell(g.matchup, "player", p.name, "DraftKings", p.books.DraftKings)}</div></div>`).join("");
-      const teams = (g.teams || []).map((tm) => `<div class="orow">
-          <div class="oname">${logo(tm.team, 18)}<b>${esc(tm.team)}</b><small>scores first</small></div>
-          <div class="ocells">${oddsCell(g.matchup, "team", tm.team, "FanDuel", tm.books.FanDuel)}${oddsCell(g.matchup, "team", tm.team, "DraftKings", tm.books.DraftKings)}</div></div>`).join("");
-      const [aw, hm] = g.matchup.split(" @ ");
-      return `<div class="ogame"><div class="ogame-h">${logo(aw, 26)}${esc(aw)} <span class="at">@</span> ${logo(hm, 26)}${esc(hm)}${c ? `<small>${esc(cardStart(c))}</small>` : ""}</div>
-        <div class="osub">🏀 First basket</div>${players}
-        ${teams ? `<div class="osub">🏀 First team to score <small>(FanDuel incl. free throws · DraftKings 1st field goal)</small></div>${teams}` : ""}</div>`;
-    }).join("");
-  } catch (e) { $("oddsList").innerHTML = `<div class="dempty">Couldn't load the odds right now — try again in a minute.</div>`; }
+    return `<div class="ogame">${head}${players || `<div class="dempty">No player odds saved for this game yet.</div>`}</div>`;
+  }).join("");
+  $("oddsList").innerHTML = tabs + games;
 }
+$("oddsList").addEventListener("click", (ev) => {
+  const b = ev.target.closest("[data-otab]");
+  if (b) { oddsTab = b.dataset.otab; drawOdds(); }
+});
 function closeOdds() {
   $("oddsView").hidden = true;
   document.body.classList.remove("bets-mode");
