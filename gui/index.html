@@ -787,7 +787,9 @@ body.bets-mode .dayswitch, body.bets-mode #yestSum, body.bets-mode #dataView { d
 .hero-pcts { display: flex; gap: 14px; justify-content: flex-end; }
 .hero-pcts .pct { font-size: 34px; }
 .hero-bk small { display: block; }
-@media (max-width: 520px) { .hero-pcts { gap: 10px; } .hero-pcts .pct { font-size: 27px; } }
+@media (max-width: 520px) { .hero-pcts { flex-direction: column; gap: 6px; align-items: flex-end; } .hero-pcts .pct { font-size: 30px; }
+  .hero-bk small { display: inline; margin-left: 4px; } }
+.tip-top { margin: 0 0 12px; }
 .team-hero { margin: 14px 0 4px; }
 .team-hero .shot { place-items: center; padding-bottom: 12px; }
 .team-hero .shot img { width: 84px; height: 84px; object-fit: contain; }
@@ -1270,21 +1272,19 @@ function card(c, i) {
     </div>
     <div class="card-body" style="--i:${i}">
       <div class="verdict"></div>
+      <div class="facts tip-top" style="--i:${i}">${tipBlock}</div>
       <div class="hero">
         <div class="shot">${topId ? `<img src="${headshot(topId)}" alt="" loading="lazy" onerror="this.remove()">` : ""}<span class="initials">${initials(top[0])}</span></div>
         <div class="who"><div class="label">Top pick</div><div class="name">${esc(top[0])}</div><div class="team">${logo(top[1], 16)}${esc(top[1])}</div>${heroRec}</div>
         <div class="big"><div class="hero-pcts"><div><div class="pct num" data-v="${top[2]}">${pct(top[2])}</div><div class="hero-bk">FanDuel<small>incl. free throws</small></div></div>
           ${(c.probs_fg || {})[top[0]] !== undefined ? `<div><div class="pct num" data-v="${c.probs_fg[top[0]]}">${pct(c.probs_fg[top[0]])}</div><div class="hero-bk">DraftKings<small>excl. free throws</small></div></div>` : ""}</div>
-          <div class="sub num">${[fd[top[0]] !== undefined ? `FD odds <b>${american(fd[top[0]])}</b>` : "", dk[top[0]] !== undefined ? `DK odds <b>${american(dk[top[0]])}</b>` : ""].filter(Boolean).join(" · ")}</div></div>
+          <div class="sub num">${[fd[top[0]] !== undefined ? `<span class="book-line">FD odds <b>${american(fd[top[0]])}</b></span>` : "", dk[top[0]] !== undefined ? `<span class="book-line">DK odds <b>${american(dk[top[0]])}</b></span>` : ""].filter(Boolean).join("")}</div></div>
       </div>
       ${valueLine}
       ${bookTabs(c)}
       ${bookSection(c, bookView[c.matchup] || "FanDuel", recLine, shortName)}
       ${c.fd_closed ? `<div class="small-note">FanDuel has closed first-basket betting (tip-off is near) — its last prices are shown faded.</div>`
         : c.fanduel_note ? `<div class="small-note">${esc(c.fanduel_note)}</div>` : ""}
-      <div class="facts" style="--i:${i}">
-        ${tipBlock}
-      </div>
       <details><summary>Starters</summary><div class="starters">${starterLine(c.away, c.away_starters)}${starterLine(c.home, c.home_starters)}</div></details>
       ${(c.notes || []).length ? `<ul class="notes">${c.notes.map((n) => `<li>${esc(n)}</li>`).join("")}</ul>` : ""}
     </div>
@@ -1353,7 +1353,7 @@ function teamHero(c, fdP, dkP) {
       <div class="who"><div class="label">Top team to score first</div><div class="name">${esc(TEAM_NAMES[top] || top)}</div></div>
       <div class="big"><div class="hero-pcts"><div><div class="pct num">${pct(fdP[top])}</div><div class="hero-bk">FanDuel<small>incl. free throws</small></div></div>
         ${dkP[top] !== undefined ? `<div><div class="pct num">${pct(dkP[top])}</div><div class="hero-bk">DraftKings<small>excl. free throws</small></div></div>` : ""}</div>
-        <div class="sub num">${[fdOdds !== undefined ? `FD odds <b>${american(fdOdds)}</b>` : "", dkOdds !== undefined ? `DK odds <b>${american(dkOdds)}</b>` : ""].filter(Boolean).join(" · ")}</div></div>
+        <div class="sub num">${[fdOdds !== undefined ? `<span class="book-line">FD odds <b>${american(fdOdds)}</b></span>` : "", dkOdds !== undefined ? `<span class="book-line">DK odds <b>${american(dkOdds)}</b></span>` : ""].filter(Boolean).join("")}</div></div>
     </div>`;
 }
 function bookSection(c, book, recLine, shortName) {
