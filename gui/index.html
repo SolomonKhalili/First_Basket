@@ -1012,9 +1012,10 @@ function tile(g) {
   const op = g.our_pick;
   if (g.past && op?.name) res += `<div class="res">Our pick: <b>${esc(op.name)}</b> <span class="num">${pct(op.prob, 0)}</span></div>`;
   if (g.past && g.tip_call) {                                            // yesterday: our tip call and how it went
-    const who = g.tip_call_jumper ? esc(g.tip_call_jumper.split(" ").slice(-1)[0]) : esc(g.tip_call);
+    const surname = (n) => { const w = String(n || "").split(" ").filter((x) => !/^(jr|sr|ii|iii|iv|v)\.?$/i.test(x)); return w[w.length - 1] || n || ""; };
+    const who = esc(g.tip_call_jumper ? surname(g.tip_call_jumper) : g.tip_call);
     res += `<div class="res tipline">Tip: we said <b>${who}</b> (${esc(g.tip_call)}${g.tip_call_prob ? ` ${pct(g.tip_call_prob, 0)}` : ""}) · ${
-      g.tip_right === true ? `<span class="tipok">✅ right</span>` : g.tip_right === false ? `<span class="tipno">❌ ${esc((g.tip_winner || g.tip_winner_team || "").split(" ").slice(-1)[0])} won it</span>` : "result not in yet"}</div>`;
+      g.tip_right === true ? `<span class="tipok">✅ right</span>` : g.tip_right === false ? `<span class="tipno">❌ ${esc(g.tip_winner ? surname(g.tip_winner) : g.tip_winner_team || "")} won it</span>` : "result not in yet"}</div>`;
   } else if (op && (pre || g.past) && (op.away_jumper || op.home_jumper)) {      // who jumps for each team (from our latest pick)
     const last = (n) => {                      // surname, skipping suffixes: 'Wendell Carter Jr.' -> 'Carter'
       if (!n) return "?";
