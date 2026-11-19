@@ -1,0 +1,39 @@
+{
+  "version": "0.0.1",
+  "configurations": [
+    {
+      "name": "first-basket-gui",
+      "runtimeExecutable": "python3",
+      "runtimeArgs": [
+        "gui.py",
+        "--no-open"
+      ],
+      "port": 8765
+    },
+    {
+      "name": "first-basket-gui-test",
+      "runtimeExecutable": "python3",
+      "runtimeArgs": [
+        "gui.py",
+        "--no-open",
+        "--port",
+        "8766"
+      ],
+      "port": 8766
+    },
+    {
+      "name": "site-test",
+      "runtimeExecutable": "python3",
+      "runtimeArgs": [
+        "-m",
+        "http.server",
+        "8770",
+        "--bind",
+        "127.0.0.1",
+        "--directory",
+        "/private/tmp/claude-501/-Users-solomonkhalili-Desktop-NBA/4ad2dd94-6320-42cc-8e78-78a1f502300a/scratchpad/site_test"
+      ],
+      "port": 8770
+    }
+  ]
+}

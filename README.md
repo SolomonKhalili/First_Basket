@@ -35,6 +35,7 @@ accounts only by the owner: `python3 site_users.py add NAME`). Everything below 
 | Website republished | On any change (≤ every ~6 min, GitHub Pages' limit) | same job |
 | **FanDuel + DraftKings odds** | **On page open, then every ~30 s** | the page: FanDuel through a free Cloudflare relay, DraftKings directly from the viewer's browser |
 | Live scores, first baskets, "Our #N pick" | Instant | the page, straight from ESPN |
+| Yesterday view (yesterday's picks, first scorer, our rank, final scores) | With each update | same job / the app |
 | Results, record, CSV, spreadsheet | As each game ends (after the day's last tip-off) | same job |
 | Retraining | Nightly ~4 AM ET | same job |
 | Keeping the job switched on | Every 10 min | Cloudflare timer (backup: this Mac, every 30 min) |
@@ -65,7 +66,7 @@ python3 gui.py                      # the same picks in your web browser (cards,
 
 If you already have the database and `pregame_model.json`, you only need the last two commands.
 
-Run the tests any time: `python3 -m pytest` (187 tests, all in the `tests/` folder).
+Run the tests any time: `python3 -m pytest` (196 tests, all in the `tests/` folder).
 
 ---
 
@@ -155,6 +156,7 @@ With 198 games the margin of error is about ±5.5 points, so this is not statist
 | Source | Used for | Cost |
 |--------|----------|------|
 | ESPN via `sportsdataverse` | Schedules, play-by-play, box scores, injury report | Free |
+| ESPN game summary (`site.api.espn.com`) | Starters + positions on days NBA.com posts no lineups (e.g. 11/02/26) | Free |
 | NBA.com daily lineups feed (`stats.nba.com/js/data/leaders/00_daily_lineups_YYYYMMDD.json`) | Expected/confirmed starters (appears during the game day) | Free |
 | NBA.com live box score (`cdn.nba.com/static/json/liveData/...`) | Confirmed starters (backup) | Free |
 | FanDuel sportsbook feed (public, no login) | First Basket prices; live price feed every ~30 s | Free |
@@ -200,13 +202,14 @@ NBA/
 ├── train_pregame.py        # retrains pregame_model.json and runs the week-by-week test
 ├── build_features.py       # builds training matrices and player game logs
 ├── picks.py                # pick log + track record (`eval`)
-├── tests/                  # 182 tests (python3 -m pytest)
+├── tests/                  # 196 tests (python3 -m pytest)
 ├── first_basket_data.csv   # every past game: who scored first (auto-regenerated; don't edit by hand)
 ├── my_predictions.xlsx     # open this: Scorecard, Games (our picks vs results), Lineups (expected vs confirmed vs actual)
 ├── nba_first_basket.db     # SQLite database
 ├── player_game_logs.pkl    # per-player game logs (refreshed automatically)
 ├── X_train.npy, y_train.npy, groups.npy, game_ids.json, feature_names.json, meta.json
 ├── gui.py, gui/            # the app (also the website's page); gui/static_site.html = website login + data layer
+├── iphone_check.py         # screenshots of the site as an iPhone sees it (Today + Yesterday)
 ├── publish.py              # builds the encrypted website; --live keeps it updated all evening
 ├── site_users.py           # website accounts
 ├── fanduel_odds.py, ev.py  # FanDuel prices + value (EV)

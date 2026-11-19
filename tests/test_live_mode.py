@@ -16,6 +16,7 @@ def _run(monkeypatch, tmp_path, results, filed=()):
     seq, files = iter(results), iter(filed)
     published, saved, clock = [], [], [1000.0]
     monkeypatch.setattr(publish, "HERE", tmp_path)
+    monkeypatch.setattr(publish, "RELAY_FILE", tmp_path / "relay_url.txt")    # no relay: never touch the real database
     monkeypatch.setattr(publish, "load_site_users", lambda: {"u": {}})
     monkeypatch.setattr(publish, "run_update", lambda: next(seq))
     monkeypatch.setattr(publish, "publish_site", lambda out, r: published.append(r["cards"][0]["fanduel"]["X"]))
