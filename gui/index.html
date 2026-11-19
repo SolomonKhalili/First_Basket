@@ -1396,7 +1396,7 @@ function heroTiles(pFd, pDk, oddsFd, oddsDk) {
       <div class="t-bk">${book}</div><div class="t-rule">${rule}</div>
       <div class="pct num"${p !== undefined ? ` data-v="${p}"` : ""}>${p !== undefined ? pct(p) : "–"}</div>
       <div class="t-odds">${odds !== undefined && odds !== null ? `${short} odds <b class="num">${american(odds)}</b>` : `${short} odds –`}</div></div>`;
-  return `<div class="tiles-h">Our chance to score first</div><div class="tiles">
+  return `<div class="tiles-h">Our prediction to score first</div><div class="tiles">
     ${tile("c-fd", "FanDuel", "incl. free throws", pFd, oddsFd, "FD")}${tile("c-dk", "DraftKings", "excl. free throws", pDk, oddsDk, "DK")}</div>`;
 }
 const TEAM_NAMES = { ATL: "Atlanta Hawks", BOS: "Boston Celtics", BKN: "Brooklyn Nets", CHA: "Charlotte Hornets", CHI: "Chicago Bulls",
