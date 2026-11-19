@@ -1347,7 +1347,7 @@ function teamHero(c, fdP, dkP) {
   const fdOdds = ((c.team_first_books || {}).FanDuel || {})[top], dkOdds = ((c.team_first_books || {}).DraftKings || {})[top];
   return `<div class="hero team-hero" style="--top-c:${color(top)}">
       <div class="shot"><img src="${logoUrl(top).replace("w=96&h=96", "w=200&h=200")}" alt="" loading="lazy" onerror="this.remove()"><span class="initials">${esc(top)}</span></div>
-      <div class="who"><div class="label">Top team</div><div class="name">${esc(TEAM_NAMES[top] || top)}</div><div class="team">🏀 Most likely to score first</div></div>
+      <div class="who"><div class="label">Top team to score first</div><div class="name">${esc(TEAM_NAMES[top] || top)}</div></div>
       <div class="big"><div class="pct num">${pct(fdP[top])}</div><div class="hero-bk">FanDuel <small>incl. free throws</small></div>
         ${dkP[top] !== undefined ? `<div class="hero-dk num">${pct(dkP[top])}</div><div class="hero-bk">DraftKings <small>excl. free throws</small></div>` : ""}
         <div class="sub num">${[fdOdds !== undefined ? `FD odds <b>${american(fdOdds)}</b>` : "", dkOdds !== undefined ? `DK odds <b>${american(dkOdds)}</b>` : ""].filter(Boolean).join(" · ")}</div></div>
