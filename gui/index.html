@@ -706,6 +706,14 @@ body.bets-mode .dayswitch, body.bets-mode #yestSum, body.bets-mode #dataView { d
 .bk-rule { font-size: 12.5px; color: var(--muted); margin: 6px 2px 0; } .bk-rule b { color: var(--text); }
 .team-sec { margin-top: 14px; padding: 12px; border-radius: 14px; background: var(--surface-2); border: 1px solid var(--line); }
 .team-sec .tf-table td small { display: block; font-size: 11px; color: var(--muted); font-weight: 400; }
+.bk-table th.bk-head { text-align: center; font-weight: 800; }
+.bk-table .bk-fd { background: color-mix(in srgb, #3b82f6 7%, transparent); }
+.bk-table .bk-dk { background: color-mix(in srgb, #22c55e 7%, transparent); }
+.bk-table thead th.bk-fd.bk-head { color: #93c5fd; } .bk-table thead th.bk-dk.bk-head { color: #86efac; }
+.bk-table td .mv { display: block; }
+.tscroll .bk-table thead th:first-child { display: table-cell !important; }
+.tscroll .bk-table td:first-child { min-width: 92px; padding-left: 8px; }
+.tscroll .bk-table td:nth-child(2) { min-width: 0; padding-left: 4px; }
 </style>
 </head>
 <body>
@@ -1179,7 +1187,7 @@ function card(c, i) {
       ${c.fd_closed ? `<div class="small-note">FanDuel has closed first-basket betting (tip-off is near) — its last prices are shown faded.</div>`
         : c.fanduel_note ? `<div class="small-note">${esc(c.fanduel_note)}</div>` : ""}
       <div class="facts" style="--i:${i}">
-        ${tipBlock}${first}
+        ${tipBlock}
       </div>
       <details><summary>Starters</summary><div class="starters">${starterLine(c.away, c.away_starters)}${starterLine(c.home, c.home_starters)}</div></details>
       ${(c.notes || []).length ? `<ul class="notes">${c.notes.map((n) => `<li>${esc(n)}</li>`).join("")}</ul>` : ""}
@@ -1214,70 +1222,53 @@ function teamFirstLine(c) {
 const bookView = {};                                       // matchup -> "FanDuel" | "DraftKings" (per device, this visit)
 const fairOdds = (p) => (p >= 0.5 ? -Math.round(100 * p / (1 - p)) : Math.round(100 * (1 - p) / p));
 function bookTable(c, i, recLine, shortName) {
-  const book = bookView[c.matchup] || "FanDuel";
-  const fg = c.probs_fg || {}, all = c.probs || c.picks.map(([n, t, p]) => [n, t, p]);
-  const prices = book === "FanDuel" ? (c.fanduel || {}) : (c.draftkings || {});
-  const list = (book === "FanDuel" ? all.map(([n, t, p]) => [n, t, p]) : all.filter(([n]) => fg[n] !== undefined).map(([n, t]) => [n, t, fg[n]]))
-    .sort((a, b) => b[2] - a[2]).slice(0, 5);
+  const fg = c.probs_fg || {}, fd = c.fanduel || {}, dk = c.draftkings || {};
+  const list = c.picks.map(([n, t, p]) => [n, t, p]);           // our top 5 (FanDuel's rule)
   const max = list.length ? list[0][2] : 1;
-  const rows = list.map(([name, team, p], r) => {
-    const a = prices[name], ev = a === undefined ? undefined : p * payout(a) - (1 - p);
-    const priceCell = a === undefined ? `<span class="fd none">–</span>`
-      : `<span class="fd ${ev >= VALUE_MIN ? "value" : ""}" title="${book}: ${ev >= VALUE_MIN ? "pays more than it should" : "pays less than it should"}">${american(a)}</span>${moveArrow(c, book, name, a)}`;
-    return `<tr data-name="${esc(name)}" class="${r === 0 ? "pick1" : r === 1 ? "pick2" : ""}">
-      <td class="rank num">${r + 1}</td>
+  const odds = (book, name, p) => {                              // one book's price, green when it's a good bet
+    const a = (book === "FanDuel" ? fd : dk)[name];
+    if (a === undefined) return `<span class="fd none">–</span>`;
+    const ev = p === undefined ? undefined : p * payout(a) - (1 - p), good = ev >= VALUE_MIN;
+    return `<span class="fd ${good ? "value" : ""}" title="${book}: ${good ? `good bet — about ${cents(ev)} per $1 over time` : "pays less than it should"}">${american(a)}</span>${moveArrow(c, book, name, a)}`;
+  };
+  const rows = list.map(([name, team, p], r) => `<tr data-name="${esc(name)}" class="${r === 0 ? "pick1" : r === 1 ? "pick2" : ""}">
       <td><div class="player">${logo(team, 18)}<span class="pn"><span class="nm"><span class="nfull">${esc(name)}</span><span class="nshort">${esc(shortName(name))}</span></span><span class="sub2"><span class="tc">${esc(team)} · </span>${recLine(name)}</span></span> <small class="tcode">${esc(team)}</small></div></td>
-      <td class="r num"><span class="bar"><i style="width:${(p / max) * 100}%;--r:${r}"></i></span>${pct(p)}</td>
-      <td class="r num odds">${american(fairOdds(p))}</td>
-      <td class="r">${priceCell}</td>
-      <td class="r num">${ev === undefined ? `<span class="fd none">–</span>` : `<span class="ev ${ev >= VALUE_MIN ? "pos" : ""}">${cents(ev)}</span>`}</td></tr>`;
-  }).join("");
-  const rule = book === "FanDuel" ? "<b>First basket</b> — the game's first points. <b>Free throws count.</b>"
-    : "<b>First field goal</b> — free throws <b>don't</b> count, so these chances are a little different.";
-  const empty = !list.length ? `<div class="small-note">Field-goal chances aren't ready yet for this game.</div>` : "";
-  return `<div class="btabs bk-tabs" role="tablist">
-      <button type="button" data-bk="FanDuel" class="${book === "FanDuel" ? "on" : ""}" role="tab">FanDuel</button>
-      <button type="button" data-bk="DraftKings" class="${book === "DraftKings" ? "on" : ""}" role="tab">DraftKings</button></div>
-    <div class="bk-rule">${rule}</div>${empty}
-    <div class="tscroll ${book === "FanDuel" && c.fd_closed ? "fd-closed" : ""}"><table style="--i:${i}">
-      <thead><tr><th></th><th>Player</th><th class="r"><span class="long">Chance</span><span class="short">%</span></th><th class="r">Fair</th>
-        <th class="r">${book === "FanDuel" ? "FanDuel" : "DraftKings"}</th><th class="r" title="Good deal? Average profit per $1 in the long run">Value<button class="whats" data-learn="2" title="What is this?">?</button></th></tr></thead>
+      <td class="r num bk-fd">${pct(p)}</td><td class="r bk-fd">${odds("FanDuel", name, p)}</td>
+      <td class="r num bk-dk">${fg[name] === undefined ? "–" : pct(fg[name])}</td><td class="r bk-dk">${odds("DraftKings", name, fg[name])}</td></tr>`).join("");
+  return `<div class="bk-rule">🟦 <b>FanDuel</b>: free throws count · 🟩 <b>DraftKings</b>: only field goals count — so each has its own chance. <b style="color:var(--good)">Green odds</b> = good bet.</div>
+    <div class="tscroll ${c.fd_closed ? "fd-closed" : ""}"><table class="bk-table" style="--i:${i}">
+      <thead><tr><th rowspan="2">Player</th><th colspan="2" class="bk-fd bk-head">FanDuel</th><th colspan="2" class="bk-dk bk-head">DraftKings</th></tr>
+        <tr><th class="r bk-fd">Chance</th><th class="r bk-fd">Odds</th><th class="r bk-dk">Chance</th><th class="r bk-dk">Odds</th></tr></thead>
       <tbody>${rows}</tbody></table></div>`;
 }
-/* "First team to score" — its own section, each book judged by its own rule */
+/* "First team to score" — same columns as the player table, teams as rows */
 function teamSection(c) {
   const books = c.team_first_books || {};
   if (!c.first_team || !Object.keys(books).length) return "";
   const fg = c.probs_fg || {}, fgTeam = {};
   for (const [n, t] of (c.probs || [])) if (fg[n] !== undefined) fgTeam[t] = (fgTeam[t] || 0) + fg[n];
-  const chance = (book, t) => book === "DraftKings" ? fgTeam[t] : c.first_team[t];
   const open = c.team_first_open || {}, deals = [];
-  const cell = (book, t) => {
-    const a = (books[book] || {})[t], p = chance(book, t);
-    if (a === undefined) return "<td>–</td>";
+  const odds = (book, t, p) => {
+    const a = (books[book] || {})[t];
+    if (a === undefined) return "–";
     const ev = p === undefined ? undefined : p * payout(a) - (1 - p);
     if (ev >= VALUE_MIN) deals.push([book, t, ev]);
     const o = (open[book] || {})[t], mv = o === undefined || o === a ? "" : payout(a) < payout(o)
       ? `<span class="mv dn" title="${book} opened at ${american(o)}: payout dropped">↓</span>` : `<span class="mv up" title="${book} opened at ${american(o)}: payout rose">↑</span>`;
-    return `<td><b class="${ev >= VALUE_MIN ? "g" : ""}">${american(a)}</b>${mv}<small>${p === undefined ? "" : `we say ${pct(p, 0)}`}</small></td>`;
+    return `<span class="fd ${ev >= VALUE_MIN ? "value" : ""}">${american(a)}</span>${mv}`;
   };
-  const row = (book) => books[book] ? `<tr><td>${book}<small>${book === "FanDuel" ? "free throws count" : "1st field goal only"}</small></td>${cell(book, c.away)}${cell(book, c.home)}</tr>` : "";
-  const table = `<table class="tf-table"><tr><th></th><th>${esc(c.away)}</th><th>${esc(c.home)}</th></tr>${row("FanDuel")}${row("DraftKings")}</table>`;
+  const row = (t) => `<tr><td><div class="player">${logo(t, 18)}<b>${esc(t)}</b></div></td>
+      <td class="r num bk-fd">${pct(c.first_team[t], 0)}</td><td class="r bk-fd">${odds("FanDuel", t, c.first_team[t])}</td>
+      <td class="r num bk-dk">${fgTeam[t] === undefined ? "–" : pct(fgTeam[t], 0)}</td><td class="r bk-dk">${odds("DraftKings", t, fgTeam[t])}</td></tr>`;
+  const table = `<div class="tscroll"><table class="bk-table">
+      <thead><tr><th rowspan="2">Team</th><th colspan="2" class="bk-fd bk-head">FanDuel</th><th colspan="2" class="bk-dk bk-head">DraftKings</th></tr>
+        <tr><th class="r bk-fd">Chance</th><th class="r bk-fd">Odds</th><th class="r bk-dk">Chance</th><th class="r bk-dk">Odds</th></tr></thead>
+      <tbody>${row(c.away)}${row(c.home)}</tbody></table></div>`;
   const best = deals.sort((x, y) => y[2] - x[2])[0];
   return `<div class="team-sec"><div class="fact-title">🏀 First team to score</div>${table}
     <div class="tf-verdict ${best ? "pos" : ""}">${best ? `💰 <b>Good bet: ${esc(best[1])} on ${esc(best[0])}</b> — it pays more than it should (about ${cents(best[2])} per $1 over time).`
       : "No good team bet here — both books pay too little."}</div></div>`;
 }
-$("cards").addEventListener("click", (ev) => {           // switch a card between FanDuel and DraftKings
-  const b = ev.target.closest("[data-bk]");
-  if (!b) return;
-  const el = b.closest(".card"), cards = lastResult?.cards || [];
-  const i = cards.findIndex((x) => x.home === el.dataset.home && x.away === el.dataset.away);
-  if (i < 0) return;
-  bookView[cards[i].matchup] = b.dataset.bk;
-  el.outerHTML = card(cards[i], i).replace('class="card enter"', 'class="card"');
-  try { markBetRows(); } catch (e) { /* bets not loaded yet */ }
-});
 function countUp(el) {
   const v = parseFloat(el.dataset.v);
   if (calm || !v) return;
@@ -2393,7 +2384,7 @@ function openBetDialog(row) {
   if (viewDay !== "today" || !lastResult) return;
   const el = row.closest(".card");
   const c = (lastResult.cards || []).find((x) => x.home === el.dataset.home && x.away === el.dataset.away);
-  if (c) openBetFor(c, row.dataset.name, bookView[c.matchup] || "FanDuel");   // the tab you're looking at
+  if (c) openBetFor(c, row.dataset.name);
 }
 function openBetFor(c, name, bookWanted) {
   const pick = c.picks.find((p) => p[0] === name) || (c.probs || []).find((p) => p[0] === name) || [];
