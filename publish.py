@@ -150,7 +150,7 @@ def should_run(kind: str) -> bool:
 # ──────────────────────────────────────────────
 PUBLISH_GAP = 6 * 60          # GitHub Pages allows ~10 publishes an hour
 MAX_RUN = 5 * 3600 + 30 * 60  # GitHub stops a job at 6 h; the next scheduled run picks up from here
-FAST, SLOW = 3 * 60, 15 * 60  # check every 3 min when a tip-off is near (lineups get confirmed ~30 min before)
+FAST = SLOW = 3 * 60          # check lineups, injuries and odds every 3 minutes all day (not just near tip-off)
 STATE_FILES = ["nba_first_basket.db", "first_basket_data.csv", "my_predictions.xlsx", "pregame_model.json",
                "X_train.npy", "y_train.npy", "groups.npy", "game_ids.json", "meta.json", "feature_names.json",
                "player_game_logs.pkl", "todays_cards.json", "run.log"]
