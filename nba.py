@@ -1164,6 +1164,7 @@ def predict_today(first_pass: bool = True, teams: set = frozenset(), ui=None) ->
             "tip": {home_team: show_home, away_team: show_away}, "jumpers": jumpers,
             "tip_record": tip_record,             # each jumper's tips won / tips taken this season
             "first_team": first_team,
+            "opening": ev.opening_prices(con, game_date, matchup),   # first price of the day at each book (↓/↑)
             **_team_first_odds(fd_games, home_team, away_team, first_team),
             "home": home_team, "away": away_team,
             "home_starters": home_starters, "away_starters": away_starters,

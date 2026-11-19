@@ -191,3 +191,19 @@ def market_results(con) -> dict:
     n = len(ll_us)
     return {"games": n, "us_closer": us, "fanduel_closer": them, "ties": ties,
             "logloss_us": sum(ll_us) / n if n else None, "logloss_fanduel": sum(ll_them) / n if n else None}
+
+
+def opening_prices(con, game_date: str, matchup: str) -> dict:
+    """Each book's FIRST saved price today for every player in this game: {"FanDuel": {name: american},
+    "DraftKings": {name: american}} — the page compares it with the current price (↓ payout dropped / ↑ rose)."""
+    ensure_table(con)
+    out = {"FanDuel": {}, "DraftKings": {}}
+    for book, table in (("FanDuel", "odds_log"), ("DraftKings", "dk_odds_log")):
+        try:
+            for name, american in con.execute(
+                    f"SELECT player_name, american FROM {table} WHERE game_date = ? AND matchup = ? ORDER BY logged_at",
+                    (game_date, matchup)):
+                out[book].setdefault(name, american)
+        except Exception:  # noqa: BLE001 — table not there yet
+            pass
+    return out

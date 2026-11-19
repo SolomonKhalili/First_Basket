@@ -109,3 +109,15 @@ def test_who_guesses_better():
                     (pid, prob, american))
     r = ev.market_results(con)
     assert r["games"] == 1 and r["us_closer"] == 1 and r["fanduel_closer"] == 0
+
+
+def test_opening_prices_both_books():
+    import sqlite3
+    import ev
+    con = sqlite3.connect(":memory:")
+    ev.ensure_table(con)
+    con.execute("CREATE TABLE dk_odds_log (game_date TEXT, matchup TEXT, logged_at TEXT, player_name TEXT, team TEXT, american INTEGER)")
+    for at, a in (("t1", 700), ("t2", 600)):
+        con.execute("INSERT INTO odds_log (game_id, game_date, logged_at, matchup, player_name, american) VALUES ('g','d',?,'A @ B','P',?)", (at, a))
+        con.execute("INSERT INTO dk_odds_log VALUES ('d','A @ B',?,'P','B',?)", (at, a + 50))
+    assert ev.opening_prices(con, "d", "A @ B") == {"FanDuel": {"P": 700}, "DraftKings": {"P": 750}}
