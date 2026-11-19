@@ -669,7 +669,7 @@ def sync_data() -> str:
     bf.build_player_game_logs()
     model = _retrain_if_needed(con)
     last = con.execute("SELECT MAX(game_date) FROM games g JOIN first_baskets USING(game_id)").fetchone()[0] or ""
-    last = f"{int(last[4:6])}/{int(last[6:8])}" if last else "?"
+    last = f"{int(last[4:6])}/{int(last[6:8])}/{last[:4]}" if last else "?"
     added = f" (+{new} new)" if new else ""
     return f"Data up to date: {n:,} games through {last}{added} · files saved · {model}"
 
