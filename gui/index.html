@@ -243,6 +243,8 @@ button { font: inherit; cursor: pointer; border: 0; color: inherit; }
 .face { flex: none; width: 34px; height: 34px; border-radius: 50%; object-fit: cover; object-position: top;
   background: var(--surface-2); border: 1px solid var(--line); }
 tr.pick1 .face { border-color: var(--accent); }
+.tscroll .player > img.face { display: block !important; width: 34px !important; height: 34px !important; }
+.book-sec .player > .logo { display: none; }   /* the face replaces the logo; the team code is under the name */
 .rank { flex: none; width: 22px; height: 22px; border-radius: 50%; display: inline-grid; place-items: center; font-size: 12px; font-weight: 800;
   background: var(--surface-2); color: var(--muted); border: 1px solid var(--line); }
 tr.pick1 .rank { background: var(--accent); color: #fff; border-color: transparent; }
