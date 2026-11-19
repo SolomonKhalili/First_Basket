@@ -10,7 +10,7 @@
   <string>com.firstbasket.app</string>
   <key>ProgramArguments</key>
   <array>
-    <string>/opt/homebrew/bin/python3</string>
+    <string>/opt/homebrew/bin/python3.14</string>
     <string>/Users/solomonkhalili/Desktop/NBA/gui.py</string>
     <string>--no-open</string>
   </array>

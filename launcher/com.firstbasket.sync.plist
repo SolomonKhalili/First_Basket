@@ -9,7 +9,7 @@
   <string>com.firstbasket.sync</string>
   <key>ProgramArguments</key>
   <array>
-    <string>/opt/homebrew/bin/python3</string>
+    <string>/opt/homebrew/bin/python3.14</string>
     <string>/Users/solomonkhalili/Desktop/NBA/sync_from_cloud.py</string>
   </array>
   <key>WorkingDirectory</key>
