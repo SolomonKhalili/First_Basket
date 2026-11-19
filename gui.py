@@ -101,6 +101,7 @@ def add_logged_cards(result: dict) -> dict:
                 "tip_record": {t: (recs.get(n) or {}).get("tips", (0, 0)) for t, n in jumpers.items() if n},
                 "first_team": None, "home": home, "away": away,
                 "home_starters": starters(home), "away_starters": starters(away), "injuries": {}, "notes": [],
+                "probs": [[x["name"], x["team"], x["prob"]] for x in players],
             })
     finally:
         con.close()
@@ -140,6 +141,38 @@ def keep_todays_cards(result: dict, path: Path = CARDS_FILE) -> dict:
     except OSError:
         pass
     return result
+
+
+# ──────────────────────────────────────────────
+# LIVE FANDUEL ODDS: the page asks here when it opens and every ~30 s (browsers can't ask FanDuel directly)
+# ──────────────────────────────────────────────
+FD_CACHE_SECONDS = 20                                   # everyone looking within 20 s shares one FanDuel request
+_fd_cache: dict = {}
+_fd_lock = threading.Lock()
+
+
+def fd_relay(fd_path: str, query: dict):
+    """/api/fd/prices?ids=<market ids>: FanDuel's current First Basket prices (fanduel_odds.fetch_prices).
+    -> (status, JSON bytes). Nothing else is passed through."""
+    import requests
+    import fanduel_odds as fd
+    if fd_path != "prices":
+        return 404, b'{"error": "not found"}'
+    ids = sorted({i for i in (query.get("ids") or [""])[0].split(",") if i and len(i) < 40})[:20]
+    key = ",".join(ids)
+    with _fd_lock:
+        hit = _fd_cache.get(key)
+        if hit and time.time() - hit[0] < FD_CACHE_SECONDS:
+            return 200, hit[1]
+    try:
+        body = to_json(fd.fetch_prices(ids))
+    except (requests.RequestException, ValueError) as e:
+        return 502, to_json({"error": f"FanDuel unreachable: {type(e).__name__}"})
+    with _fd_lock:
+        if len(_fd_cache) > 200:
+            _fd_cache.clear()
+        _fd_cache[key] = (time.time(), body)
+    return 200, body
 
 
 def to_json(obj) -> bytes:
@@ -498,6 +531,9 @@ class Handler(BaseHTTPRequestHandler):
                     self._send(200, to_json(data_tab(tab)))
             elif path == "/api/record":
                 self._send(200, to_json(track_record()))
+            elif path.startswith("/api/fd/"):                # live FanDuel odds for the page (see fd_relay)
+                code, body = fd_relay(path[len("/api/fd/"):], parse_qs(urlparse(self.path).query))
+                self._send(code, body)
             else:                                    # nothing else is ever served: no model files, no code
                 self._send(404, b'{"error": "not found"}')
         except Exception as e:  # noqa: BLE001 — report any failure to the page as a 500

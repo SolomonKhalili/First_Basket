@@ -25,6 +25,9 @@ STATE = os.environ.get("FANDUEL_STATE", "ny")      # FanDuel serves each state f
 API = f"https://sbapi.{STATE}.sportsbook.fanduel.com/api"
 APP_KEY = "FhMFpcPWXMeyZxOx"                         # public key the FanDuel website sends with every request
 HEADERS = {"Accept": "application/json", "User-Agent": "Mozilla/5.0"}
+# FanDuel's small live-price feed (what its own site polls): POST {"marketIds": [...]} -> each runner's current price.
+# ~7 KB per game instead of a 680 KB game page; players are identified by selection id, not name.
+PRICES_URL = f"https://smp.{STATE}.sportsbook.fanduel.com/api/sports/fixedodds/readonly/v1/getMarketPrices"
 SLEEP = 0.5                                          # pause between game pages
 
 # FanDuel abbreviation -> ESPN code (only the ones that differ)
@@ -81,7 +84,9 @@ def parse_first_basket(event_page: dict) -> list[dict]:
         if not decimal or american is None:
             continue
         rows.append({"player": r.get("runnerName", "").strip(), "team": espn_code(r.get("teamAbbr")),
-                     "american": int(american), "decimal": float(decimal), "implied": 1 / float(decimal)})
+                     "american": int(american), "decimal": float(decimal), "implied": 1 / float(decimal),
+                     # FanDuel's ids: the page re-reads just the prices by these (PRICES_URL), every ~30 s
+                     "market_id": str(markets[0].get("marketId", "")), "selection_id": str(r.get("selectionId", ""))})
     total = sum(r["implied"] for r in rows)
     full = is_complete(rows)
     for r in rows:
@@ -212,3 +217,14 @@ def main(argv) -> int:
 
 if __name__ == "__main__":
     sys.exit(main(sys.argv[1:]))
+
+
+def fetch_prices(market_ids) -> list:
+    """Current prices for these markets (FanDuel's live-price feed). [] for no ids."""
+    ids = [str(m) for m in market_ids if m][:20]
+    if not ids:
+        return []
+    r = requests.post(PRICES_URL, json={"marketIds": ids}, headers={**HEADERS, "Content-Type": "application/json"},
+                      timeout=15)
+    r.raise_for_status()
+    return r.json()

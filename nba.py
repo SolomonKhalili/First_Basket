@@ -427,6 +427,33 @@ def catchup_missing_games():
     return total
 
 
+def file_finished_games(day: str) -> int:
+    """File the results of `day`'s games that are over (first basket, tip, lineups) and refresh the CSV and
+    my_predictions.xlsx, so the Data tabs show tonight's results the same night. Returns how many were added.
+    Called only after the day's last tip-off (the model retrains on new results; picks must not change mid-evening)."""
+    con = db()
+    have = {r[0] for r in con.execute("SELECT game_id FROM first_baskets")}
+    df = espn_nba_scoreboard(dates=[day], return_as_pandas=True)
+    added = 0
+    if df is not None and len(df):
+        done = df[(df['status_type_state'] == 'post') & (df['season_type'] == 2)]
+        for _, r in done.iterrows():
+            gid, home, away = str(r['game_id']), str(r['home_abbreviation']), str(r['away_abbreviation'])
+            if home not in NBA_TEAMS or away not in NBA_TEAMS or gid in have:
+                continue
+            con.execute("INSERT OR IGNORE INTO games (game_id, game_date, home_team, away_team, status) "
+                        "VALUES (?, ?, ?, ?, 3)", (gid, day, home, away))
+            con.execute("UPDATE games SET status = 3 WHERE game_id = ?", (gid,))
+            ingest_game(gid, con)
+            st.store_game_lineup(con, gid)
+            added += 1
+        con.commit()
+    if added:
+        export_csv(con)
+        picks.export_predictions(con)
+    return added
+
+
 CSV_PATH = "first_basket_data.csv"
 
 CSV_HEADER = ["game_start", "game_id", "home_team", "away_team", "tip_winner", "tip_winner_player",
@@ -933,6 +960,7 @@ def predict_today(first_pass: bool = True, teams: set = frozenset(), ui=None) ->
             "picks": top5, **fd_card,
             # each starter's real record this season: first baskets / games played (games before today)
             "season": {info[i]['name']: season_counts.get(str(info[i]['id']), (0, 0)) for i in order},
+            "probs": [[info[i]['name'], info[i]['team'], float(probs[i])] for i in order],   # all 10, for live odds
             "tip": {home_team: show_home, away_team: show_away}, "jumpers": jumpers,
             "tip_record": tip_record,             # each jumper's tips won / tips taken this season
             "first_team": ({home_team: float(probs[:len(home_starters)].sum()),
@@ -1036,7 +1064,11 @@ def _fanduel_card(fd_games, home: str, away: str, top5: list, everyone: list = (
     elif any(name not in prices for name, *_ in top5):
         note = "– = FanDuel doesn't offer that player (it prices only the starters it expects)."
     best = priced[0] if priced and ev.is_value(priced[0]["ev"]) else None
-    return {"fanduel": prices, "fanduel_note": note, "ev": {r["name"]: r["ev"] for r in priced},
+    # for live odds on the page: FanDuel's market + each matched player's selection id
+    market_id = next((row.get("market_id") for row in matched.values() if row.get("market_id")), None)
+    fd_market = {"id": market_id, "runners": {row["selection_id"]: name for name, row in matched.items()
+                                              if row.get("selection_id")}} if market_id else None
+    return {"fanduel": prices, "fanduel_note": note, "ev": {r["name"]: r["ev"] for r in priced}, "fd_market": fd_market,
             "best_value": ({k: best[k] for k in ("name", "team", "prob", "american", "ev")} if best else None),
             "_priced": [r for r in priced if "id" in r]}
 

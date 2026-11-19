@@ -8,8 +8,9 @@ Builds the free, password-protected website (run on a schedule by GitHub — .gi
 
 Live mode (run by the public website repo's workflow, which has unlimited free minutes): every few minutes it
 re-checks FanDuel's odds, NBA.com's lineups (Expected -> Confirmed) and injuries, re-runs the picks and republishes
-the moment anything changes (at most every ~6 minutes — GitHub Pages' limit is about 10 publishes an hour). It
-stops once every game has tipped off. Its public log only says "updated" / "no change": details go to a private log.
+the moment anything changes (at most every ~6 minutes — GitHub Pages' limit is about 10 publishes an hour). After
+the last tip-off it stays on and files each result as its game ends (Data tabs, record, spreadsheet the same night),
+then stops. Its public log only says "updated" / "no change": details go to a private log.
 
 What it publishes: ONLY results — tonight's picks (chances, fair odds, FanDuel prices, value), the scoreboard, the
 track record and the four Data tabs. Never the model, the training data or the code that makes picks.
@@ -32,7 +33,8 @@ from zoneinfo import ZoneInfo
 HERE = Path(__file__).parent
 SITE_USERS = HERE / "site_users.json"
 KEY_FILE = Path.home() / ".config" / "first-basket" / "site_data_key"
-STATIC_PARTS = HERE / "gui" / "static_site.html"       # login screen + the bit that replaces the server
+STATIC_PARTS = HERE / "gui" / "static_site.html"
+RELAY_FILE = HERE / "website_live" / "relay_url.txt"    # the live-odds relay's address (setup_odds_relay.sh)       # login screen + the bit that replaces the server
 ET = ZoneInfo("America/New_York")
 
 
@@ -108,7 +110,8 @@ def build_site(enc: dict, users: dict, out: Path) -> None:
     """index.html (the app's page + login screen + offline data layer) and data.json (the locked results)."""
     out.mkdir(parents=True, exist_ok=True)
     page = (HERE / "gui" / "index.html").read_text()
-    parts = STATIC_PARTS.read_text()
+    relay = RELAY_FILE.read_text().strip() if RELAY_FILE.exists() else ""
+    parts = STATIC_PARTS.read_text().replace("__FB_ODDS_BASE__", relay.rstrip("/"))
     page = page.replace("<title>First Basket Picks</title>",
                         '<title>First Basket Picks</title>\n<meta name="robots" content="noindex, nofollow">', 1)
     page = page.replace("<body>", "<body>\n" + parts, 1)          # plain replace: the JS contains backslashes
@@ -223,7 +226,10 @@ def live(out: Path, once: bool = False) -> int:
         say("no website accounts yet — nothing to publish")
         return 0
     started, last_pub, last_save, published_fp, fails = time.time(), 0.0, time.time(), None, 0
-    users_seen = json.dumps(load_site_users(), sort_keys=True)
+    day = datetime.now(ET).strftime("%Y%m%d")          # the NBA day this run looks after
+    settings = lambda: json.dumps(load_site_users(), sort_keys=True) + (  # noqa: E731 — accounts + relay address
+        RELAY_FILE.read_text() if RELAY_FILE.exists() else "")
+    users_seen = settings()
     while True:
         print(f"\n=== check {datetime.now(ET):%Y-%m-%d %H:%M:%S} ===")
         if os.environ.get("STATE_REMOTE"):               # accounts added/removed since the run started
@@ -232,7 +238,11 @@ def live(out: Path, once: bool = False) -> int:
                 _git("checkout", "FETCH_HEAD", "--", "site_users.json", cwd=HERE)
             except Exception:  # noqa: BLE001
                 traceback.print_exc()
-        users_now = json.dumps(load_site_users(), sort_keys=True)
+            try:                                         # the live-odds relay, once it's set up
+                _git("checkout", "FETCH_HEAD", "--", "website_live/relay_url.txt", cwd=HERE)
+            except Exception:  # noqa: BLE001 — not set up yet
+                pass
+        users_now = settings()
         if users_now != users_seen:
             users_seen, published_fp = users_now, None    # publish straight away with the new account list
         try:
@@ -260,17 +270,37 @@ def live(out: Path, once: bool = False) -> int:
         else:
             say("no change" if fp == published_fp else "changed — publishing at the next check")
         wait = seconds_to_next_tip(result)
-        if once or wait == float("inf") or time.time() - started > MAX_RUN:
+        new_day = datetime.now(ET).strftime("%Y%m%d") != day
+        unfinished = [g for g in result.get("schedule", []) if g.get("status") != 3]
+        if wait == float("inf") and not once and not new_day:
+            # every game has tipped off: file each result as its game ends, so the Data tabs, the record and the
+            # spreadsheet update tonight (not at 4 AM). Not earlier: new results retrain the model.
+            try:
+                import nba
+                with nba._quiet([]):
+                    filed = nba.file_finished_games(day)
+            except Exception:  # noqa: BLE001
+                traceback.print_exc()
+                filed = 0
+            if filed:
+                try:
+                    publish_site(out, result)
+                    last_pub = time.time()
+                    say(f"filed {filed} finished game{'s' * (filed != 1)} — Data tabs updated")
+                except Exception:  # noqa: BLE001
+                    traceback.print_exc()
+        all_done = wait == float("inf") and not unfinished
+        if once or new_day or all_done or time.time() - started > MAX_RUN:
             if fp != published_fp:
                 publish_site(out, result)
                 say("published final update")
             save_state()
-            say("done — every game has tipped off" if wait == float("inf") else "done for this run")
+            say("done — every game is over and filed" if all_done else "done for this run")
             return 0
         if time.time() - last_save > 1800:
             save_state()
             last_save = time.time()
-        time.sleep(FAST if wait < 100 * 60 else SLOW)
+        time.sleep(FAST if wait < 100 * 60 else SLOW if wait != float("inf") else 10 * 60)
 
 
 def main(argv) -> int:

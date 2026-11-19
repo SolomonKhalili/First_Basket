@@ -52,6 +52,8 @@
 <script>
 (() => {
   const DATA_URL = "data.json", STORE = "fb-site-v1", REMEMBER_DAYS = 30;
+  // live FanDuel odds go through the free relay (website_live/odds-relay.js); "" = not set up: cloud odds only
+  window.FB_ODDS_BASE = "__FB_ODDS_BASE__";
   const ESPN = "https://site.api.espn.com/apis/site/v2/sports/basketball/nba/scoreboard";
   const ESPN_SUMMARY = "https://site.web.api.espn.com/apis/site/v2/sports/basketball/nba/summary?event=";
   const b64d = (s) => Uint8Array.from(atob(s), (c) => c.charCodeAt(0));

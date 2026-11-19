@@ -503,6 +503,12 @@ body.viewer #runAll, body.viewer #runSelected, body.viewer #ddown { display: non
 .dpsum b { display: block; font-size: 18px; font-weight: 800; }
 .dpsum small { color: var(--muted); font-size: 12px; }
 .dpsum .ok { color: var(--good); font-weight: 700; }
+.fd-live { margin: 0 0 12px; font-size: 13px; color: var(--muted); display: flex; align-items: center; gap: 8px; }
+.fd-live.ok { color: var(--good); }
+.fd-live .livedot { background: var(--good); }
+.fd-live .livedot::after { background: var(--good); }
+@keyframes fdFlash { from { box-shadow: 0 0 0 2px var(--good); } to { box-shadow: var(--shadow); } }
+.card.fd-flash { animation: fdFlash 1.2s ease-out; }
 </style>
 </head>
 <body>
@@ -939,10 +945,95 @@ function updateCardsLive() {
 }
 
 /* ── Results ──────────────────────────────── */
+
+/* ── Live FanDuel odds: read when the page opens, then every ~30 s while it's open ──────────────────────────
+   Browsers can't ask FanDuel directly (it only answers its own website), so the page asks a pass-through: the
+   Mac app's /api/fd, or on the website the free relay (window.FB_ODDS_BASE; empty = not set up, and the website
+   keeps the cloud's every-few-minutes odds). It reads FanDuel's small live-price feed (~7 KB a game) for the
+   First Basket markets the cloud already matched to our players (card.fd_market: market id + selection id -> name). */
+const fdProfit = (a) => (a > 0 ? a / 100 : 100 / -a);
+const fdState = { at: null, prices: {}, fails: 0, timer: null };     // prices: market id -> {selection id: american}
+
+function oddsBase() {
+  if (window.FB_ODDS_BASE !== undefined) return window.FB_ODDS_BASE || null;   // the website (relay, or none yet)
+  return "/api/fd";                                                            // the Mac app
+}
+const fdPre = (c) => {                       // a game that hasn't started (only those have open odds)
+  if (c.earlier || !c.fd_market) return false;
+  const g = board.find((b) => b.away_team === c.away && b.home_team === c.home);
+  return !g || g.status === 1;
+};
+function fdApply(c) {                        // live prices -> the card's FanDuel column, EV and best deal
+  const live = fdState.prices[c.fd_market?.id];
+  if (!live) return;
+  const prices = {};
+  for (const [sel, name] of Object.entries(c.fd_market.runners)) if (live[sel] !== undefined) prices[name] = live[sel];
+  const players = c.probs || c.picks.map(([n, t, p]) => [n, t, p]);
+  const priced = players.filter(([n]) => n in prices)
+    .map(([name, team, prob]) => ({ name, team, prob, american: prices[name], ev: prob * fdProfit(prices[name]) - (1 - prob) }))
+    .sort((a, b) => b.ev - a.ev);
+  c.fanduel = prices;
+  c.ev = Object.fromEntries(priced.map((r) => [r.name, r.ev]));
+  c.best_value = priced[0] && priced[0].ev >= VALUE_MIN ? priced[0] : null;
+}
+function fdBadge(text, ok) {
+  let el = $("fdLive");
+  if (!el) { el = Object.assign(document.createElement("div"), { id: "fdLive", className: "fd-live" }); $("cards").before(el); }
+  el.innerHTML = text; el.classList.toggle("ok", !!ok); el.hidden = !text;
+}
+async function refreshOdds() {
+  clearTimeout(fdState.timer);
+  const next = () => {                       // every 30 s; slower if FanDuel or the relay pushes back; hidden tabs rest
+    fdState.timer = setTimeout(refreshOdds, document.hidden ? 120e3 : Math.min(30e3 * 2 ** fdState.fails, 300e3));
+  };
+  const pre = (lastResult?.cards || []).filter(fdPre);
+  if (!oddsBase() || !pre.length) { fdBadge(""); return next(); }
+  try {
+    const ids = [...new Set(pre.map((c) => c.fd_market.id))].join(",");
+    const r = await fetch(`${oddsBase()}/prices?ids=${encodeURIComponent(ids)}`, { cache: "no-store" });
+    if (!r.ok) throw new Error(`odds ${r.status}`);
+    const markets = await r.json();
+    const prices = {};
+    for (const m of Array.isArray(markets) ? markets : []) {
+      const open = (m.marketStatus ?? "OPEN") === "OPEN";
+      prices[m.marketId] = {};
+      for (const run of m.runnerDetails || []) {
+        const a = run.winRunnerOdds?.americanDisplayOdds?.americanOddsInt;
+        if (open && (run.runnerStatus ?? "ACTIVE") === "ACTIVE" && a !== undefined && a !== null) prices[m.marketId][run.selectionId] = Number(a);
+      }
+    }
+    fdState.prices = prices; fdState.at = new Date(); fdState.fails = 0;
+    fdRedraw();
+    fdBadge(`<span class="livedot"></span> FanDuel odds live · checked ${fdState.at.toLocaleTimeString([], { hour: "numeric", minute: "2-digit", second: "2-digit" })}`, true);
+  } catch (e) {
+    fdState.fails++;
+    if (fdState.fails >= 2) fdBadge(fdState.at ? `FanDuel odds from ${fdState.at.toLocaleTimeString([], { hour: "numeric", minute: "2-digit" })} · retrying`
+                                             : "FanDuel odds: showing the latest update · retrying live odds");
+  }
+  next();
+}
+function fdRedraw() {                        // put the live prices on the cards; redraw only the cards that changed
+  const els = [...document.querySelectorAll("#cards .card")];
+  (lastResult?.cards || []).forEach((c, i) => {
+    if (!fdPre(c) || !fdState.prices[c.fd_market.id]) return;
+    const before = JSON.stringify(c.fanduel);
+    fdApply(c);
+    if (els[i] && JSON.stringify(c.fanduel) !== before) {
+      const hidden = els[i].hidden;
+      els[i].outerHTML = card(c, i).replace('class="card enter"', 'class="card"');
+      const fresh = document.querySelectorAll("#cards .card")[i];
+      if (fresh) { fresh.hidden = hidden; fresh.classList.add("fd-flash"); }
+    }
+  });
+  renderTicker(); updateCardsLive();
+}
+document.addEventListener("visibilitychange", () => { if (!document.hidden && Date.now() - (fdState.at || 0) > 25e3) refreshOdds(); });
+
 function renderResult(res) {
   setTimeout(applyCardFilter, 0);                            // keep showing only the tapped games
   if (!res) return;
   lastResult = res;
+  for (const c of res.cards) if (fdPre(c)) fdApply(c);       // keep the live odds on freshly drawn cards
   if (res.date) $("date").textContent = res.date;
   $("cards").innerHTML = res.cards.length ? res.cards.map(card).join("")
     : `<div class="empty">No picks to show right now — see “Not predicted” for why.</div>`;
@@ -1520,6 +1611,7 @@ setInterval(async () => {
   refreshBoard(true);
   const s = await poll();                    // a run already going, or an earlier result
   lastFinished = s.finished_at || null;
+  refreshOdds();                             // live FanDuel odds straight away, then every ~30 s
   if (s.running) polling = polling || setInterval(poll, 1000);
   else if (!s.result && ROLE !== "viewer") run([]);   // owner's first visit: get every game's picks straight away
   else if (!s.result) $("cards").innerHTML = `<div class="empty">Tonight's picks are being prepared — they appear here by themselves.</div>`;

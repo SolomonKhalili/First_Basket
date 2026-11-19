@@ -5,19 +5,15 @@ from datetime import datetime, timedelta, timezone
 import publish
 
 
-def _result(price, tipped=False):
+def _result(price, status=1):
     soon = (datetime.now(timezone.utc) + timedelta(minutes=40)).isoformat()
     return {"cards": [{"matchup": "A @ B", "picks": [["X", "B", 0.2, 400]], "fanduel": {"X": price}}],
-            "skipped": [], "schedule": [{"status": 2 if tipped else 1, "start_utc": soon}]}
+            "skipped": [], "schedule": [{"status": status, "start_utc": soon}]}
 
 
-def test_fingerprint_sees_odds_changes_only():
-    assert publish.fingerprint(_result(450)) == publish.fingerprint(_result(450))
-    assert publish.fingerprint(_result(450)) != publish.fingerprint(_result(500))
-
-
-def test_live_loop(monkeypatch, tmp_path):
-    seq = iter([_result(450), _result(450), _result(500), _result(500, tipped=True)])
+def _run(monkeypatch, tmp_path, results, filed=()):
+    import nba
+    seq, files = iter(results), iter(filed)
     published, saved, clock = [], [], [1000.0]
     monkeypatch.setattr(publish, "HERE", tmp_path)
     monkeypatch.setattr(publish, "load_site_users", lambda: {"u": {}})
@@ -26,12 +22,32 @@ def test_live_loop(monkeypatch, tmp_path):
     monkeypatch.setattr(publish, "save_state", lambda: saved.append(1))
     monkeypatch.setattr(publish.time, "time", lambda: clock[0])
     monkeypatch.setattr(publish.time, "sleep", lambda s: clock.__setitem__(0, clock[0] + s))
+    monkeypatch.setattr(nba, "file_finished_games", lambda day: next(files, 0))
     out, err = sys.stdout, sys.stderr
     try:
         assert publish.live(tmp_path / "site") == 0
     finally:
         sys.stdout, sys.stderr = out, err
-    # first check publishes; same odds = no publish; new odds 3 min after = wait for the 6-min gap; then the
-    # last check (everything tipped) publishes the pending change and saves
+    return published, saved
+
+
+def test_fingerprint_sees_odds_changes_only():
+    assert publish.fingerprint(_result(450)) == publish.fingerprint(_result(450))
+    assert publish.fingerprint(_result(450)) != publish.fingerprint(_result(500))
+
+
+def test_live_loop(monkeypatch, tmp_path):
+    published, saved = _run(monkeypatch, tmp_path, [_result(450), _result(450), _result(500), _result(500, status=3)])
+    # first check publishes; same odds = no publish; new odds 3 min later still publishes (6-min gap reached at
+    # check 3); the last check (every game over) ends the run and saves
     assert published == [450, 500]
+    assert saved == [1]
+
+
+def test_files_results_after_last_tip(monkeypatch, tmp_path):
+    # check 1: game on (tipped, not final) -> nothing to file; check 2: a game finished -> filed + published;
+    # check 3: all final -> done
+    published, saved = _run(monkeypatch, tmp_path, [_result(450, status=2), _result(450, status=2),
+                                                    _result(450, status=3)], filed=[0, 1, 0])
+    assert published == [450, 450]          # the first publish + the one after filing a result
     assert saved == [1]
