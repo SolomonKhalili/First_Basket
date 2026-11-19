@@ -1,6 +1,6 @@
 # NBA First Basket Scorer — Project Blueprint
 
-> **Last updated:** 2026-11-19 midday (big day: bets tracker + parlays, best bets, DraftKings via ESPN, field-goal model for DraftKings, us-vs-sportsbooks scoreboards, odds logging opening→closing, auto-sync every minute — see "Where we left off" in §0) · **Owner:** Solomon · **Folder:** `~/Desktop/NBA`
+> **Last updated:** 2026-11-19 evening (2024-25 season added as player history; tip-off call: this season ×2 + "who you beat" rating; Injuries / Starters pages; backup players; Odds tracker; deep research + 12 ideas tested — see "Where we left off" in §0) · **Owner:** Solomon · **Folder:** `~/Desktop/NBA`
 >
 > Single source of truth for the project's state: what works, how well, what is known to be wrong, and
 > what comes next. Update it in the same session as any change (checklist in §11). Every number here was
@@ -41,11 +41,17 @@ and — later — compare those odds with sportsbook prices.
 **Where we left off — read this first in a new session.** *(Keep this block current at the end of every
 session: §11 step 0. Full details of every change are in §10, newest first.)*
 
-*Last session ended 2026-11-19, ~12:30 PM ET* (Mac desktop session, owner on the phone via Remote Control).
+*Last session ended 2026-11-19, ~5:30 PM ET* (Mac desktop session, owner on the phone via Remote Control).
 
 **Right now**
-- **Everything is shipped and running; nothing half-built.** 249 tests pass. The Mac's NBA folder follows GitHub
-  every minute (code + the cloud's data) — no manual pull needed any more.
+- **Everything is shipped and running.** 259 tests pass. The Mac's NBA folder follows GitHub every minute.
+- **Just shipped (5:28 PM): the 2024-25 season as player history** (`data_patches/history_2024_25.json.gz`). The cloud
+  loads it once on its next full update and rebuilds the training data from scratch (72 s on the Mac); training games
+  stay 2025-26 + 2026-27 (`train_pregame.HISTORY_BEFORE`). Check that the state branch's `game_ids.json` has ~2,858
+  games and the Data tab shows games from Oct 2024.
+- **Before offering model ideas, read §10 and `experiments/`** — most obvious ideas were already tested (11/17–11/19).
+  Re-test at the All-Star break: tip height prior and first-shot-as-extra-examples (each won one period, lost the other).
+- **Research report:** `reports/First basket model improvements.md` (16 ideas; the top ones are tested in §10 11/19).
 - **To watch tonight (first real runs):** the 30-second FanDuel checks in the last 15 min before the 8 PM tip-offs
   (closing price + "Market closed" time in Odds moves), and after midnight the first overnight odds checks
   (`kind=odds`, "Market opened"). If either misbehaves, `HEALTH.md` or the Odds moves tab will show it.
@@ -65,7 +71,7 @@ session: §11 step 0. Full details of every change are in §10, newest first.)*
   simple-rule mix — §7.1 item 4. Keep only what is still better in both test periods.
 - **~2026-12-20 (150+ finished games with saved odds):** test blending in sportsbook odds
   (`experiments/market_blend_test.py`, §10 11/18 "accuracy pass"). Log-loss decides.
-- **Around the All-Star break:** re-test adding 2024-25 tip-offs (`old_tips`, §7.1 item 5).
+- **Around the All-Star break:** re-test the tip height prior and first-shot extra examples (§10, 11/19 evening).
 
 **What was done, and when** (one line each; details in §10)
 - **11/07–11/09:** first version of the bot (several 11/09 "done" items turned out not to exist — fixed 11/17).
