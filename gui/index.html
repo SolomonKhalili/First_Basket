@@ -871,7 +871,7 @@ details.oc[open] { grid-column: 1 / -1; }
 .who-p { display: block; font-family: var(--body, inherit); font-size: 12px; font-weight: 500; color: var(--muted); text-transform: none; letter-spacing: 0; margin-top: 2px; }
 .tlegend { font-size: 12px; color: var(--muted); margin: 6px 2px 0; }
 tr.bk-row td { background: rgba(251,191,36,.06); } tr.bk-row .rank { background: transparent; color: #fbbf24; border-color: #fbbf24; }
-tr.bk-row .sub2 b { color: #fbbf24; font-weight: 700; }
+tr.bk-row .itag.bk { color: #fbbf24; }
 </style>
 </head>
 <body>
@@ -1513,7 +1513,7 @@ function bookSection(c, book, recLine, shortName) {
     const b = (c.backup_chance || {})[starter], p = b && b[rule];
     if (!b || p === undefined || p === null || c.label === "CONFIRMED" || (list.length >= 5 && p < fifth)) return "";
     return `<tr class="bk-row" data-name="${esc(b.name)}" data-book="${book}">
-      <td><div class="player"><span class="fwrap">${b.id ? `<img class="face" src="${headshot(b.id)}" alt="" loading="lazy" onerror="this.remove()">` : ""}<span class="rank num">↳</span></span><span class="pn"><span class="nm"><span class="nfull">${esc(b.name)}</span><span class="nshort">${esc(shortName(b.name))}</span></span><span class="sub2">${esc(b.team || "")} · <b>if ${esc(starter.split(" ").slice(-1)[0])} sits</b></span></span></div></td>
+      <td><div class="player"><span class="fwrap">${b.id ? `<img class="face" src="${headshot(b.id)}" alt="" loading="lazy" onerror="this.remove()">` : ""}<span class="rank num">↳</span></span><span class="pn"><span class="nm"><span class="nfull">${esc(b.name)}</span><span class="nshort">${esc(shortName(b.name))}</span></span><span class="sub2">${esc(b.team || "")} · ${recLine(b.name)}</span><span class="itag bk">↳ only if ${esc(starter.split(" ").slice(-1)[0])} sits</span></span></div></td>
       <td class="r num">${pctCell(p)}</td><td class="r num">${ourCell(p)}</td><td class="r">${bookCell(prices[b.name], p)}</td></tr>`;
   };
   const inList = new Set(list.map(([n]) => n));

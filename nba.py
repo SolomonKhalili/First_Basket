@@ -1280,7 +1280,7 @@ def predict_today(first_pass: bool = True, teams: set = frozenset(), ui=None) ->
                 for i in order[:5]]
         everyone = [{**info[i], "prob": float(probs[i]),                         # all 10 starters, for EV
                      **({"prob_fg": float(probs_fg[i])} if probs_fg is not None else {})} for i in order]
-        season_counts = season_first_baskets(con, [p['id'] for p in info], game_date)
+        season_counts = season_first_baskets(con, [p['id'] for p in info] + [b['id'] for b in backup_chance.values()], game_date)
         fd_card = _fanduel_card(fd_games, home_team, away_team, top5, everyone, dk_games)
         first_team = ({home_team: float(probs[:len(home_starters)].sum()),
                        away_team: float(probs[len(home_starters):].sum())} if pg.get("type") == "two_stage" else None)
@@ -1291,7 +1291,8 @@ def predict_today(first_pass: bool = True, teams: set = frozenset(), ui=None) ->
             "matchup": matchup, "start": g.get('start', ''), "label": label, "updated": changed,
             "picks": top5, **fd_card,
             # each starter's real record this season: first baskets / games played (games before today)
-            "season": {info[i]['name']: season_counts.get(str(info[i]['id']), (0, 0)) for i in order},
+            "season": {**{info[i]['name']: season_counts.get(str(info[i]['id']), (0, 0)) for i in order},
+                       **{b['name']: season_counts.get(str(b['id']), (0, 0)) for b in backup_chance.values()}},   # backups too
             "probs": [[info[i]['name'], info[i]['team'], float(probs[i])] for i in order],   # all 10, for live odds
             "probs_fg": ({info[i]['name']: float(probs_fg[i]) for i in order} if probs_fg is not None else None),
             "tip": {home_team: show_home, away_team: show_away}, "jumpers": jumpers,
