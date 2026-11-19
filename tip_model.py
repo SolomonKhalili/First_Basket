@@ -131,6 +131,9 @@ def home_advantage(con, before: str, extended: bool = False) -> float:
 # (log-loss 2025-26 0.6275 -> 0.6274, 2026-27 0.6310 -> 0.6273; tip winners 64.6 -> 64.5%, 67.0 -> 67.9%).
 # A plain head-to-head adjustment was worse at every weight (most pairs meet only 1-2 times). The first-basket
 # model's tip input (extended=False) is unchanged.
+# Also tested 2026-11-19 on top of this (weights learned on one season, checked on the other): this-season-only rate,
+# last-season-only rate, head-to-head, record vs that team, and all six signals weighted together — none was better
+# in both seasons (all six together: 0.6394 / 0.6356, clearly worse). Keep it simple until there's more data.
 ELO_K, ELO_HOME, ELO_BLEND = 24, 15, 0.5
 _elo_cache: dict = {}
 
