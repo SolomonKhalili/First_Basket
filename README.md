@@ -51,7 +51,7 @@ password unlocks in their browser. Full details: [`BLUEPRINT.md`](BLUEPRINT.md) 
 
 ## On the website / app
 
-Top buttons: **🏀 Picks · 🩹 Injuries · 👥 Starters · 📈 Odds tracker · 💵 My bets · 📊 Data · 💰 What's value?**
+Top buttons: **🏀 Picks · 🩹 Injuries · 👥 Starters · 📈 Odds tracker · 💵 My bets · 📊 Data**
 (the owner's Mac app also has **🔄 Update picks**). Games are shown one at a time, top to bottom; times are in each
 viewer's own time zone.
 
@@ -60,7 +60,7 @@ viewer's own time zone.
   - **🏀 First basket prediction** — the top pick's photo and two equal tiles, *Our prediction to score first*:
     **FanDuel** (incl. free throws) and **DraftKings** (excl. free throws), each with that book's odds.
   - **FanDuel / DraftKings tabs** — each book's own **top 5** table (rank, face, Chance, Our odds, FD/DK odds;
-    "MIL · 2/13" under a name = his team, and he scored first in 2 of his 13 games this season — each table explains it with its own top player). **💰 value** only for top-5 players and only for the team
+    "MIL · 2/13 scored first" = his team, and he scored first in 2 of his 13 games this season). **💰 value** only for top-5 players and only for the team
     we favor. A questionable starter shows ⚠️ and his likely **backup**; if the backup's chance (whole lineup
     re-scored) would make the top 5, he gets his own "↳ only if X sits" row.
   - **🏀 First team to score prediction** — the top team's logo and the same two tiles, then both teams' odds
@@ -78,7 +78,6 @@ viewer's own time zone.
 - **📊 Data** — **Scorecard** (tabs Last season / This season / All time: #1 pick, #1 or #2, tip-off winner, all
   combined), Our picks, Lineups, All games, Odds tracker. One search bar: players (then "show games where he was …"),
   dates, or any team name (knicks, ny, nyk, new york knicks, sixers, cavs…).
-- **💰 What's value?** — 3 short slides on the 💰 tag, using a real example from tonight.
 
 ## Quick start
 

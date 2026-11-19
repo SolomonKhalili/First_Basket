@@ -873,6 +873,8 @@ details.oc[open] { grid-column: 1 / -1; }
 tr.bk-row td { background: rgba(251,191,36,.06); } tr.bk-row .rank { background: transparent; color: #fbbf24; border-color: #fbbf24; }
 tr.bk-row .itag.bk { color: #fbbf24; }
 .itag-sub { display: block; font-weight: 600; color: #c9ced8; font-size: 11.5px; }
+.rec-w { white-space: nowrap; }
+.sub2 { white-space: normal; }
 </style>
 </head>
 <body>
@@ -893,7 +895,7 @@ tr.bk-row .itag.bk { color: #fbbf24; }
       <button class="btn secondary" id="oddsBtn" title="Every odds change today, with the time">📈 Odds tracker</button>
       <button class="btn secondary" id="betsBtn" title="The bets you placed: wins, losses and profit">💵 My bets</button>
       <button class="btn secondary" id="dataBtn" title="Your spreadsheet and CSV as tabs: scorecard, picks, lineups, all games">📊 Data</button>
-      <button class="btn secondary" id="learnBtn" title="What the 💰 value tag means, in 3 short slides">💰 What's value?</button>
+      <button class="btn secondary" id="learnBtn" hidden style="display:none">💰 What's value?</button>
       <button class="btn secondary" id="runSelected" hidden>🔄 Update selected</button>
       <button class="btn" id="runAll" title="Run the model again for every game now">🔄 Update picks</button>
       <span class="acct" id="acct" hidden></span>
@@ -996,7 +998,7 @@ tr.bk-row .itag.bk { color: #fbbf24; }
             <dt>Fair odds</dt><dd>The break-even price. A bet only makes sense if the sportsbook pays more (e.g. +700 when fair is +500).</dd>
             <dt>DraftKings (FG only)</dt><dd>DraftKings' price for its first-scorer bet. DraftKings only counts the first <b>field goal</b> — free throws don't count (FanDuel's do). So we judge DraftKings prices with a separate <b>field-goal</b> chance for each player, and FanDuel's with the normal chance. The ★ goes to whichever is the better deal.</dd>
             <dt>FanDuel</dt><dd>FanDuel's current First Basket price. <b style="color:var(--good)">Green</b> = it pays more than the fair odds, so the model sees value. Grey = it pays less.</dd>
-            <dt>Value (EV) <button class="whats" data-learn="0">1-minute guide</button></dt><dd>Is FanDuel's prize big enough for how often the model thinks he scores first? <b style="color:var(--good)">Green +10¢</b> = good deal: about 10¢ profit for every $1 over many bets. Grey = bad deal. A good deal still loses most nights.</dd>
+            <dt>Value (EV)</dt><dd>Is FanDuel's prize big enough for how often the model thinks he scores first? <b style="color:var(--good)">Green +10¢</b> = good deal: about 10¢ profit for every $1 over many bets. Grey = bad deal. A good deal still loses most nights.</dd>
             <dt>↓ ↑ under a price</dt><dd><b style="color:var(--warn)">↓</b> = the payout dropped since this morning: the sportsbook now thinks he's <b>more</b> likely to score first (people are betting him). ↑ = it went up. If one of our good bets shows ↓, it's getting worse — <b>bet it soon</b> (shown as ⏰ in Tonight's best bets).</dd>
             <dt>Best deal</dt><dd>The best-value player in the game (out of all 10 starters, not just the top 5).</dd>
             <dt>Tip-off</dt><dd>Who jumps for each team (the player who usually takes the tip, or NBA.com's listed centre) and each one's chance to win the opening jump ball; the favourite is in bold. The team that wins the tip scores first about 66% of the time. "Not known yet" = no tip history for that team's starters.</dd>
@@ -1270,7 +1272,7 @@ function card(c, i) {
   const rec = (name) => { const r = season[name]; return r && r[1] ? r : null; };
   function recLine(name) {
     const r = rec(name);
-    return r ? `<span class="rec" title="Scored the game's first basket in ${r[0]} of his ${r[1]} games this season"><span class="rl">1st basket </span><b>${r[0]}</b>/${r[1]}<span class="rl"> games</span></span>`
+    return r ? `<span class="rec" title="Scored the game's first basket in ${r[0]} of his ${r[1]} games this season"><b>${r[0]}</b>/${r[1]} <span class="rec-w">scored first</span></span>`
              : (c.season ? `<span class="rec">no games yet this season</span>` : "");
   }
   const topRec = rec(top[0]);
@@ -1542,12 +1544,7 @@ function bookSection(c, book, recLine, shortName) {
     <div class="book-h">${book}</div>
     <div class="sub-h">🏀 First basket <small>— top 5</small></div>
     <div class="tscroll"><table class="bk-table bk3">${head("Player")}<tbody>${rows || `<tr><td colspan="4">${missing(c, book)}</td></tr>`}</tbody></table></div>
-    ${(() => {                          // explain the small "TEAM · 2/13" with the table's own first player
-      const ex = list.find(([n]) => ((c.season || {})[n] || [0, 0])[1] > 0);
-      if (!ex) return "";
-      const [n, tm] = ex, [fb, gp] = c.season[n];
-      return `<div class="tlegend">Example: <b>${esc(tm)} · ${fb}/${gp}</b> under ${esc(shortName(n))} = he scored first in <b>${fb} of his ${gp}</b> games this season.</div>`;
-    })()}
+
     ${teamRows ? `${teamHero(c, c.first_team || {}, dkTeamP)}<div class="sub-h">Both teams</div>
     <div class="tscroll"><table class="bk-table bk3">${head("Team")}<tbody>${teamRows}</tbody></table></div>` : ""}
   </div>`;

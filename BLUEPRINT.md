@@ -778,8 +778,9 @@ NBA/
   Model files record `early_m`; `_retrain_if_needed` retrains when it doesn't match. Season/last-10 trust re-checked:
   current 30 / 10 still best. (Note: `season_backtest.fill_fg_grades` grades the field-goal model with the
   first-points early setting — re-grade only if those grades are re-run.)
-- **Table legend** now uses a real example from each table ("Example: MIL · 2/13 under T. Herro = he scored first in 2 of his
-  13 games this season") — owner found "under a name" unclear.
+- **Table record line:** each player shows "MIL · 2/13 scored first" (2 first baskets in his 13 games this season); the
+  separate explanation line under each table was removed (owner). The "💰 What's value?" button and guide link were
+  removed (owner: not useful); the 💰 value tags stay.
 - **Owner's rule — DraftKings sources (2026-11-19):** prediction cards show the viewer's browser's live DraftKings
   prices (every 30 s; the Mac app's server on the Mac); the **Odds tracker uses ESPN's copy only** — new table
   `dk_espn_log` (opening + every ESPN change, written by `draftkings_odds.log_espn`, filled by the cloud every 3 min
