@@ -130,6 +130,56 @@ def push_snapshot() -> str:
     return f"{sum(len(g['players']) for g in games)} prices for {len(games)} games"
 
 
+# ──────────────────────────────────────────────
+# VIEWERS → RELAY → CLOUD: browsers send the DraftKings lines they read to the Cloudflare relay (GET /dk-log);
+# the cloud job pulls them each check: logs every line in dk_odds_log (next to FanDuel's odds_log, for the
+# "did we beat Vegas?" checks) and writes SNAPSHOT so nba._draftkings_prices can put them on the cards.
+# ──────────────────────────────────────────────
+DK_LOG_SCHEMA = """CREATE TABLE IF NOT EXISTS dk_odds_log (
+    game_date TEXT, matchup TEXT, logged_at TEXT, player_name TEXT, team TEXT, american INTEGER,
+    PRIMARY KEY (game_date, matchup, logged_at, player_name))"""
+RECENT_MIN = 45                          # a browser-read line counts as current for this long
+
+
+def _row(r) -> dict:
+    a = int(r["american"])
+    dec = 1 + (a / 100 if a > 0 else 100 / -a)
+    return {"player": r["player"], "team": r.get("team", ""), "american": a, "decimal": dec, "implied": 1 / dec}
+
+
+def store_relay_log(data: dict, con, day: str, now: float, path: Path = SNAPSHOT) -> int:
+    """Pure-ish (testable): relay log JSON -> rows in dk_odds_log + the snapshot file. Returns new rows logged."""
+    import json
+    import time as _t
+    import fanduel_odds as fd
+    con.execute(DK_LOG_SCHEMA)
+    before = con.total_changes
+    for snap in data.get("snapshots", []):
+        at = _t.strftime("%Y-%m-%d %H:%M:%S", _t.localtime(snap["at"] / 1000))
+        away, home = snap["key"].split("@")
+        for r in snap.get("rows", []):
+            con.execute("INSERT OR IGNORE INTO dk_odds_log VALUES (?, ?, ?, ?, ?, ?)",
+                        (day, f"{away} @ {home}", at, r["player"], r.get("team", ""), int(r["american"])))
+    con.commit()
+    games = []
+    for key, g in data.get("games", {}).items():
+        if now - g["at"] / 1000 <= RECENT_MIN * 60:
+            away, home = key.split("@")
+            rows = sorted((_row(r) for r in g["rows"]), key=lambda r: r["decimal"])
+            games.append({"home_code": home, "away_code": away, "players": rows, "margin": fd.margin(rows)})
+    if games:
+        path.write_text(json.dumps({"at": now, "games": games}))
+    return con.total_changes - before
+
+
+def pull_relay_log(relay_url: str, con, day: str) -> int:
+    """The cloud: fetch today's DraftKings log from the relay and store it (see store_relay_log)."""
+    import time as _t
+    r = requests.get(f"{relay_url.rstrip('/')}/dk-log", params={"day": day}, timeout=20)
+    r.raise_for_status()
+    return store_relay_log(r.json(), con, day, _t.time())
+
+
 if __name__ == "__main__":
     import sys
     if "--push" in sys.argv:

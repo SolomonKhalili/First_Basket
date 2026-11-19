@@ -263,6 +263,14 @@ def live(out: Path, once: bool = False) -> int:
                 _git("checkout", "FETCH_HEAD", "--", "dk_prices.json", cwd=HERE)
             except Exception:  # noqa: BLE001 — the Mac hasn't sent any (it's off): FanDuel only
                 pass
+        relay = RELAY_FILE.read_text().strip() if RELAY_FILE.exists() else ""
+        if relay:                                    # DraftKings lines that viewers' browsers read (see draftkings_odds)
+            try:
+                import nba
+                import draftkings_odds as dk
+                dk.pull_relay_log(relay, nba.db(), datetime.now(ET).strftime("%Y%m%d"))
+            except Exception:  # noqa: BLE001 — storage not set up yet / relay down: FanDuel only
+                traceback.print_exc()
         users_now = settings()
         if users_now != users_seen:
             users_seen, published_fp = users_now, None    # publish straight away with the new account list

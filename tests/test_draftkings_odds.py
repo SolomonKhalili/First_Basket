@@ -55,3 +55,20 @@ def test_snapshot_used_only_when_fresh(tmp_path):
     f.write_text(json.dumps({"at": time.time() - 15 * 60, "games": [{"home_code": "SAC"}]}))
     assert dk.load_snapshot(f) == (None, None)                          # 15 minutes old: ignored
     assert dk.load_snapshot(tmp_path / "missing.json") == (None, None)
+
+
+def test_relay_log_is_stored_and_used(tmp_path):
+    import json
+    import sqlite3
+    import time
+    con = sqlite3.connect(":memory:")
+    now = time.time()
+    data = {"games": {"UTAH@LAL": {"at": now * 1000, "rows": [{"player": "Luka Doncic", "team": "LAL", "american": 365}]},
+                      "PHX@SAC": {"at": (now - 3600) * 1000, "rows": [{"player": "Devin Booker", "team": "PHX", "american": 454}]}},
+            "snapshots": [{"at": now * 1000, "key": "UTAH@LAL", "rows": [{"player": "Luka Doncic", "team": "LAL", "american": 365}]}]}
+    f = tmp_path / "dk.json"
+    assert dk.store_relay_log(data, con, "20261119", now, f) == 1
+    assert dk.store_relay_log(data, con, "20261119", now, f) == 0            # already logged
+    games, age = dk.load_snapshot(f)
+    assert [(g["away_code"], g["home_code"]) for g in games] == [("UTAH", "LAL")]   # the 1-hour-old line is left out
+    assert games[0]["players"][0]["american"] == 365

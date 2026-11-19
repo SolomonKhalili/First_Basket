@@ -12,14 +12,20 @@ const CACHE_SECONDS = 20;
 // only start that one job (secret GH_TOKEN, set in Cloudflare), this starts it whenever nothing is running:
 //   9 AM – midnight ET: the live job (it stops by itself when no games are left)   4–9 AM ET: the nightly update.
 const GH = "https://api.github.com/repos/SolomonKhalili/first-basket/actions/workflows/live-picks.yml";
-async function keepJobRunning(env) {
+async function keepJobRunning(env, dryRun = false) {
   if (!env.GH_TOKEN) return "no GH_TOKEN";
   const h = { Authorization: `Bearer ${env.GH_TOKEN}`, Accept: "application/vnd.github+json",
               "User-Agent": "first-basket-odds", "X-GitHub-Api-Version": "2022-11-28" };
   const r = await fetch(`${GH}/runs?per_page=10`, { headers: h });
   if (!r.ok) return `GitHub ${r.status}`;
   const runs = (await r.json()).workflow_runs || [];
-  if (runs.some((x) => ["queued", "in_progress", "waiting", "pending", "requested"].includes(x.status))) return "running";
+  let perm = "";
+  if (dryRun) {                     // permission probe: start a job that doesn't exist (404 = allowed, 403 = not)
+    const probe = await fetch(GH.replace("live-picks.yml", "no-such-job.yml") + "/dispatches",
+      { method: "POST", headers: { ...h, "Content-Type": "application/json" }, body: JSON.stringify({ ref: "main" }) });
+    perm = " · start permission: " + (probe.status === 404 ? "OK" : `MISSING (GitHub ${probe.status})`);
+  }
+  if (runs.some((x) => ["queued", "in_progress", "waiting", "pending", "requested"].includes(x.status))) return "running" + perm;
   const now = new Date();
   const et = (d, o) => Number(new Intl.DateTimeFormat("en-US", { timeZone: "America/New_York", hour12: false, ...o }).format(d));
   const hour = et(now, { hour: "numeric" }) % 24, day = et(now, { day: "numeric" });
@@ -28,10 +34,50 @@ async function keepJobRunning(env) {
   let kind = null;
   if (hour >= 9 && ageMin > 25) kind = "live";
   else if (hour >= 4 && hour < 9 && (!last || et(last, { day: "numeric" }) !== day || et(last, { hour: "numeric" }) % 24 < 4)) kind = "once";
-  if (!kind) return "nothing to do";
+  if (!kind) return "nothing to do" + perm;
+  if (dryRun) return `would start ${kind} (last run ${Math.round(ageMin)} min ago, ${hour}:00 ET)` + perm;
   const d = await fetch(`${GH}/dispatches`, { method: "POST", headers: { ...h, "Content-Type": "application/json" },
                                               body: JSON.stringify({ ref: "main", inputs: { kind } }) });
   return d.ok ? `started ${kind}` : `start failed ${d.status}`;
+}
+
+// ── DraftKings log: viewers' browsers send the DraftKings lines they read (DraftKings refuses servers, so only
+// browsers can read it); kept per day in Cloudflare KV (binding DKLOG). The cloud job reads them back (GET) to log
+// them next to FanDuel's and to keep them on the cards. Writes only when a line changed (free plan: 1,000/day).
+const LOG_ORIGINS = new Set([SITE, "http://127.0.0.1:8765", "http://localhost:8765"]);
+const etDay = () => new Intl.DateTimeFormat("en-CA", { timeZone: "America/New_York" }).format(new Date()).replaceAll("-", "");
+async function dkLog(request, env) {
+  const origin = request.headers.get("Origin") || "";
+  const cors = { "Access-Control-Allow-Origin": LOG_ORIGINS.has(origin) ? origin : SITE, "Vary": "Origin",
+                 "Access-Control-Allow-Methods": "GET, POST", "Access-Control-Allow-Headers": "Content-Type" };
+  if (request.method === "OPTIONS") return new Response(null, { status: 204, headers: cors });
+  if (!env.DKLOG) return new Response('{"error":"storage not set up"}', { status: 503, headers: cors });
+  const day = etDay();
+  if (request.method === "GET") {
+    const d = new URL(request.url).searchParams.get("day") || day;
+    return new Response((await env.DKLOG.get(d)) || '{"games":{},"snapshots":[]}', { headers: { ...cors, "Content-Type": "application/json" } });
+  }
+  if (request.method !== "POST" || !LOG_ORIGINS.has(origin)) return new Response('{"error":"not allowed"}', { status: 403, headers: cors });
+  let body;
+  try { body = await request.json(); } catch (e) { return new Response('{"error":"bad json"}', { status: 400, headers: cors }); }
+  const stored = JSON.parse((await env.DKLOG.get(day)) || '{"games":{},"snapshots":[]}');
+  const now = Date.now(); let changed = 0;
+  for (const g of (body.games || []).slice(0, 20)) {
+    if (!/^[A-Z]{2,4}$/.test(g.away || "") || !/^[A-Z]{2,4}$/.test(g.home || "")) continue;
+    const rows = (g.rows || []).slice(0, 30).filter((r) => typeof r.player === "string" && Number.isFinite(r.american))
+      .map((r) => ({ player: r.player.slice(0, 60), team: String(r.team || "").slice(0, 4), american: Math.round(r.american) }));
+    if (!rows.length) continue;
+    const key = `${g.away}@${g.home}`;
+    if (JSON.stringify(stored.games[key]?.rows) === JSON.stringify(rows)) continue;     // same line: nothing to write
+    stored.games[key] = { at: now, rows };
+    stored.snapshots.push({ at: now, key, rows });
+    changed++;
+  }
+  if (changed) {
+    stored.snapshots = stored.snapshots.slice(-3000);
+    await env.DKLOG.put(day, JSON.stringify(stored), { expirationTtl: 60 * 60 * 24 * 14 });   // the cloud keeps the record
+  }
+  return new Response(JSON.stringify({ saved: changed }), { headers: { ...cors, "Content-Type": "application/json" } });
 }
 
 export default {
@@ -41,6 +87,10 @@ export default {
 
   async fetch(request, env, ctx) {
     const cors = { "Access-Control-Allow-Origin": SITE, "Vary": "Origin" };
+    if (new URL(request.url).pathname === "/dk-log") return dkLog(request, env);
+    if (new URL(request.url).pathname === "/timer-check") {           // what the timer would do now (starts nothing)
+      return new Response(await keepJobRunning(env, true), { headers: { "Content-Type": "text/plain" } });
+    }
     if (request.method === "OPTIONS") return new Response(null, { status: 204, headers: { ...cors, "Access-Control-Allow-Methods": "GET" } });
     const url = new URL(request.url);
     if (request.method !== "GET" || url.pathname !== "/prices") return new Response('{"error":"not found"}', { status: 404, headers: cors });

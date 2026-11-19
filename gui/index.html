@@ -1091,6 +1091,18 @@ function saveDK(games) {
     localStorage.setItem(DK_SAVE, JSON.stringify({ date: lastResult?.date || "", games: keep }));
   } catch (e) { /* private browsing: just this visit */ }
 }
+/* Send the DraftKings lines this browser read to the relay's log (only when something changed), so the cloud can
+   record them next to FanDuel's ("did we beat Vegas?") and keep them on the cards for everyone. */
+const DK_LOG_URL = (window.FB_ODDS_BASE || "https://first-basket-odds.solomonkhalili.workers.dev") + "/dk-log";
+let dkLogged = "";
+function logDK(games) {
+  const open = (games || []).filter((g) => g.home && g.away && g.rows.length);
+  const sig = JSON.stringify(open);
+  if (!open.length || sig === dkLogged) return;
+  dkLogged = sig;
+  fetch(DK_LOG_URL, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ games: open }) })
+    .catch(() => { dkLogged = ""; });                         // try again next time
+}
 function applySavedDK(c) {                   // a started game: its last saved DraftKings line
   if (isPre(c) || (c.draftkings && Object.keys(c.draftkings).length)) return;
   const rows = savedDK()[`${c.away}@${c.home}`];
@@ -1158,6 +1170,7 @@ async function refreshDK() {
     if (!r.ok) throw new Error(`dk ${r.status}`);
     dkState.games = parseDK(await r.json()); dkState.at = new Date(); dkState.fails = 0;
     saveDK(dkState.games);
+    logDK(dkState.games);
     return true;
   } catch (e) { dkState.fails++; return false; }
 }
