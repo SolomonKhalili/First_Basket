@@ -42,6 +42,7 @@ accounts only by the owner: `python3 site_users.py add NAME`). Everything below 
 | Retraining (first-points model + field-goal model) | Nightly ~4 AM ET (when new games arrive) | same job |
 | Keeping the job switched on | Every 10 min | Cloudflare timer (backup: this Mac) |
 | New code reaches the live job | Within ~1 min of being pushed (the job restarts itself) | same job |
+| Open website pages pick up new code | Within ~1 min of the site being rebuilt (the page reloads itself; no refresh needed) | the page (`static_site.html`) |
 | This Mac's NBA folder + Mac app (newest code + the cloud's data) | Every minute (the cloud saves its data when it changes, at most every 10 min) | `sync_from_cloud.py` (`launcher/com.firstbasket.sync.plist`) |
 | Health check: writes `HEALTH.md` (✅ all good, or ⚠️ what stopped updating); Claude reads it at the start of every session | Every ~30 min while the Mac is on | `health_check.py` (run by `sync_from_cloud.py`) |
 | Desktop app | Always running | `gui.py` (`launcher/com.firstbasket.app.plist`) |

@@ -51,6 +51,19 @@
 <script>
 (() => {
   const DATA_URL = "data.json", STORE = "fb-site-v1", REMEMBER_DAYS = 30;
+  // ── new code? reload by itself (GitHub lets browsers keep the old page up to 10 min) ──
+  (function watchBuild() {
+    const mine = (document.querySelector('meta[name="fb-build"]') || {}).content;
+    if (!mine) return;
+    setInterval(async () => {
+      if (document.hidden || document.querySelector("dialog[open]")) return;      // never in the middle of a bet form
+      try {
+        const html = await (await fetch("index.html?b=" + Date.now(), { cache: "no-store" })).text();
+        const m = html.match(/<meta name="fb-build" content="([0-9a-f]+)">/);
+        if (m && m[1] !== mine) location.replace(location.pathname + "?b=" + m[1] + location.hash);
+      } catch (e) { /* offline: try again next minute */ }
+    }, 60000);
+  })();
   // live FanDuel odds go through the free relay (website_live/odds-relay.js); "" = not set up: cloud odds only
   window.FB_ODDS_BASE = "__FB_ODDS_BASE__";
   const ESPN = "https://site.api.espn.com/apis/site/v2/sports/basketball/nba/scoreboard";

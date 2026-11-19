@@ -147,6 +147,11 @@ def build_site(enc: dict, users: dict, out: Path) -> None:
     page = page.replace("<title>First Basket Picks</title>",
                         '<title>First Basket Picks</title>\n<meta name="robots" content="noindex, nofollow">', 1)
     page = page.replace("<body>", "<body>\n" + parts, 1)          # plain replace: the JS contains backslashes
+    # the page's CODE version (not the data): open pages compare it every minute and reload themselves when it changes,
+    # so a code update shows in ~2-3 min instead of after GitHub's 10-minute browser cache (owner, 2026-11-19)
+    import hashlib
+    build = hashlib.sha256(page.encode()).hexdigest()[:12]
+    page = page.replace("<head>", f'<head>\n<meta name="fb-build" content="{build}">', 1)
     (out / "index.html").write_text(page)
     (out / "data.json").write_text(json.dumps({"v": 1, **enc, "users": users}, separators=(",", ":")))
     (out / ".nojekyll").write_text("")
