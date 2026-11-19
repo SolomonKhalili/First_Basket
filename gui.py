@@ -355,9 +355,11 @@ def track_record() -> dict:
     s = picks.summary(nba.db())
     paper = ev.paper_results(nba.db())
     paper["rows"] = paper["rows"][:5]
+    clv = ev.clv_results(nba.db())
+    clv.pop("rows", None)
     return {"final": s["final"], "overall": s["overall"], "last_season": s["last_season"], "by_type": s["by_type"],
             "recent": s["games"][:12],
-            "paper": paper}
+            "paper": paper, "clv": clv}
 
 
 GAME_KEYS = ("game_id", "start", "start_utc", "home_team", "away_team", "status", "home_score", "away_score",

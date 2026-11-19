@@ -279,7 +279,7 @@ th.r, td.r { text-align: right; }
 .value-line b.g { color: var(--good); }
 .paper { border-top: 1px solid var(--line); margin-top: 14px; padding-top: 12px; }
 .paper .big { font-size: 22px; font-weight: 800; }
-.paper .big.pos { color: var(--good); } .paper .big.neg { color: var(--bad); }
+.paper .big.pos, .paper-stats b.pos { color: var(--good); } .paper .big.neg { color: var(--bad); }
 .paper-stats { display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px; margin: 8px 0 10px; }
 .paper-stats div { background: var(--surface-2); border: 1px solid var(--line); border-radius: 10px; padding: 7px 8px; text-align: center; }
 .paper-stats b { display: block; font-size: 16px; }
@@ -1464,6 +1464,29 @@ const homeAway = (m) => {                        // 'MEM @ CLE' -> 'MEM (away) a
   const [a, h] = String(m || "").split(" @ ");
   return h ? `${esc(a)} <i>(away)</i> at ${esc(h)} <i>(home)</i>` : esc(m);
 };
+/* Closing line value: did FanDuel's price for our good-deal picks get shorter before tip-off? (ev.clv_results) */
+function clvBlock(c) {
+  if (!c || !c.picks) return "";
+  const moved = c.shorter + c.longer, a = c.all_players || {};
+  const pctS = (x) => `${x >= 0 ? "+" : "−"}${Math.abs(x * 100).toFixed(1)}%`;
+  const good = c.avg_clv > (a.avg_clv || 0) && c.beat_rate > 0.5;
+  const verdict = moved < 30 ? `<b>Too early to tell</b> — only ${moved} price moves so far; this means something after ~100.`
+    : good ? `<b>Good sign</b> — the market keeps moving toward our picks, which usually means the value is real.`
+    : `<b>Not yet</b> — the market isn't moving toward our picks more than it does for everyone.`;
+  return `<div class="paper"><div class="section-title">📈 Closing line value</div>
+    <div class="paper-stats">
+      <div><b>${moved ? Math.round(c.shorter / moved * 100) : 0}%</b><span>of our good deals got shorter</span></div>
+      <div><b class="${c.avg_clv > 0 ? "pos" : ""}">${pctS(c.avg_clv)}</b><span>market moved our way</span></div>
+      <div><b>${pctS(a.avg_clv || 0)}</b><span>all players (yardstick)</span></div>
+    </div>
+    <div class="verdict-line ${moved < 30 ? "ok" : good ? "good" : "warn"}">${verdict}</div>
+    <details class="paper-learn"><summary>What is this?</summary><ul>
+      <li>When the model calls a player a <b>good deal</b>, we note FanDuel's price. Right before tip-off we check it again.</li>
+      <li>If the price got <b>shorter</b> (say +1000 → +700), the sportsbook moved toward our view — sharp money agreed with us.</li>
+      <li>Bettors who regularly beat the closing price tend to win long-term, and this shows up in <b>weeks</b>, not the hundreds of games results take.</li>
+      <li>So far: ${c.picks} good-deal picks, ${c.shorter} got shorter, ${c.longer} got longer, ${c.picks - moved} didn't move.</li>
+    </ul></details></div>`;
+}
 function paperBlock(p) {
   if (!p) return "";
   const intro = `<div class="hint" style="margin:0 0 10px">A <b>scoreboard for our model</b>. Every time it finds a “good deal” on FanDuel, we pretend to bet <b>$1</b> and check after the game. No real money: it shows whether following the model would make or lose money.</div>`;
@@ -1537,6 +1560,7 @@ async function renderRecord() {
       <ul class="recent">${r.recent.map((g) => `<li>
         <span class="${g.hit ? "ok" : "no"}">${g.hit ? "✓" : "✗"}</span>
         <span>${esc(g.pick)} <small>${esc(g.matchup)} · scored: ${esc(g.actual)}</small></span></li>`).join("")}</ul>
+      ${clvBlock(r.clv)}
       ${paperBlock(r.paper)}`;
     const ring = $("ring"), target = rate * 100;      // fill the ring
     if (calm) ring.style.setProperty("--p", target);

@@ -79,3 +79,19 @@ def test_paper_results_empty():
 def test_value_threshold_is_one_cent():
     assert not ev.is_value(0.004) and ev.is_value(0.005) and ev.is_value(0.12) and not ev.is_value(None)
     assert not ev.is_value(-0.1)
+
+
+def test_closing_line_value():
+    """A good-deal pick whose price shortens before tip-off has positive CLV; drift of everyone is the yardstick."""
+    import sqlite3
+    import ev
+    con = sqlite3.connect(":memory:")
+    ev.ensure_table(con)
+    con.execute("CREATE TABLE first_baskets (game_id TEXT, scorer_player_id TEXT, scorer_name TEXT)")
+    con.execute("INSERT INTO first_baskets VALUES ('g', '9', 'X')")
+    for at, a1, e1, a2, e2 in (("t1", 1000, 0.10, 500, -0.2), ("t2", 700, -0.05, 500, -0.2)):
+        con.execute("INSERT INTO odds_log (game_id, game_date, logged_at, player_id, player_name, american, ev) VALUES ('g','d',?,'1','A',?,?)", (at, a1, e1))
+        con.execute("INSERT INTO odds_log (game_id, game_date, logged_at, player_id, player_name, american, ev) VALUES ('g','d',?,'2','B',?,?)", (at, a2, e2))
+    r = ev.clv_results(con)
+    assert r["picks"] == 1 and r["shorter"] == 1 and abs(r["avg_clv"] - (ev.implied(700) / ev.implied(1000) - 1)) < 1e-9
+    assert r["all_players"]["picks"] == 2

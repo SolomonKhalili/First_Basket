@@ -123,3 +123,40 @@ def paper_results(con, min_ev: float = VALUE_MIN) -> dict:
     return {"bets": len(bets), "wins": sum(b["won"] for b in bets), "staked": staked, "profit": profit,
             "roi": profit / staked if staked else 0.0, "games": len({b["game_id"] for b in bets}),
             "expected_profit": sum(STAKE * b["ev"] for b in bets), "rows": bets}
+
+
+def implied(american: int) -> float:
+    """Sportsbook price -> the chance it implies (margin included)."""
+    return 100 / (american + 100) if american > 0 else -american / (-american + 100)
+
+
+def clv_results(con, min_ev: float = VALUE_MIN) -> dict:
+    """Closing line value: for every player the model first called a good deal (EV >= min_ev) in a finished game,
+    compare FanDuel's price at that moment with its last price before tip-off. A price that got SHORTER (e.g. +900 ->
+    +750) means the market moved toward our view — the earliest sign the model finds real value.
+    clv = closing implied chance / implied chance when picked - 1 (+0.10 = the market moved 10% our way).
+    `all_players` is the same over every priced player, as a yardstick for how prices drift anyway."""
+    ensure_table(con)
+    rows = con.execute(
+        """SELECT o.game_id, o.player_id, o.player_name, o.logged_at, o.american, o.ev
+           FROM odds_log o JOIN first_baskets f ON f.game_id = o.game_id
+           ORDER BY o.game_id, o.player_id, o.logged_at""").fetchall()
+    by = {}
+    for gid, pid, name, at, american, ev in rows:
+        by.setdefault((gid, pid), []).append((at, american, ev, name))
+
+    def summary(pairs):
+        moved = [c for c in pairs if abs(c) > 1e-9]
+        return {"picks": len(pairs), "shorter": sum(c > 1e-9 for c in pairs), "longer": sum(c < -1e-9 for c in pairs),
+                "avg_clv": sum(pairs) / len(pairs) if pairs else 0.0,
+                "beat_rate": sum(c > 0 for c in moved) / len(moved) if moved else 0.0}
+    value, everyone, rows_out = [], [], []
+    for (gid, pid), snaps in by.items():
+        close = snaps[-1][1]
+        everyone.append(implied(close) / implied(snaps[0][1]) - 1)
+        first = next((s for s in snaps if s[2] is not None and s[2] >= min_ev), None)
+        if first:
+            c = implied(close) / implied(first[1]) - 1
+            value.append(c)
+            rows_out.append({"game_id": gid, "player": first[3], "picked": first[1], "closed": close, "clv": c})
+    return {**summary(value), "all_players": summary(everyone), "rows": rows_out}
