@@ -1946,32 +1946,34 @@ const LEARN = [
       <p><b style="color:var(--good)">Above zero = good deal</b>: the prize is big enough for how often he scores.<br>
         <b style="color:var(--bad)">Below zero = bad deal</b>: the prize is too small.</p>`;
   },
-  () => `<div class="kicker">Step 4 · Try it</div><h3>Is it a good deal?</h3>
-      <p class="muted">Slide the two numbers and watch the answer change.</p>
-      <div class="calc">
-        <div><label>How often he scores first (out of 100 games) <b class="num" id="cChanceV"></b></label>
-          <input type="range" id="cChance" min="2" max="40" step="1" value="${Math.round(calc.chance * 100)}"></div>
-        <div><label>The prize (odds) <b class="num" id="cOddsV"></b></label>
-          <input type="range" id="cOdds" min="150" max="2000" step="50" value="${calc.odds}">
-          <div class="chips-row">${[300, 450, 700, 900, 1200].map((o) => `<button data-o="${o}">+${o}</button>`).join("")}</div></div>
-        <div id="cResult"></div>
-      </div>`,
+  () => {                                   // a REAL example from tonight — no sliders, no math
+    const t = tonightExample();
+    if (!t) return `<div class="kicker">Step 4 · A real example</div><h3>How to spot value</h3>
+      <p class="bigline">On each game, compare <b>Our odds</b> with the sportsbook's odds.</p>
+      <p class="bigline">If the sportsbook <b>pays more</b> than our odds, it's marked <b style="color:var(--good)">💰 value</b>. You don't have to do any math.</p>`;
+    return `<div class="kicker">Step 4 · A real example from tonight</div><h3>${esc(t.name)}</h3>
+      <div class="ticket"><div class="lose"><small>Our odds</small><b style="color:var(--text)">${american(fairOdds(t.prob))}</b><small>${pct(t.prob, 0)} chance</small></div>
+        <div class="win"><small>${esc(t.book || "FanDuel")} pays</small><b>${american(t.american)}</b><small>💰 value</small></div></div>
+      <p class="bigline">${esc(t.book || "FanDuel")}'s <b>${american(t.american)}</b> pays <b>more</b> than our <b>${american(fairOdds(t.prob))}</b> — so it's <b style="color:var(--good)">value</b>.</p>
+      <p class="muted">You don't have to do any math: the site compares them for you and marks value in green.</p>`;
+  },
   () => {
     const t = tonightExample();
-    const ex = t ? `<div class="callout good">🏀 <b>Tonight's best deal:</b> ${esc(t.name)} at <b class="g">${american(t.american)}</b>
+    const ex = t ? `<div class="callout good">🏀 <b>Tonight's best value:</b> ${esc(t.name)} at <b class="g">${american(t.american)}</b>
         (about <b class="g">${cents(t.ev)}</b> for every $1). Even so, he <i>won't</i> score first about ${Math.round((1 - t.prob) * 10)} times out of 10.</div>` : "";
     return `<div class="kicker">Step 5 · Remember</div><h3>Three things to remember</h3>
       <ul class="checklist">
-        <li><span>🎲</span><span><b>A good deal still loses most nights.</b> It only pays off over lots and lots of bets.</span></li>
+        <li><span>🎲</span><span><b>Value still loses most nights.</b> It only pays off over lots and lots of bets.</span></li>
         <li><span>🧠</span><span><b>It's only as good as our model's guess.</b> If the guess is wrong, the “good deal” isn't one. The <b>Paper betting</b> panel keeps score so we can find out.</span></li>
         <li><span>🛑</span><span><b>This app never bets.</b> It only looks at prices. Only ever risk money you can afford to lose.</span></li>
       </ul>
       ${ex}
-      <p class="muted"><b>In the app:</b> look for <b style="color:var(--good)">green</b> in the <b>Value</b> column and the <b>💰 Best deal</b> line on each game.</p>`;
+      <p class="muted"><b>In the app:</b> look for the green <b style="color:var(--good)">💰 value</b> tags in each game's table and the <b>💰 Best value</b> line.</p>`;
   },
 ];
 
 function renderCalc() {
+  if (!$("cChanceV")) return;                 // the slider slide was replaced by a real example (2026-11-19)
   const c = calc.chance, o = calc.odds, p = payout(o), ev = c * p - (1 - c);
   const w = Math.round(c * 100);
   $("cChanceV").textContent = `${w} of 100`;
