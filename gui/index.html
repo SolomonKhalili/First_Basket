@@ -513,13 +513,23 @@ body.viewer #runAll, body.viewer #runSelected, body.viewer #ddown { display: non
 .card.fd-flash { animation: fdFlash 1.2s ease-out; }
 .tscroll { overflow-x: auto; -webkit-overflow-scrolling: touch; }   /* a wide odds table swipes sideways, never cut off */
 th .short { display: none; }
-@media (max-width: 560px) {
+.nshort { display: none; }
+@container cardbody (max-width: 520px) { .tscroll .nshort { display: inline; } }
+/* compact odds table whenever the CARD is narrow — a phone, or a laptop showing cards side by side */
+.card-body { container-type: inline-size; container-name: cardbody; }
+@container cardbody (max-width: 520px) {
   th .long { display: none; } th .short { display: inline; }
   .tscroll table { font-size: 13px; }
   .tscroll td.rank, .tscroll thead th:first-child { display: none; }       /* the order already shows the rank */
   .tscroll td, .tscroll th { padding-left: 2px; padding-right: 2px; }
   .tscroll .player { gap: 5px; }
   .tscroll .fd { padding-left: 4px; padding-right: 4px; min-width: 40px; font-size: 12px; }
+  .tscroll .nm { display: block; font-weight: 600; line-height: 1.2; overflow-wrap: anywhere; }   /* long names wrap, never cut */
+  .tscroll .nfull { display: none; }
+  .tscroll td .bar { display: none; }                                        /* the % says it; room for names */
+  .tscroll .player img, .tscroll .player svg { width: 15px; height: 15px; }
+  .tscroll .rl, .tscroll .tcode { display: none; }                         /* "1st basket 2/12 games" -> "2/12" */
+  .tscroll td { padding-top: 7px; padding-bottom: 7px; }
   /* both books shown: drop "Fair" — each price's green/grey already says whether it beats fair odds */
   .tscroll.two-books th:nth-child(4), .tscroll.two-books td:nth-child(4) { display: none; }
 }
@@ -527,6 +537,7 @@ th .short { display: none; }
 .fd.best { box-shadow: inset 0 0 0 2px var(--gold); font-weight: 800; }
 .fd.best:not(.value) { color: var(--text); }
 .fd.worse { opacity: .4; }
+.tscroll.fd-closed th:nth-child(5) , .tscroll.fd-closed td:nth-child(5) { opacity: .45; }   /* FanDuel closed: faded */
 .top-best { box-shadow: inset 0 0 0 1.5px var(--gold); border-radius: 6px; padding: 0 4px; }
 .top-worse { opacity: .5; }
 </style>
@@ -824,7 +835,7 @@ function card(c, i) {
   const rec = (name) => { const r = season[name]; return r && r[1] ? r : null; };
   function recLine(name) {
     const r = rec(name);
-    return r ? `<span class="rec" title="Scored the game's first basket in ${r[0]} of his ${r[1]} games this season">1st basket <b>${r[0]}</b>/${r[1]} games</span>`
+    return r ? `<span class="rec" title="Scored the game's first basket in ${r[0]} of his ${r[1]} games this season"><span class="rl">1st basket </span><b>${r[0]}</b>/${r[1]}<span class="rl"> games</span></span>`
              : (c.season ? `<span class="rec">no games yet this season</span>` : "");
   }
   const topRec = rec(top[0]);
@@ -883,9 +894,11 @@ function card(c, i) {
     </div>`;
   }
   const max = top[2];
+  // "Luka Dončić" -> "L. Dončić", "Jaren Jackson Jr." -> "J. Jackson Jr." (phones)
+  const shortName = (n) => { const w = String(n).split(" "); return w.length > 1 ? `${w[0][0]}. ${w.slice(1).join(" ")}` : n; };
   const rows = c.picks.map(([name, team, p, fair], r) => `<tr data-name="${esc(name)}">
       <td class="rank num">${r + 1}</td>
-      <td><div class="player">${logo(team, 18)}<span class="pn"><span>${esc(name)}</span>${recLine(name)}</span> <small>${esc(team)}</small></div></td>
+      <td><div class="player">${logo(team, 18)}<span class="pn"><span class="nm"><span class="nfull">${esc(name)}</span><span class="nshort">${esc(shortName(name))}</span></span>${recLine(name)}</span> <small class="tcode">${esc(team)}</small></div></td>
       <td class="r num"><span class="bar"><i style="width:${(p / max) * 100}%;--r:${r}"></i></span>${pct(p)}</td>
       <td class="r num odds">${american(fair)}</td>${fdCell(name, fair)}${evCell(name)}</tr>`).join("");
   const starterLine = (team, players) => `<div class="line"><span class="tm">${logo(team, 18)}${esc(team)}</span>
@@ -919,15 +932,16 @@ function card(c, i) {
         <div class="who"><div class="label">Top pick</div><div class="name">${esc(top[0])}</div><div class="team">${logo(top[1], 16)}${esc(top[1])}</div>${heroRec}</div>
         <div class="big"><div class="pct num" data-v="${top[2]}">${pct(top[2])}</div><div class="sub num">fair ${american(top[3])}${topFd}</div></div>
       </div>
-      <div class="facts" style="--i:${i}">
-        ${tipBlock}${first}
-      </div>
-      <div class="tscroll ${dkOn ? "two-books" : ""}"><table style="--i:${i}">
+      ${valueLine}
+      <div class="tscroll ${dkOn ? "two-books" : ""} ${c.fd_closed ? "fd-closed" : ""}"><table style="--i:${i}">
         <thead><tr><th></th><th>Player</th><th class="r">Chance</th><th class="r">Fair</th>${fdOn ? '<th class="r"><span class="long">FanDuel</span><span class="short">FD</span></th>' + (dkOn ? '<th class="r"><span class="long">DraftKings</span><span class="short">DK</span></th>' : '') + '<th class="r" title="Good deal? (best price of the books) Average profit per $1 in the long run">Value<button class="whats" data-learn="2" title="What is this?">?</button></th>' : ""}</tr></thead>
         <tbody>${rows}</tbody>
       </table></div>
-      ${c.fanduel_note ? `<div class="small-note">${esc(c.fanduel_note)}</div>` : ""}
-      ${valueLine}
+      ${c.fd_closed ? `<div class="small-note">FanDuel has closed first-basket betting (tip-off is near) — its last prices are shown faded.</div>`
+        : c.fanduel_note ? `<div class="small-note">${esc(c.fanduel_note)}</div>` : ""}
+      <div class="facts" style="--i:${i}">
+        ${tipBlock}${first}
+      </div>
       <details><summary>Starters</summary><div class="starters">${starterLine(c.away, c.away_starters)}${starterLine(c.home, c.home_starters)}</div></details>
       ${(c.notes || []).length ? `<ul class="notes">${c.notes.map((n) => `<li>${esc(n)}</li>`).join("")}</ul>` : ""}
     </div>
@@ -982,7 +996,7 @@ function updateCardsLive() {
    the page reads it straight from the viewer's own phone or computer — no Mac, no server in between. One request
    covers every game; players are matched with the same rules as fanduel_odds.match_prices. */
 const fdProfit = (a) => (a > 0 ? a / 100 : 100 / -a);
-const fdState = { at: null, prices: {}, fails: 0, timer: null };     // FanDuel: market id -> {selection id: american}
+const fdState = { at: null, prices: {}, closed: {}, fails: 0, timer: null };     // FanDuel: market id -> {selection id: american}
 const dkState = { at: null, games: null, fails: 0 };                  // DraftKings: [{home, away, rows}]
 const DK_URL = "https://sportsbook-nash.draftkings.com/sites/US-NY-SB/api/sportscontent/controldata/league/leagueSubcategory/v1/markets?isBatchable=false&templateVars=42648&eventsQuery=%24filter%3DleagueId%20eq%20%2742648%27%20AND%20clientMetadata/Subcategories/any%28s%3A%20s/Id%20eq%20%2716305%27%29&marketsQuery=%24filter%3DclientMetadata/subCategoryId%20eq%20%2716305%27%20AND%20tags/all%28t%3A%20t%20ne%20%27SportcastBetBuilder%27%29&include=Events&entity=events";
 const DK_TEAMS = {"hawks": "ATL", "celtics": "BOS", "nets": "BKN", "hornets": "CHA", "bulls": "CHI", "cavaliers": "CLE", "cavs": "CLE", "mavericks": "DAL", "mavs": "DAL", "nuggets": "DEN", "pistons": "DET", "warriors": "GS", "rockets": "HOU", "pacers": "IND", "clippers": "LAC", "lakers": "LAL", "grizzlies": "MEM", "heat": "MIA", "bucks": "MIL", "timberwolves": "MIN", "wolves": "MIN", "pelicans": "NO", "knicks": "NY", "thunder": "OKC", "magic": "ORL", "76ers": "PHI", "sixers": "PHI", "suns": "PHX", "trail blazers": "POR", "blazers": "POR", "trailblazers": "POR", "kings": "SAC", "spurs": "SA", "raptors": "TOR", "jazz": "UTAH", "wizards": "WSH"};
@@ -1054,8 +1068,9 @@ function fdApply(c) {                        // the latest live prices of both b
   if (live) {
     const prices = {};
     for (const [sel, name] of Object.entries(c.fd_market.runners)) if (live[sel] !== undefined) prices[name] = live[sel];
-    c.fanduel = prices;
+    if (Object.keys(prices).length) c.fanduel = prices;            // never blank the column
   }
+  c.fd_closed = !!(c.fd_market && fdState.closed[c.fd_market.id]);
   const g = (dkState.games || []).find((x) => x.home === c.home && x.away === c.away);
   if (g && g.rows.length) c.draftkings = matchRows(g.rows, c.probs || c.picks.map(([n, t]) => [n, t]));
   if (live || g) recompute(c);
@@ -1071,15 +1086,19 @@ async function refreshFD(pre) {
     const ids = [...new Set(pre.filter((c) => c.fd_market).map((c) => c.fd_market.id))].join(",");
     const r = await fetch(`${oddsBase()}/prices?ids=${encodeURIComponent(ids)}`, { cache: "no-store" });
     if (!r.ok) throw new Error(`odds ${r.status}`);
-    const prices = {};
+    const prices = {}, seen = new Set();
     for (const m of (await r.json()) || []) {
-      const open = (m.marketStatus ?? "OPEN") === "OPEN";
+      seen.add(String(m.marketId));
+      if ((m.marketStatus ?? "OPEN") !== "OPEN") continue;            // closed: keep the last prices
+      const open = true;
       prices[m.marketId] = {};
       for (const run of m.runnerDetails || []) {
         const a = run.winRunnerOdds?.americanDisplayOdds?.americanOddsInt;
         if (open && (run.runnerStatus ?? "ACTIVE") === "ACTIVE" && a !== undefined && a !== null) prices[m.marketId][run.selectionId] = Number(a);
       }
     }
+    // a market FanDuel no longer lists or has closed: keep its last prices, marked closed
+    for (const id of ids.split(",")) if (!(id in prices)) { fdState.closed[id] = true; if (fdState.prices[id]) prices[id] = fdState.prices[id]; }
     fdState.prices = prices; fdState.at = new Date(); fdState.fails = 0;
     return true;
   } catch (e) { fdState.fails++; return false; }
@@ -1112,9 +1131,9 @@ function fdRedraw() {                        // put the live prices on the cards
   const els = [...document.querySelectorAll("#cards .card")];
   (lastResult?.cards || []).forEach((c, i) => {
     if (!isPre(c)) return;
-    const before = JSON.stringify([c.fanduel, c.draftkings]);
+    const before = JSON.stringify([c.fanduel, c.draftkings, c.fd_closed]);
     fdApply(c);
-    if (els[i] && JSON.stringify([c.fanduel, c.draftkings]) !== before) {
+    if (els[i] && JSON.stringify([c.fanduel, c.draftkings, c.fd_closed]) !== before) {
       const hidden = els[i].hidden;
       els[i].outerHTML = card(c, i).replace('class="card enter"', 'class="card"');
       const fresh = document.querySelectorAll("#cards .card")[i];
