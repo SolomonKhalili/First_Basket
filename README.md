@@ -51,12 +51,32 @@ password unlocks in their browser. Full details: [`BLUEPRINT.md`](BLUEPRINT.md) 
 
 ## On the website / app
 
-- **Game cards** — one **FanDuel** box (free throws count) and one **DraftKings** box (only field goals), each with its own **top 5 first-basket picks** and **first team to score**: Our odds (with % chance) next to FD odds / DK odds, **💰 value** when the book pays more than our odds; our #1 pick gold, #2 blue; times in each viewer's own time zone.
-- **💰 Tonight's best value** — every value bet (pays more than the chance is worth — usually NOT the favorite) across tonight's games, best first (FanDuel judged with the first-points chances, DraftKings with the field-goal chances); **⏰ bet soon** when a good bet's payout is dropping.
-- **💵 My bets** — each login has its own tracker (new accounts get it automatically). Tap a player → **Straight bet** or **Parlay** → pick FanDuel / DraftKings / Other (odds fill in) → amount. Settles itself; separate Straight / Parlays tabs with profit; ✕ deletes. Stored encrypted on the Cloudflare relay, backed up to the database.
-- **Track record** — #1-pick rate **this season / last season / all time**, each graded (Poor → Excellent) with the reason; **🥊 Who guesses better: us or the sportsbooks?** (DraftKings all season, FanDuel since Nov 18); **🤝 Does the sportsbook agree with us?** (do our good bets' prices shorten before tip-off); paper betting.
-- **📈 Odds** — every player's odds at both books today: opened → now, ↓/↑, a little chart of the day, biggest movers first (team to score first too).
-- **📊 Data** — Scorecard, Our picks, Lineups, All games and **📈 Odds moves** (both books: opening → closing, every change with its time, market opened / closed).
+Top buttons: **🏀 Picks · 🩹 Injuries · 👥 Starters · 📈 Odds tracker · 💵 My bets · 📊 Data · 💰 What's value?**
+(the owner's Mac app also has **🔄 Update picks**). Games are shown one at a time, top to bottom; times are in each
+viewer's own time zone.
+
+- **Each game card**, top to bottom:
+  - **⛹️ Tip-off** — who jumps for each team, their tips won this season, and each team's chance.
+  - **🏀 First basket prediction** — the top pick's photo and two equal tiles, *Our prediction to score first*:
+    **FanDuel** (incl. free throws) and **DraftKings** (excl. free throws), each with that book's odds.
+  - **FanDuel / DraftKings tabs** — each book's own **top 5** table (rank, face, Chance, Our odds, FD/DK odds;
+    "2/13" = scored first in 2 of his 13 games this season). **💰 value** only for top-5 players and only for the team
+    we favor. A questionable starter shows ⚠️ and his likely **backup**; if the backup's chance (whole lineup
+    re-scored) would make the top 5, he gets his own "↳ only if X sits" row.
+  - **🏀 First team to score prediction** — the top team's logo and the same two tiles, then both teams' odds
+    (FanDuel "Team to Score First" counts free throws; DraftKings "Team to Score 1st FG" doesn't).
+  - **👥 Starters** (expected / confirmed) and **🩹 Injuries** (every listed player, always with the injury).
+- **🩹 Injuries** — every game: Out / Questionable / Active, with what changed today ("was questionable — now ruled
+  out", "now in the confirmed starting lineup") and the likely replacement. Updates on every refresh.
+- **👥 Starters** — every game: NBA.com's projected five next to the confirmed five (~30 min before tip-off).
+- **📈 Odds tracker** — tabs **First basket** / **First team to score**; per player and book: opening → now, a small
+  chart, 🟢 Better / 🔴 Worse; tap a book to see **every change with its time**.
+- **💵 My bets** — each login has its own tracker. Tap a player → **Straight bet** or **Parlay** → book (odds fill in)
+  → amount. Settles itself; Straight / Parlays tabs with profit; ✕ deletes. Stored encrypted on the Cloudflare relay.
+- **📊 Data** — **Scorecard** (tabs Last season / This season / All time: #1 pick, #1 or #2, tip-off winner, all
+  combined), Our picks, Lineups, All games, Odds tracker. One search bar: players (then "show games where he was …"),
+  dates, or any team name (knicks, ny, nyk, new york knicks, sixers, cavs…).
+- **💰 What's value?** — 3 short slides on the 💰 tag, using a real example from tonight.
 
 ## Quick start
 
@@ -79,7 +99,7 @@ python3 gui.py                      # the same picks in your web browser (cards,
 
 If you already have the database and `pregame_model.json`, you only need the last two commands.
 
-Run the tests any time: `python3 -m pytest` (256 tests, all in the `tests/` folder).
+Run the tests any time: `python3 -m pytest` (259 tests, all in the `tests/` folder).
 
 ---
 
@@ -140,27 +160,33 @@ A player's chance = his team's chance × his share within the team. Inputs built
 | `team_tipoff_win_pct` | How often the player's team has won the opening tip |
 | `early_shot_shrunk` | His share of his team's first 5 shot attempts in earlier starts (the team's early first option) |
 | `tip_win_prob` | Chance the player's team wins tonight's opening tip (`tip_model.py`: the expected jumper for each team — its regular jumper, else NBA.com's listed center, else its most experienced starter — their past tip results and home court; earlier games only) |
+| `opp_pos_share`, `vs_opp_rate` | Tonight's opponent: how often it gives up the first basket to his position, and his own record against that team |
 
-Trained on the **2025-26 regular season plus every 2026-27 game so far** (1,428 games). Only the two most recent seasons are used, because rosters and roles change too fast for older data.
+Trained on the **2025-26 regular season plus every 2026-27 game so far**. The **2024-25 season** (1,321 games, `data_patches/history_2024_25.json.gz`) is used only as **player history** — it makes every player's stats more complete, but its games are never training examples (rosters and roles change). Adding it improved the week-by-week test in both periods (2026-27 log-loss 2.2377 → 2.2342; Jan–Apr 2026 2.2725 → 2.2578).
 
-### Results (walk-forward test, 198 games of 2026-27)
+**Tip-off call shown on the cards** (`tip_model.py`, `extended=True`): every opening tip since 2024-25, **this season's tips count double**, blended 50/50 with a **"who you beat" rating** (Elo) so beating a strong jumper counts more — calls the tip winner **67.9%** this season (64.5% last season).
+
+### Results (walk-forward test, 215 games of 2026-27)
 
 Each week of the current season is predicted by a model trained only on games before that week, the way it is used in real life.
 
 | Metric | Value |
 |--------|-------|
-| Top pick scored first | **19.7%** (random = 10%; best simple rule, season first-basket rate = 17.7%) |
-| Log-loss | **2.232** (uniform guess = 2.303; lower = more accurate chances) |
-| Calibration | Checked on 1,129 games: the chances match how often players actually score first |
-| Tip-off model | Calls the tip winner **63.6%** of the time (always picking the home team: 47.5%); names the player who actually jumps ~88% of the time |
+| Top pick scored first | **19.1%** this season test, **17.0%** Jan–Apr 2026 (random = 10%; StatsBench's published model: 17.7%) |
+| Log-loss | **2.234** this season, **2.258** Jan–Apr 2026 (uniform guess = 2.303; lower = more accurate chances) |
+| vs DraftKings | Our field-goal chances were closer to what happened than DraftKings' own prices over 307 games (2.213 vs 2.228; 2.242 vs 2.258) |
+| Tip-off | Calls the tip winner **67.9%** this season; names the player who actually jumps ~95% of the time |
+| First team to score | ~57–60% right — close to the ceiling (the tip winner scores first only ~66% of the time) |
 
-With 198 games the margin of error is about ±5.5 points, so this is not statistically distinguishable from the best simple rule. Results are re-measured every time the model retrains.
+With ~200 games the margin of error is about ±5.5 points. Results are re-measured every time the model retrains.
 
 ### What we learned (from our own data)
 - The team that wins the opening tip scores the first basket **66.3%** of the time (1,005 of 1,515 games); the home team wins the tip 52.8% (2025-26).
 - The first points are a free throw in 8.9% of games (135 of 1,515).
 - An earlier model reported ~60% accuracy, but it used features taken from the first plays of the game, which already contain the first basket. That number is invalid for pre-game use; the model has been deleted.
 - Public sources put the honest pre-game ceiling around 17–18% (e.g. StatsBench: 17.7% over 724 games, no ROI or closing-line data). Recent-form windows (L5/L10) add little.
+- **Tested and not adopted (2026-11-19)** — each had to win in both test periods: tip head-to-head, tip record vs a team, season-only tip rates, all tip signals weighted together, height for tips, other jumper rules, faster ratings for new jumpers, a smaller tip home edge, free-throw drawing, both teams' first scorers or the first shot attempt as extra examples, a per-player bonus, home court in "first team" (already captured), and blending DraftKings' prices. Details and numbers: `BLUEPRINT.md` and `experiments/`; the outside research behind them: `reports/First basket model improvements.md`.
+- News reports say the NBA asked its partner sportsbooks (Oct 2026) to stop offering "first basket" / opening-tip bets; FanDuel and DraftKings still list them for us, but that could change.
 
 ---
 
