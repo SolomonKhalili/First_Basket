@@ -71,3 +71,11 @@ def test_should_run_until_results_are_filed(monkeypatch):
     assert run(["post", "post"], ["0"]) is True           # one finished game not filed yet
     assert run(["post", "post"], ["0", "1"]) is False     # everything filed: nothing to do
     assert run([], []) is False                           # no games today
+
+
+def test_live_job_restarts_only_for_code_changes():
+    from publish import code_changed
+    assert code_changed(["gui/index.html"]) and code_changed(["nba.py"]) and code_changed(["requirements.txt"])
+    assert not code_changed(["site_users.json"]) and not code_changed(["website_live/relay_url.txt"])
+    assert not code_changed(["BLUEPRINT.md", "README.md"]) and not code_changed(["tests/test_bets.py"])
+    assert not code_changed([])

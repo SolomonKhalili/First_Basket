@@ -216,6 +216,23 @@ def _git(*args, cwd) -> None:
     subprocess.run(["git", *args], cwd=cwd, check=True, capture_output=True, timeout=180)
 
 
+CODE_FILES = (".py", "requirements.txt")        # + anything under gui/: what the live job runs or publishes
+
+
+def code_changed(changed_files) -> bool:
+    """Pure (testable). Did GitHub's main change anything the running live job uses (code, the page)?
+    Accounts and the relay address are re-read every check, so those alone don't count."""
+    return any(f.startswith("gui/") or (f.endswith(CODE_FILES) and not f.startswith("tests/")) for f in changed_files)
+
+
+def newer_code(cwd) -> bool:
+    """After fetching main (FETCH_HEAD): is there code newer than what this run started with?"""
+    import subprocess
+    r = subprocess.run(["git", "diff", "--name-only", "HEAD", "FETCH_HEAD"], cwd=cwd, capture_output=True, text=True,
+                       timeout=60)
+    return r.returncode == 0 and code_changed(r.stdout.split())
+
+
 def push_dir(folder: Path, remote: str, branch: str, message: str) -> None:
     """Replace `branch` on `remote` with exactly this folder (one commit, no growing history)."""
     import shutil
@@ -280,6 +297,10 @@ def live(out: Path, once: bool = False) -> int:
                 _git("checkout", "FETCH_HEAD", "--", "website_live/relay_url.txt", cwd=HERE)
             except Exception:  # noqa: BLE001 — not set up yet
                 pass
+            if newer_code(HERE):                         # improvements pushed today go live now, not tomorrow:
+                save_state()                             # hand over to a fresh run (GitHub always has one queued;
+                say("new code on GitHub — restarting with it")   # the Cloudflare timer starts one otherwise)
+                return 0
             try:                                         # DraftKings prices from the Mac (DraftKings refuses clouds)
                 _git("fetch", "-q", "--depth", "1", os.environ["STATE_REMOTE"], "dk-prices", cwd=HERE)
                 _git("checkout", "FETCH_HEAD", "--", "dk_prices.json", cwd=HERE)
