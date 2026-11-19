@@ -39,7 +39,7 @@ accounts only by the owner: `python3 site_users.py add NAME`). Everything below 
 | Results, record, CSV, spreadsheet | As each game ends (after the day's last tip-off) | same job |
 | Retraining | Nightly ~4 AM ET | same job |
 | Keeping the job switched on | Every 10 min | Cloudflare timer (backup: this Mac, every 30 min) |
-| This Mac's NBA folder | Every 30 min | `sync_from_cloud.py` (`launcher/com.firstbasket.sync.plist`) |
+| This Mac's NBA folder (newest code from GitHub + the cloud's data; never overwrites edits made on the Mac) | Every 30 min | `sync_from_cloud.py` (`launcher/com.firstbasket.sync.plist`) |
 | Desktop app | Always running, live odds every 30 s | `gui.py` (`launcher/com.firstbasket.app.plist`) |
 
 The model, code and data stay in the private repo; the website only holds encrypted results that each friend's
@@ -66,7 +66,7 @@ python3 gui.py                      # the same picks in your web browser (cards,
 
 If you already have the database and `pregame_model.json`, you only need the last two commands.
 
-Run the tests any time: `python3 -m pytest` (196 tests, all in the `tests/` folder).
+Run the tests any time: `python3 -m pytest` (203 tests, all in the `tests/` folder).
 
 ---
 
@@ -202,7 +202,7 @@ NBA/
 ├── train_pregame.py        # retrains pregame_model.json and runs the week-by-week test
 ├── build_features.py       # builds training matrices and player game logs
 ├── picks.py                # pick log + track record (`eval`)
-├── tests/                  # 196 tests (python3 -m pytest)
+├── tests/                  # 203 tests (python3 -m pytest)
 ├── first_basket_data.csv   # every past game: who scored first (auto-regenerated; don't edit by hand)
 ├── my_predictions.xlsx     # open this: Scorecard, Games (our picks vs results), Lineups (expected vs confirmed vs actual)
 ├── nba_first_basket.db     # SQLite database
@@ -214,7 +214,7 @@ NBA/
 ├── site_users.py           # website accounts
 ├── fanduel_odds.py, ev.py  # FanDuel prices + value (EV)
 ├── draftkings_odds.py      # DraftKings prices
-├── sync_from_cloud.py      # Mac: download the cloud's data + start the cloud job if it went quiet
+├── sync_from_cloud.py      # Mac: take GitHub's newest code + the cloud's data; start the cloud job if it went quiet
 ├── website_live/           # the cloud job, the Cloudflare relay + timer
 ├── launcher/               # Mac launch agents + Desktop app
 ├── requirements.txt, README.md, BLUEPRINT.md

@@ -1,5 +1,6 @@
 """
-Keeps this Mac's NBA folder up to date with the cloud copy (GitHub keeps the "live" data — see
+Keeps this Mac's NBA folder up to date with the cloud copy and with the code on GitHub's main (changes made from the
+phone or a cloud session arrive here by themselves; see update_code) (GitHub keeps the "live" data — see
 .github/workflows/update-site.yml). Runs by itself every 30 minutes and at login (launcher/com.firstbasket.sync.plist);
 you can also run it any time:
 
@@ -64,6 +65,64 @@ def sync() -> list:
 
 
 # ──────────────────────────────────────────────
+# CODE: changes saved to GitHub from anywhere (a phone or cloud session) reach this Mac by themselves.
+# ──────────────────────────────────────────────
+def code_update_plan(up_to_date: bool, mac_has_own_commits: bool, incoming: set, dirty: set,
+                     same: frozenset = frozenset()) -> tuple:
+    """Pure (testable). Should this Mac's NBA folder take GitHub's newest `main`?
+    incoming = files GitHub changed; dirty = files edited on this Mac but not saved to GitHub yet; same = dirty files
+    whose content here already equals GitHub's (nothing to lose).
+    -> ("none",) / ("skip", reason) / ("update", data files to reset first).
+    Never overwrites work in progress: a code file edited here that GitHub also changed means skip. Data files
+    (FILES) are fine to reset, because sync() downloads the cloud's newest copy right after."""
+    if up_to_date:
+        return ("none",)
+    if mac_has_own_commits:
+        return ("skip", "this Mac has changes GitHub doesn't have yet")
+    clash = sorted(f for f in incoming & dirty if f not in FILES and f not in same)
+    if clash:
+        return ("skip", f"edited here and on GitHub: {', '.join(clash[:3])}")
+    return ("update", sorted(incoming & dirty))                      # reset these, then take GitHub's
+
+
+def update_code() -> str:
+    """Fast-forward this folder to GitHub's main when it's safe (see code_update_plan); restart the Mac app if its
+    files changed. Returns a line for the log."""
+    git("fetch", "-q", "origin", "main")
+    head, new = git("rev-parse", "HEAD"), git("rev-parse", "FETCH_HEAD")
+    base = git("merge-base", "HEAD", "FETCH_HEAD")
+    incoming = set(git("diff", "--name-only", "HEAD", "FETCH_HEAD").splitlines()) if head != new else set()
+    tracked_edits = set(git("diff", "--name-only", "HEAD").splitlines())   # edited here, not saved to GitHub
+    untracked = set(git("ls-files", "--others", "--exclude-standard").splitlines())   # new here, never saved
+    dirty = tracked_edits | untracked
+    same = set()
+    for f in incoming & dirty:
+        try:
+            if (HERE / f).exists() and git("hash-object", str(HERE / f)) == git("rev-parse", f"FETCH_HEAD:{f}"):
+                same.add(f)
+        except RuntimeError:
+            pass                                                      # removed on GitHub: not "same"
+    plan = code_update_plan(head == new, base != head, incoming, dirty, frozenset(same))
+    if plan[0] == "none":
+        return "code already up to date"
+    if plan[0] == "skip":
+        return f"code update skipped ({plan[1]})"
+    for f in plan[1]:                                                 # data (cloud copy comes next) or identical
+        if f in untracked:
+            (HERE / f).unlink()
+        else:
+            git("checkout", "--", f)
+    git("merge", "--ff-only", "-q", "FETCH_HEAD")
+    if any(f == "gui.py" or f.startswith("gui/") for f in incoming):
+        try:                                                          # the app restarts with the new page
+            subprocess.run(["launchctl", "kickstart", "-k", f"gui/{os.getuid()}/com.firstbasket.app"],
+                           capture_output=True, timeout=60)
+        except (OSError, subprocess.SubprocessError):
+            pass                                                      # not a Mac / app not installed
+    return f"code updated from GitHub ({len(incoming)} files)"
+
+
+# ──────────────────────────────────────────────
 # BACKUP: GitHub's timed runs are "best effort" (they can be late or skipped). If the cloud has gone quiet,
 # this Mac starts the cloud update itself. The cloud still does the work; this only presses its Run button.
 # ──────────────────────────────────────────────
@@ -125,6 +184,10 @@ def main() -> int:
         nudge_cloud()
     except Exception as e:  # noqa: BLE001 — offline / not signed in to gh: the cloud's own schedule still runs
         log(f"backup check skipped ({type(e).__name__}: {e})")
+    try:
+        log(update_code())
+    except Exception as e:  # noqa: BLE001 — offline / git busy: try again next time
+        log(f"code update skipped ({type(e).__name__}: {e})")
     try:
         changed = sync()
     except Exception as e:  # noqa: BLE001 — offline, GitHub down, …: try again next time
