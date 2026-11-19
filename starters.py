@@ -468,6 +468,28 @@ def parse_injury_rows(rows) -> list[dict]:
     return out
 
 
+INJURY_LOG_SCHEMA = """CREATE TABLE IF NOT EXISTS injury_log (
+    game_date TEXT, player_name TEXT, team TEXT, status TEXT, detail TEXT, note TEXT, return_date TEXT,
+    first_seen TEXT, PRIMARY KEY (game_date, player_name, status))"""
+
+
+def save_injury_report(con, game_date: str, report: list) -> int:
+    """Keep tonight's injury report (saved 2026-11-18 onward, for a later "returning from injury / questionable"
+    test). One row per player per status per day: the first time each status was seen; a later change
+    (Questionable -> Out) adds its own row. Returns how many new rows were saved."""
+    con.execute(INJURY_LOG_SCHEMA)
+    import time
+    now = time.strftime("%Y-%m-%d %H:%M:%S")
+    before = con.total_changes
+    for r in report or []:
+        if r.get("name") and r.get("status"):
+            con.execute("INSERT OR IGNORE INTO injury_log VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
+                        (yyyymmdd(game_date), r["name"], r.get("team", ""), r["status"], r.get("detail", ""),
+                         r.get("note", ""), r.get("return", ""), now))
+    con.commit()
+    return con.total_changes - before
+
+
 SUMMARY_URL = ("https://site.web.api.espn.com/apis/site/v2/sports/basketball/nba/summary"
                "?region=us&lang=en&contentorigin=espn&event={event}")
 

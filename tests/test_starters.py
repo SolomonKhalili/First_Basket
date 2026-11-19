@@ -488,3 +488,15 @@ def test_position_is_ignored_when_unknown_or_nobody_matches():
     no_centre = {"cen": "C", "wing": "G"}                                 # BIG's position unknown
     r = st.project_usual_starters(con, "UTAH", "20261101", [rep("CEN", "Out")], groups=no_centre)
     assert r["replaced"][0]["in"] == "WING"
+
+
+
+def test_injury_report_is_kept_once_per_status():
+    import sqlite3
+    con = sqlite3.connect(":memory:")
+    rep = [{"name": "A Player", "team": "LAL", "status": "Questionable", "detail": "Ankle", "note": "", "return": ""}]
+    assert st.save_injury_report(con, "20261119", rep) == 1
+    assert st.save_injury_report(con, "20261119", rep) == 0                      # same status again: not repeated
+    rep[0]["status"] = "Out"
+    assert st.save_injury_report(con, "20261119", rep) == 1                      # a change gets its own row
+    assert con.execute("SELECT COUNT(*) FROM injury_log").fetchone()[0] == 2

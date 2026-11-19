@@ -812,6 +812,7 @@ def predict_today(first_pass: bool = True, teams: set = frozenset(), ui=None) ->
         player_logs = bf.build_player_game_logs()
         # League feed + each game's own summary (the summaries carry Doubtful / Questionable)
         inj_report = st.fetch_injury_report([g['game_id'] for g in pre_games])
+        st.save_injury_report(con, date.today().strftime("%Y%m%d"), inj_report)   # kept for later tests
         # Current rosters: a traded player counts for his new team right away
         roster_pos: dict = {}
         rosters = st.fetch_rosters({g[k] for g in pre_games for k in ('home_team', 'away_team')}, positions=roster_pos)
