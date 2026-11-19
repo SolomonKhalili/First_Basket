@@ -349,12 +349,19 @@ def odds_track(con, day: str) -> dict:
                           "teams": [{"team", "books": {...}}]}]}  — points only when the price changed."""
     games = {}
 
+    import starters as _st
+
     def add(kind, m, name, team, book, at, a):
         g = games.setdefault(m, {"matchup": m, "players": {}, "teams": {}})
-        row = g[kind].setdefault(name, {"name" if kind == "players" else "team": name, "team": team, "books": {}})
+        key = _st.norm_name(name) if kind == "players" else name      # "L.J. Cryer" and "LJ Cryer" are one player
+        row = g[kind].setdefault(key, {"name" if kind == "players" else "team": name, "team": team, "books": {}})
+        if team and not row.get("team"):
+            row["team"] = team
         pts = row["books"].setdefault(book, [])
+        when = _utc(at, day)
         if not pts or pts[-1][1] != a:
-            pts.append([_utc(at, day), int(a)])
+            pts.append([when, int(a)])
+        pts.sort(key=lambda p: p[0])                                  # two spellings may interleave in time
 
     for book, sql in (("FanDuel", "SELECT matchup, player_name, team, logged_at, american FROM odds_log WHERE game_date = ? ORDER BY logged_at"),
                       ("DraftKings", "SELECT matchup, player_name, team, logged_at, american FROM dk_odds_log WHERE game_date = ? ORDER BY logged_at")):
