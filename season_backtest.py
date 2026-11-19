@@ -35,7 +35,7 @@ DB = "nba_first_basket.db"
 LABEL = "BACKTEST"
 MODEL_ID = "week-by-week-backtest"
 LAST_SEASON_FROM = "20251101"          # last season graded from here: the first ~10 days had no earlier games to learn from
-LAST_SEASON_PLAN = f"{LAST_SEASON_FROM}+playoffs+mix"   # what fill_last_season last built (re-built when this changes)
+LAST_SEASON_PLAN = f"{LAST_SEASON_FROM}+playoffs+mix+stretch"   # what fill_last_season last built (re-built when this changes)
 
 
 def load_training():
@@ -54,11 +54,12 @@ def with_simple_mix(P, M, test):
     """The live model's final step (pregame_model.probabilities): SIMPLE_MIX of each starter's shrunk season
     first-basket rate. Without it the grading scored a different model than the one making picks (fixed 2026-11-19:
     last season 14.6% -> 15.1%, playoffs 13.8% -> 18.4%)."""
-    col = pm.FEATURES.index("fb_rate_shrunk")
+    col, home = pm.FEATURES.index("fb_rate_shrunk"), pm.FEATURES.index("is_home")
     out = []
     for p, k in zip(P, test):
         fb = M[k][:, col]
-        out.append((1 - pm.SIMPLE_MIX) * p + pm.SIMPLE_MIX * fb / fb.sum() if fb.sum() > 0 else p)
+        q = (1 - pm.SIMPLE_MIX) * p + pm.SIMPLE_MIX * fb / fb.sum() if fb.sum() > 0 else p
+        out.append(pm.stretch_teams(q, M[k][:, home] > 0.5))     # same final steps as the live model
     return out
 
 
@@ -137,7 +138,7 @@ def fill_last_season(con) -> int:
     return made
 
 
-FG_PLAN = "fg-v1"
+FG_PLAN = "fg-v2-stretch"
 
 
 def fill_fg_grades(con) -> int:

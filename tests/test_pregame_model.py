@@ -34,7 +34,9 @@ def test_live_chances_mix_in_the_simple_rule():
     fb = R[:, pm.FEATURES.index("fb_rate_shrunk")]
     p = pm.probabilities(m, rows(tip_home=0.7))
     assert p.sum() == pytest.approx(1.0)
-    assert p == pytest.approx((1 - pm.SIMPLE_MIX) * pure + pm.SIMPLE_MIX * fb / fb.sum())
+    mixed = (1 - pm.SIMPLE_MIX) * pure + pm.SIMPLE_MIX * fb / fb.sum()
+    home = R[:, pm.FEATURES.index("is_home")] > 0.5
+    assert p == pytest.approx(pm.stretch_teams(mixed, home))          # then team chances stretched (TEAM_STRETCH)
 
 
 def test_within_a_team_the_better_player_ranks_higher():

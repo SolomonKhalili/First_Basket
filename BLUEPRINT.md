@@ -58,6 +58,7 @@ session: §11 step 0. Full details of every change are in §10, newest first.)*
   was asked and ask before side quests; every change goes live everywhere at once (GitHub + website + relay + Mac);
   never let a failing test ship.
 
+- **Calibration check + team stretch (2026-11-19):** odds formula verified (12.1% → +726, 57% → −133; page = server); player chances sum to 100% per game; players well calibrated over 14,570 starters (said 7.8% → 7.4%, 10.4% → 10.3%, 13.2% → 13.2%, 22.4% → 22.4%); no bench player scored first in 1,537 games. Team chances were too cautious at the extremes (said 63% → 73%, 37% → 27%). Mixing the simple rule inside each team helped 2026-27 but not Jan–Apr 2026 — not adopted. Adopted `pregame_model.TEAM_STRETCH = 1.4` (team chance → sigmoid(1.4·logit), players keep their in-team shares), learned on one season and checked on the other: player and team log-loss better in both. Applied in the live model and the grading (both seasons re-graded).
 **Coming up (dated)**
 - **Around the All-Star break:** re-test adding play-in/playoff/Finals games to training (tested 2026-11-19 on 215 games of 2026-27, walk-forward: without 20.9% / 2.2378, with 20.5% / 2.2362 — no clear gain, not adopted).
 - **On/after 2026-12-08:** re-check the two inputs adopted 11/18 (opponent by position, head-to-head) and the 20%

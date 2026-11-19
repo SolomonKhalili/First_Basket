@@ -91,13 +91,34 @@ def two_stage(team: dict, w, mu, sd, R: np.ndarray) -> np.ndarray:
 # for 2026-27. Re-check with the other inputs on 2026-12-08.
 SIMPLE_MIX = 0.2
 
+# Team chances were too cautious at the extremes (checked 2026-11-19 on 1,461 graded games: "63%" happened 73%,
+# "37%" happened 27%). Stretch each team's chance on the log-odds scale: sigmoid(TEAM_STRETCH * logit), players keep
+# their share inside the team. Learned on one season, checked on the other (1.45 / 1.35): player AND team log-loss
+# better in both (2026-27 2.2371 -> 2.2360, Jan–Apr 2026 2.2646 -> 2.2636).
+TEAM_STRETCH = 1.4
+
+
+def stretch_teams(p: np.ndarray, is_home: np.ndarray, k: float = TEAM_STRETCH) -> np.ndarray:
+    """Pure (testable). Players' chances -> same shares within each team, team totals stretched by k."""
+    p = np.asarray(p, dtype=float)
+    h = np.asarray(is_home, dtype=bool)
+    ph = p[h].sum()
+    if not (0 < ph < 1) or k == 1:
+        return p
+    ph2 = 1 / (1 + np.exp(-k * np.log(ph / (1 - ph))))
+    q = p.copy()
+    q[h] *= ph2 / ph
+    q[~h] *= (1 - ph2) / (1 - ph)
+    return q
+
 
 def probabilities(model: dict, rows: list) -> np.ndarray:
     R = np.array(rows, dtype=float)
     if model.get("type") == "two_stage":
         p = two_stage(model["team"], model["w"], model["mu"], model["sd"], R)
         fb = R[:, FEATURES.index("fb_rate_shrunk")]
-        return (1 - SIMPLE_MIX) * p + SIMPLE_MIX * fb / fb.sum() if fb.sum() > 0 else p
+        p = (1 - SIMPLE_MIX) * p + SIMPLE_MIX * fb / fb.sum() if fb.sum() > 0 else p
+        return stretch_teams(p, R[:, FEATURES.index("is_home")] > 0.5)
     R = R[:, :len(model["mu"])]
     Z = (R - np.array(model["mu"])) / np.array(model["sd"])          # older one-stage model files
     s = Z @ np.array(model["w"])

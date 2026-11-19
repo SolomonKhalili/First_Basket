@@ -320,3 +320,14 @@ def test_grading_uses_the_live_models_final_step():
     got = sb.with_simple_mix([p], M, [0])[0]
     fb = M[0, :, pm.FEATURES.index("fb_rate_shrunk")]
     assert np.allclose(got, (1 - pm.SIMPLE_MIX) * p + pm.SIMPLE_MIX * fb / fb.sum())
+
+
+def test_team_stretch_keeps_shares_and_totals():
+    import numpy as np
+    import pregame_model as pm
+    p = np.array([0.2, 0.15, 0.1, 0.1, 0.05] + [0.08] * 5)         # home 60%, away 40%
+    home = np.array([True] * 5 + [False] * 5)
+    q = pm.stretch_teams(p, home, 1.4)
+    assert abs(q.sum() - 1) < 1e-12 and q[home].sum() > 0.6        # the favourite gets more
+    assert np.allclose(q[home] / q[home].sum(), p[home] / p[home].sum())   # same shares inside the team
+    assert np.allclose(pm.stretch_teams(p, home, 1.0), p)
