@@ -778,6 +778,12 @@ NBA/
   Model files record `early_m`; `_retrain_if_needed` retrains when it doesn't match. Season/last-10 trust re-checked:
   current 30 / 10 still best. (Note: `season_backtest.fill_fg_grades` grades the field-goal model with the
   first-points early setting — re-grade only if those grades are re-run.)
+- **Lineup / injury status checked by simulation (owner):** questionable → cleared (off ESPN's report) removes the ⚠️ tag,
+  backup line and backup row and shows "✅ Active" on Injuries; expected → confirmed switches the badge, drops the
+  "not out yet" note and backups, and Starters lists now show "✅ playing" (projected column: "❌ not starting" if he's
+  not in the confirmed five). A player cleared when he was his team's only listed injury now still shows "✅ Active".
+  Pages pick changes up within ~5 min (cloud every 3 min, page re-checks data every 2 min). The self-reload now
+  checks the new page loads before switching (a reload mid-deploy once showed GitHub's 404).
 - **Card header:** "Expected/Projected lineup" now says "Confirmed lineup not out yet (~30 min before tip-off)" next to it.
 - **Website reloads itself on new code** (`publish.build_site` adds `<meta name="fb-build">` = hash of the page;
   `static_site.html` checks it every minute, never while a dialog is open) — changes show in ~2–3 min instead of after

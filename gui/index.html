@@ -876,6 +876,7 @@ tr.bk-row .itag.bk { color: #fbbf24; }
 .rec-w { white-space: normal; }
 .sub2 { white-space: normal; }
 .nolineup { font-size: 12.5px; color: var(--muted); font-weight: 600; }
+.itag.in.ok { color: var(--good); }
 </style>
 </head>
 <body>
@@ -1343,7 +1344,8 @@ function card(c, i) {
   const starterLine = (team, players) => `<div class="sblock"><div class="iteam-h">${logo(team, 18)}${esc(TEAM_NAMES[team] || team)}</div>
     <ol class="slist">${players.map((p) => { const s = (c.injuries || {})[p.name];
       const bk = (c.backups || {})[p.name];
-      return `<li>${esc(p.name)}${s ? ` <span class="itag in">⚠️ ${esc(/day/i.test(s) ? "Questionable" : s)}</span>` : ""}${bk ? `<div class="sbk">↳ if he sits: ${esc(bk)}</div>` : ""}</li>`; }).join("")}</ol></div>`;
+      const conf = c.label === "CONFIRMED";                   // confirmed starting five: a listed player is playing
+      return `<li>${esc(p.name)}${s ? (conf ? ` <span class="itag in ok">✅ playing</span>` : ` <span class="itag in">⚠️ ${esc(/day/i.test(s) ? "Questionable" : s)}</span>`) : ""}${bk && !conf ? `<div class="sbk">↳ if he sits: ${esc(bk)}</div>` : ""}</li>`; }).join("")}</ol></div>`;
   // the top pick's price at each book; the better one gets the ★
   const topBooks = [["FanDuel", fdOn ? fd[top[0]] : undefined], ["DraftKings", dk[top[0]]]].filter(([, a]) => a !== undefined);
   const topBest = topBooks.length > 1 && topBooks[0][1] !== topBooks[1][1] ? (c.best_book || {})[top[0]] : null;
@@ -3097,12 +3099,15 @@ async function drawStarters() {
       ${[[c.away, c.away_starters], [c.home, c.home_starters]].map(([tm, ours]) => {
         const r = today.find((x) => x[1] === c.matchup && x[2] === tm) || [];
         const proj = names(r[3]), conf = names(r[4]), used = (ours || []).map((s) => s.name);
-        const list = (arr) => arr ? `<ol class="slist">${arr.map((n) => `<li>${esc(n)}${(c.injuries || {})[n] ? ` <span class="itag in">⚠️ ${esc(/day/i.test(c.injuries[n]) ? "Questionable" : c.injuries[n])}</span>` : ""}${(c.backups || {})[n] && !conf ? `<div class="sbk">↳ if he sits: ${esc(c.backups[n])}</div>` : ""}</li>`).join("")}</ol>` : "";
+        const tag = (n) => !(c.injuries || {})[n] && !(c.injury_list ? Object.values(c.injury_list).flat().some((r) => r.name === n && !r.cleared) : false) ? ""
+          : conf ? (conf.includes(n) ? ` <span class="itag in ok">✅ playing</span>` : ` <span class="itag in">❌ not starting</span>`)
+          : ` <span class="itag in">⚠️ ${esc(/day/i.test((c.injuries || {})[n] || "") ? "Questionable" : ((c.injuries || {})[n] || "Questionable"))}</span>`;
+        const list = (arr, isConf) => arr ? `<ol class="slist">${arr.map((n) => `<li>${esc(n)}${tag(n)}${(c.backups || {})[n] && !conf ? `<div class="sbk">↳ if he sits: ${esc(c.backups[n])}</div>` : ""}</li>`).join("")}</ol>` : "";
         const swapped = proj && used.length && used.some((n) => !proj.includes(n))
           ? `<div class="snote">🔁 Our picks use: ${used.map(esc).join(", ")} (we swapped out players ruled out after NBA.com posted).</div>` : "";
         return `<div class="steam"><div class="iteam-h">${logo(tm, 18)}${esc(TEAM_NAMES[tm] || tm)}</div>
-          <div class="scols"><div><div class="sh">Projected</div>${list(proj) || `<div class="inone">Not posted yet</div>`}</div>
-            <div><div class="sh">Confirmed</div>${list(conf) || `<div class="inone">Not confirmed yet<br><small>~30 min before tip-off</small></div>`}</div></div>${swapped}</div>`;
+          <div class="scols"><div><div class="sh">Projected</div>${list(proj, false) || `<div class="inone">Not posted yet</div>`}</div>
+            <div><div class="sh">Confirmed</div>${list(conf, true) || `<div class="inone">Not confirmed yet<br><small>~30 min before tip-off</small></div>`}</div></div>${swapped}</div>`;
       }).join("")}</div>`).join("");
 }
 $("injBtn").addEventListener("click", () => openView("injView", "#injuries", drawInjuries));

@@ -1492,8 +1492,8 @@ def _injury_list(con, game_date: str, teams, inj_report, team_of) -> dict:
             k = st.norm_name(r["name"]); seen.add(k)
             rows.append({"name": r["name"], "status": r["status"], "detail": r.get("detail") or "", "return": r.get("return") or "",
                          "history": (hist.get(k) or {}).get("h", [[r["status"], ""]]), "cleared": False})
-        for k, h in hist.items():           # only when today's report for this team actually loaded (a failed feed != healthy)
-            if rows and k not in seen and (h["team"] or team_of.get(k)) == t:
+        for k, h in hist.items():           # only when today's report actually loaded (a failed feed != everyone healthy)
+            if inj_report and k not in seen and (h["team"] or team_of.get(k)) == t:
                 rows.append({"name": h["name"], "status": "Available", "detail": h["detail"] or "", "return": h["return"] or "",
                              "history": h["h"], "cleared": True})
         out[t] = rows

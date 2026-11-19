@@ -60,7 +60,12 @@
       try {
         const html = await (await fetch("index.html?b=" + Date.now(), { cache: "no-store" })).text();
         const m = html.match(/<meta name="fb-build" content="([0-9a-f]+)">/);
-        if (m && m[1] !== mine) location.replace(location.pathname + "?b=" + m[1] + location.hash);
+        if (m && m[1] !== mine) {
+          // only switch once that exact page really loads with the new version (GitHub can 404 for a moment mid-swap)
+          const target = location.pathname + "?b=" + m[1];
+          const r = await fetch(target, { cache: "no-store" });
+          if (r.ok && (await r.text()).includes(`content="${m[1]}"`)) location.replace(target + location.hash);
+        }
       } catch (e) { /* offline: try again next minute */ }
     }, 60000);
   })();
