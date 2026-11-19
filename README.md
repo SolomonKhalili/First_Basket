@@ -1,8 +1,8 @@
 # NBA First Basket Scorer Bot
 
-Predicts which **starter** will score the **first basket** — the game's first points, a made field goal **or a made free throw** (regulation only, the sportsbook rule) — in each NBA game, using free data (ESPN via `sportsdataverse`, plus NBA.com's public lineup feeds). It runs **before tip-off**, shows the lineup it used (confirmed / expected / projected), and prints a probability and fair odds for each player.
+Predicts which **starter** will score the **first basket** — the game's first points, a made field goal **or a made free throw** (regulation only, the sportsbook rule) — in each NBA game, using free data (ESPN via `sportsdataverse`, plus NBA.com's public lineup feeds). It runs **before tip-off**, shows the lineup it used (confirmed / expected / projected), and prints a probability and fair odds for each player. A second, **field-goal** version of the model (free throws don't count) is used for DraftKings, whose first-scorer bet only counts field goals.
 
-> **Read this first.** The pre-game model is deliberately modest: tested week by week on the 198 games of the current season, its top pick scored first **19.7%** of the time (random = 10%; simply picking the starter with the most minutes = 16.7%). That is a *shortlist generator*, not a proven betting edge. Sportsbook favorites are priced around 14–17% implied with a large margin, so treat picks accordingly. Not betting advice; gamble responsibly and only if you're of legal age where you live.
+> **Read this first.** The pre-game model is deliberately modest. Graded honestly (each week predicted by a model that had only seen earlier games), its #1 pick scored first **20.0%** of the time this season (43 of 215), **15.3%** last season (1,238 games incl. playoffs) and **16.0%** all time (random = 10%; "always the starter with the most minutes" ≈ 14%). Against DraftKings' closing odds over 307 games it is **about even** (we were closer 155 times, DraftKings 152). That is a *shortlist generator*, not a proven betting edge. Sportsbook favorites are priced around 14–17% implied with a large margin, so treat picks accordingly. Not betting advice; gamble responsibly and only if you're of legal age where you live.
 
 Project status, decisions, known issues and the to-do list live in [`BLUEPRINT.md`](BLUEPRINT.md).
 
@@ -31,20 +31,31 @@ accounts only by the owner: `python3 site_users.py add NAME`). Everything below 
 
 | What | How often | Done by |
 |---|---|---|
-| Lineups (Expected → Confirmed), injuries, picks re-run | Every 3 min, 9 AM → last tip-off | GitHub cloud job (`website_live/live-picks.yml`, `publish.py --live`) in the public website repo |
+| Lineups (Expected → Confirmed), injuries, picks re-run | Every 3 min, 6 AM → last tip-off | GitHub cloud job (`website_live/live-picks.yml`, `publish.py --live`) in the public website repo |
 | Website republished | On any change (≤ every ~6 min, GitHub Pages' limit) | same job |
-| **FanDuel + DraftKings odds** | **On page open, then every ~30 s** | the page: FanDuel through a free Cloudflare relay, DraftKings directly from the viewer's browser |
+| FanDuel odds (players + team to score first) | Every 3 min; **every 30 s in the last 15 min before each tip-off** (exact closing price + close time) | same job |
+| FanDuel market opening | Every 30 min, midnight → 6 AM (catches when markets open) | same job (`publish.py --odds`) |
+| DraftKings odds (players + team 1st field goal), incl. official opening prices | Every 3 min via **ESPN's public odds feed** (shows DraftKings' changes ~2–8 min later); live every 3 min from the Mac app and every ~30 s from any viewer's browser | same job + Mac app + browsers |
+| Odds on the page | On open, then every ~30 s | FanDuel through the free Cloudflare relay, DraftKings from the viewer's browser |
 | Live scores, first baskets, "Our #N pick" | Instant | the page, straight from ESPN |
-| Yesterday view (yesterday's picks, first scorer, our rank, final scores) | With each update | same job / the app |
-| Results, record, CSV, spreadsheet | As each game ends (after the day's last tip-off) | same job |
-| Retraining | Nightly ~4 AM ET | same job |
-| Keeping the job switched on | Every 10 min | Cloudflare timer (backup: this Mac, every 30 min) |
-| This Mac's NBA folder (newest code from GitHub + the cloud's data; never overwrites edits made on the Mac) | Every 30 min | `sync_from_cloud.py` (`launcher/com.firstbasket.sync.plist`) |
-| Health check: writes `HEALTH.md` in this folder (✅ all good, or ⚠️ what stopped updating); Claude reads it at the start of every session | Every 30 min while the Mac is on | `health_check.py` (run by `sync_from_cloud.py`) |
-| Desktop app | Always running, live odds every 30 s | `gui.py` (`launcher/com.firstbasket.app.plist`) |
+| Results, record, CSV, spreadsheet, first field goal | As each game ends | same job |
+| Retraining (first-points model + field-goal model) | Nightly ~4 AM ET (when new games arrive) | same job |
+| Keeping the job switched on | Every 10 min | Cloudflare timer (backup: this Mac) |
+| New code reaches the live job | Within ~1 min of being pushed (the job restarts itself) | same job |
+| This Mac's NBA folder + Mac app (newest code + the cloud's data) | Every minute (the cloud saves its data when it changes, at most every 10 min) | `sync_from_cloud.py` (`launcher/com.firstbasket.sync.plist`) |
+| Health check: writes `HEALTH.md` (✅ all good, or ⚠️ what stopped updating); Claude reads it at the start of every session | Every ~30 min while the Mac is on | `health_check.py` (run by `sync_from_cloud.py`) |
+| Desktop app | Always running | `gui.py` (`launcher/com.firstbasket.app.plist`) |
 
 The model, code and data stay in the private repo; the website only holds encrypted results that each friend's
 password unlocks in their browser. Full details: [`BLUEPRINT.md`](BLUEPRINT.md) §4a.
+
+## On the website / app
+
+- **Game cards** — our #1 pick in **gold**, #2 in **blue**; chance, fair odds, FanDuel and DraftKings (FG only) prices with **↓/↑** since the day's first price; "Scores first" with **team to score first** odds from both books; times in each viewer's own time zone.
+- **💰 Tonight's best bets** — every good-value bet across tonight's games, best first (FanDuel judged with the first-points chances, DraftKings with the field-goal chances); **⏰ bet soon** when a good bet's payout is dropping.
+- **💵 My bets** — each login has its own tracker (new accounts get it automatically). Tap a player → **Straight bet** or **Parlay** → pick FanDuel / DraftKings / Other (odds fill in) → amount. Settles itself; separate Straight / Parlays tabs with profit; ✕ deletes. Stored encrypted on the Cloudflare relay, backed up to the database.
+- **Track record** — #1-pick rate **this season / last season / all time**, each graded (Poor → Excellent) with the reason; **🥊 Who guesses better: us or the sportsbooks?** (DraftKings all season, FanDuel since Nov 18); **🤝 Does the sportsbook agree with us?** (do our good bets' prices shorten before tip-off); paper betting.
+- **📊 Data** — Scorecard, Our picks, Lineups, All games and **📈 Odds moves** (both books: opening → closing, every change with its time, market opened / closed).
 
 ## Quick start
 
@@ -67,7 +78,7 @@ python3 gui.py                      # the same picks in your web browser (cards,
 
 If you already have the database and `pregame_model.json`, you only need the last two commands.
 
-Run the tests any time: `python3 -m pytest` (243 tests, all in the `tests/` folder).
+Run the tests any time: `python3 -m pytest` (249 tests, all in the `tests/` folder).
 
 ---
 
@@ -161,7 +172,9 @@ With 198 games the margin of error is about ±5.5 points, so this is not statist
 | NBA.com daily lineups feed (`stats.nba.com/js/data/leaders/00_daily_lineups_YYYYMMDD.json`) | Expected/confirmed starters (appears during the game day) | Free |
 | NBA.com live box score (`cdn.nba.com/static/json/liveData/...`) | Confirmed starters (backup) | Free |
 | FanDuel sportsbook feed (public, no login) | First Basket prices; live price feed every ~30 s | Free |
-| DraftKings sportsbook feed (public, no login) | "1st Points Scorer" prices, read live by each viewer's own browser every ~30 s (DraftKings refuses cloud servers but lets browsers read it); best price across both books | Free |
+| DraftKings sportsbook feed (public, no login) | "1st Points Scorer" prices — **pays on the first FIELD GOAL** (free throws don't count, unlike FanDuel). Read live by viewers' browsers and the Mac app; DraftKings refuses cloud servers (GitHub and Cloudflare) — never worked around | Free |
+| ESPN public odds feed (`sports.core.api.espn.com/…/odds/100/propBets`) | DraftKings' first-basket and team prices **for the cloud**, with official opening prices and every past game's opening + closing (this whole season, part of last) | Free |
+| NBA.com play-by-play + box score (`cdn.nba.com`) | Backup for playoff games ESPN has no play-by-play for (4 in 2026) | Free |
 | GitHub (Actions + Pages) | Cloud updates and the private website | Free |
 | Cloudflare Workers (free plan) | Live-odds relay + the timer that keeps the cloud job on | Free, no card |
 
@@ -182,6 +195,13 @@ SQLite file `nba_first_basket.db`.
 | `first_shots` | game_id, team, player_id, player_name, made, shot_type — each team's first field-goal attempt (recorded for research; not a model input) |
 | `early_shots` | game_id, team, seq, player_id, player_name, made — each team's first 5 field-goal attempts (feeds the early-shot share input) |
 | `pick_log` | every pick: game_id, game_date, logged_at, matchup, lineup_type, lineup_source, lineup_sig, model_id, pick player/team/probability, tip_home, all 10 probabilities (JSON) |
+| `first_fg` | game_id, first made FIELD GOAL scorer (DraftKings' rule) — every game |
+| `game_types` | game_id, season_type (2 regular, 5 play-in, 3 playoffs) — playoffs are filed but kept out of training |
+| `odds_log` / `dk_odds_log` / `team_first_log` | every FanDuel / DraftKings player price and team-to-score-first price through the day ("00:00:00" = opening, "23:59:59" = closing for back-filled DraftKings games) |
+| `market_times` | when each book's market was first seen open and when it closed |
+| `fg_grades` | the field-goal model's honest week-by-week chances for past games (us vs DraftKings) |
+| `my_bets` | backup of everyone's bet tracker (the live copy is on the relay) |
+| `dk_history`, `gap_checks`, `audits`, `backtest_meta` | bookkeeping: which past games were checked/filled, so nothing is asked twice |
 | `predictions` | legacy (before 2026-11-17): one overwritten pick per game; no longer used |
 
 "First basket" = the first points of the game in periods 1–4: a made field goal or a made free throw. Every pick is kept in `pick_log`; a new row is added only when a game's lineup type, lineup or model version changes, so re-running `predict` never overwrites history.
@@ -203,7 +223,7 @@ NBA/
 ├── train_pregame.py        # retrains pregame_model.json and runs the week-by-week test
 ├── build_features.py       # builds training matrices and player game logs
 ├── picks.py                # pick log + track record (`eval`)
-├── tests/                  # 243 tests (python3 -m pytest)
+├── tests/                  # 249 tests (python3 -m pytest)
 ├── first_basket_data.csv   # every past game: who scored first (auto-regenerated; don't edit by hand)
 ├── my_predictions.xlsx     # open this: Scorecard, Games (our picks vs results), Lineups (expected vs confirmed vs actual)
 ├── nba_first_basket.db     # SQLite database
@@ -214,7 +234,11 @@ NBA/
 ├── publish.py              # builds the encrypted website; --live keeps it updated all evening
 ├── site_users.py           # website accounts
 ├── fanduel_odds.py, ev.py  # FanDuel prices + value (EV)
-├── draftkings_odds.py      # DraftKings prices
+├── draftkings_odds.py      # DraftKings prices (direct, and via ESPN's feed for the cloud) + odds history
+├── nba_com.py              # NBA.com play-by-play backup (playoff games ESPN lacks)
+├── bets.py                 # My bets: each login's encrypted bet list on the relay
+├── health_check.py, HEALTH.md   # automatic health check (HEALTH.md is written on the Mac)
+├── pregame_model_fg.json   # the field-goal model (DraftKings' rule)
 ├── sync_from_cloud.py      # Mac: take GitHub's newest code + the cloud's data; start the cloud job if it went quiet
 ├── website_live/           # the cloud job, the Cloudflare relay + timer
 ├── launcher/               # Mac launch agents + Desktop app
@@ -228,8 +252,8 @@ NBA/
 - **Pre-game accuracy is low.** Expect roughly 15–18%, not 60%. A single game is a one-event market; even a real edge loses for long stretches.
 - **Lineups can change.** Anything not marked CONFIRMED may differ at tip; a bet on a player who doesn't start is typically voided. Run close to tip.
 - **Projections are guesses** based on recent starts, the injury report and current rosters (about 4 of 5 starters right before NBA.com posts). They ignore rest days and matchups.
-- **Odds: FanDuel + DraftKings.** Value uses whichever pays more. DraftKings may block automated reading at any time (then FanDuel only). Always confirm the price on the bet slip.
-- **Website delays:** odds ~30 s, lineups/picks ~3–6 min (GitHub Pages allows ~10 publishes an hour).
+- **Odds: FanDuel + DraftKings.** FanDuel's First Basket counts free throws; DraftKings' first-scorer bet counts only field goals (~9% of games start with a free throw), so each book is judged with its own chances. DraftKings' prices reach the cloud through ESPN a few minutes late; FanDuel history only exists from Nov 18, 2026. Always confirm the price on the bet slip.
+- **Website delays:** odds ~30 s, lineups/picks ~3–6 min (GitHub Pages allows ~10 publishes an hour); new code ~3–5 min; the Mac's copy of the data ≤ ~10 min.
 - **Unofficial endpoints** (ESPN, NBA.com JSON) can break without notice.
 
 ---

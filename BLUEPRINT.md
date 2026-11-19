@@ -1,6 +1,6 @@
 # NBA First Basket Scorer — Project Blueprint
 
-> **Last updated:** 2026-11-19 ("Where we left off" in §0; ESPN fallback for blank NBA.com lineup days; Today / Yesterday views, AWAY / HOME labels, iPhone and desktop layout fixes, paper betting explained) · **Owner:** Solomon · **Folder:** `~/Desktop/NBA`
+> **Last updated:** 2026-11-19 midday (big day: bets tracker + parlays, best bets, DraftKings via ESPN, field-goal model for DraftKings, us-vs-sportsbooks scoreboards, odds logging opening→closing, auto-sync every minute — see "Where we left off" in §0) · **Owner:** Solomon · **Folder:** `~/Desktop/NBA`
 >
 > Single source of truth for the project's state: what works, how well, what is known to be wrong, and
 > what comes next. Update it in the same session as any change (checklist in §11). Every number here was
@@ -18,18 +18,19 @@ and — later — compare those odds with sportsbook prices.
 **Status (2026-11-17).**
 - The full pipeline works from one command, `python3 nba.py` (same as `python3 nba.py predict`): it brings all data up to date, resolves
   tonight's starting lineups, scores every starter and prints one card per game.
-- **Model performance:** honestly tested week by week on the 198 games of 2026-27, the top pick scored first
-  **19.7%** of the time with the **two-stage model + early-shot share** (log-loss 2.2318, the best yet; random =
-  10%; best simple rule — season first-basket rate — 17.7%; "most minutes" 14.6%). The margin over the best simple
-  rule is **within noise** (95% interval ≈ ±5.5 points).
+- **Model performance (graded 2026-11-19 with the live formula):** #1 pick right **20.0%** this season (43/215),
+  **15.3%** last season (190/1,238, Nov 1 → Finals), **16.0%** all time (random 10%, "most minutes" ≈ 14%, published
+  StatsBench model 17.7%). Last season is lower mainly because early-season weeks had little to learn from. Against
+  **DraftKings' closing odds** (307 games, field-goal model, same 10 starters): we were closer 155, DraftKings 152;
+  log-loss 2.2401 vs 2.2487 — about even with the book's final line.
 - **Tip-off model:** calls the opening-tip winner **63.6%** of the time this season (always-home 47.5%).
 - No open fixes. Owner's workflow: run `python3 nba.py` about 30 minutes before tip-off — it shows today's games as a numbered list and asks which one (type the number, a team name, or Enter for all); or name the team directly, e.g. `python3 nba.py knicks`.
 - Each game card names the **top 2 picks** and the **predicted tip-off winner by player**. This is a
   **shortlist tool, not a proven betting edge.**
-- **EV step built 2026-11-18 (owner's request):** FanDuel First Basket prices, EV per $1 for all 10 starters,
-  a "best value" line, every priced pick saved (`odds_log`), and $1 paper bets on +EV prices settled in
-  `nba.py eval` and the GUI. Nothing is bet. Stakes (Kelly), closing-line value and a real bet log are still
-  **not built**; judge the paper results over a few hundred bets first.
+- **Odds + value (built 2026-11-18/19):** FanDuel (first POINTS, free throws count) judged with the main model;
+  DraftKings (first FIELD GOAL only — owner + web check 11/19) judged with a separate **field-goal model**. Paper
+  betting, closing-line value ("does the sportsbook agree"), us-vs-sportsbooks scoreboards and a **real bet log
+  (My bets, straight + parlays)** are built. Kelly stakes are not.
 
 - **Runs by itself, 24/7, free, Mac on or off (2026-11-18, owner's request).** A private, login-protected website
   (https://solomonkhalili.github.io/first-basket/) for the owner and friends: the cloud (GitHub Actions) re-checks
@@ -40,25 +41,23 @@ and — later — compare those odds with sportsbook prices.
 **Where we left off — read this first in a new session.** *(Keep this block current at the end of every
 session: §11 step 0. Full details of every change are in §10, newest first.)*
 
-*Last session ended 2026-11-19, ~7:30 AM ET* (a cloud session, continued from the Mac's desktop session of 11/18–19).
+*Last session ended 2026-11-19, ~12:30 PM ET* (Mac desktop session, owner on the phone via Remote Control).
 
-**Right now (what we're in the middle of)**
-- **Owner's setup:** Claude on the Mac with **Remote Control** on (Claude desktop app → Settings → Claude Code →
-  Remote Control, NBA folder added), used from the phone's Claude app → Code → pick the Mac. The owner was setting
-  this up at 7:30 AM on 11/19. In a fresh Mac session, **first bring the NBA folder up to date with GitHub's
-  `main`** (the 11/19 morning work below is there; the Mac hadn't pulled it). The Mac's synced data files may differ
-  from `main`: keep the newer data (the cloud's), lose neither. After that one manual update the Mac **updates its
-  code by itself every 30 min** (`sync_from_cloud.update_code`); check `launcher/sync.log` says "code updated" /
-  "code already up to date".
-- **Owner's rule:** everything done anywhere (phone, cloud session) must end up in the Mac's NBA folder. Work in a
-  cloud session reaches GitHub's `main` (via a pull request Claude merges when the owner agrees), then the Mac's
-  30-min sync brings it in.
-- **Check pending:** first fully automatic morning start (Cloudflare timer → live job from 9 AM ET on 11/19). At
-  7:00 AM the site was last published 4:02 AM (nightly run, worked) and `/timer-check` said "nothing to do · start
-  permission: OK". Confirm the site republished after 9 AM; if not, look at the timer and the live job (§4a).
-- **Nothing half-built.** All code is merged; 203 tests pass.
+**Right now**
+- **Everything is shipped and running; nothing half-built.** 249 tests pass. The Mac's NBA folder follows GitHub
+  every minute (code + the cloud's data) — no manual pull needed any more.
+- **To watch tonight (first real runs):** the 30-second FanDuel checks in the last 15 min before the 8 PM tip-offs
+  (closing price + "Market closed" time in Odds moves), and after midnight the first overnight odds checks
+  (`kind=odds`, "Market opened"). If either misbehaves, `HEALTH.md` or the Odds moves tab will show it.
+- **DraftKings rules (don't forget):** its first-scorer bet pays on the first FIELD GOAL; its team market (ESPN calls
+  it "First Team to Score") is "Team to Score 1st FG". FanDuel's First Basket and Team to Score First count free
+  throws. Each book is judged with its own chances; DraftKings team prices are shown, not valued.
+- **DraftKings blocks cloud servers on purpose — never work around it.** The cloud reads DraftKings through ESPN's
+  public odds feed (measured 11/19: ~2–8 min behind); the Mac app and viewers' browsers add live prices.
+- **Owner's working style (hard):** plain kid-simple words on the site and in replies; short answers; do only what
+  was asked and ask before side quests; every change goes live everywhere at once (GitHub + website + relay + Mac);
+  never let a failing test ship.
 
-- **Grading fix (2026-11-19):** re-created picks (both seasons) now apply the live model's 20% simple-rule mix (`season_backtest.with_simple_mix`); before, they graded the model without it. Now 20.0% this season, 15.3% last season (playoffs 18.4%), 16.0% all time. Tested leaning on the first-basket rate more as games pile up (20%→60%): better last season (playoffs 23%) but worse this season (18.6%, log-loss 2.2481 vs 2.2372) — not adopted (must be better in both).
 **Coming up (dated)**
 - **Around the All-Star break:** re-test adding play-in/playoff/Finals games to training (tested 2026-11-19 on 215 games of 2026-27, walk-forward: without 20.9% / 2.2378, with 20.5% / 2.2362 — no clear gain, not adopted).
 - **On/after 2026-12-08:** re-check the two inputs adopted 11/18 (opponent by position, head-to-head) and the 20%
@@ -86,6 +85,16 @@ session: §11 step 0. Full details of every change are in §10, newest first.)*
   lineups before 11/17 are gone for good (don't chase); NBA.com's servers refuse cloud computers, ESPN doesn't.
 - **11/19 (~7:45 AM):** the Mac's 30-min sync now also takes GitHub's newest code by itself (safe: never
   overwrites Mac edits). Tested on practice copies: update, no-op, clash skipped, identical untracked file replaced.
+- **11/19 (7:30 AM – 12:30 PM, Mac session):** Mac jobs pinned to Python 3.14 (Homebrew's 3.15 lacked the libraries);
+  HEALTH.md health check (no emails — owner's choice); My bets (per login, encrypted on the relay; straight +
+  parlays); Tonight's best bets; old-gap repair (8 never-played games removed, 4 real playoff games restored from
+  NBA.com, LAC@CHI filled); game types (playoffs filed, kept out of training); track record this/last/all-time with
+  grades; grading fix (re-created picks now use the live 20% mix: 20.0% / 15.3% / 16.0%); playoffs-in-training and
+  "lean on fb rate later" tested — not adopted; closing-line value + us-vs-FanDuel boxes; team to score first (both
+  books); price ↓/↑ + Odds moves tab (every change, opening → closing, market opened/closed); DraftKings via ESPN
+  (cloud, history for every past game); field-goal model for DraftKings (first_fg for all 1,533 games; better in both
+  test periods); us-vs-DraftKings all season; times in the viewer's time zone; #1 gold / #2 blue; 30-second checks
+  before tip-off + overnight checks; live job restarts itself with new code; Mac syncs every minute.
 
 **Talking to the owner:** plain words, short answers, one clear next step. Not technical; got lost in git/branch
 talk on 11/19 — keep git out of the conversation (hard rule 8) and just say what was saved. Owner wants
