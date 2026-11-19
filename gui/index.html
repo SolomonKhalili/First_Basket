@@ -632,6 +632,31 @@ body.bets-mode .dayswitch, body.bets-mode #yestSum, body.bets-mode #dataView { d
 .betdlg .win { font-size: 14px; color: var(--muted); } .betdlg .win b { color: var(--good); }
 .betdlg .berr { color: var(--bad); font-size: 13.5px; } .betdlg .berr:empty { display: none; }
 .betdlg .brow { display: flex; gap: 10px; justify-content: flex-end; }
+
+/* ── Tonight's best bets ── */
+.bestbets { background: var(--surface); border: 1px solid var(--line); border-radius: 18px; padding: 14px 14px 10px; margin: 0 0 16px; }
+.bestbets[hidden] { display: none; }
+.bb-head { display: flex; align-items: baseline; gap: 10px; flex-wrap: wrap; }
+.bb-head h3 { margin: 0; font-family: var(--display); font-size: 22px; font-weight: 800; text-transform: uppercase; letter-spacing: .02em; }
+.bb-head span { color: var(--muted); font-size: 13px; }
+.bb-why { color: var(--muted); font-size: 13px; margin: 6px 0 10px; }
+.bb-why b { color: var(--text); }
+.bb-list { display: grid; gap: 6px; }
+.bb-row { display: grid; grid-template-columns: 26px 1fr auto auto; gap: 10px; align-items: center; padding: 9px 10px;
+  border-radius: 12px; background: var(--surface-2); border: 1px solid transparent; cursor: pointer; text-align: left; font: inherit; color: inherit; width: 100%; }
+.bb-row:hover { border-color: var(--accent); }
+.bb-rank { font-weight: 800; color: var(--muted); text-align: center; }
+.bb-who { min-width: 0; }
+.bb-who b { display: block; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.bb-who small { color: var(--muted); font-size: 12px; }
+.bb-odds { text-align: right; white-space: nowrap; font-size: 13px; color: var(--muted); }
+.bb-odds b { display: block; font-size: 15px; color: var(--text); }
+.bb-ev { text-align: right; min-width: 64px; }
+.bb-ev b { display: block; color: var(--good); font-size: 16px; font-weight: 800; }
+.bb-ev small { color: var(--muted); font-size: 11px; }
+.bb-more { margin-top: 8px; background: none; border: 0; color: var(--accent); font: inherit; font-weight: 700; font-size: 13.5px; cursor: pointer; padding: 4px 2px; }
+.bb-none { color: var(--muted); font-size: 14px; padding: 4px 2px 6px; }
+@media (max-width: 420px) { .bb-row { grid-template-columns: 1fr auto auto; } .bb-rank { display: none; } }
 </style>
 </head>
 <body>
@@ -716,6 +741,7 @@ body.bets-mode .dayswitch, body.bets-mode #yestSum, body.bets-mode #dataView { d
 
   <div class="layout">
     <main>
+      <section class="bestbets" id="bestBets" hidden></section>
       <div class="cards" id="cards"><div class="empty">Press <b>All games</b> to run the model.</div></div>
     </main>
     <aside class="side">
@@ -1093,6 +1119,7 @@ function countUp(el) {
 /* Card headers follow the live board: countdown → LIVE score → Final, plus the first-basket verdict. */
 function updateCardsLive() {
   try { markBetRows(); } catch (e) { /* bets not loaded yet */ }
+  try { renderBestBets(); } catch (e) { /* before the page finished loading */ }
   if (viewDay === "yesterday") return;                     // yesterday's cards are filled once, from /api/yesterday
   document.querySelectorAll(".card").forEach((el) => {
     const g = gameOf(el.dataset.home, el.dataset.away);
@@ -1326,6 +1353,7 @@ function setDayButtons() {
   $("dayToday").classList.toggle("on", viewDay === "today"); $("dayYest").classList.toggle("on", viewDay === "yesterday");
   for (const id of ["boardWrap", "fdLive", "filterNote"]) if ($(id)) $(id).hidden = viewDay === "yesterday" || (id === "filterNote" && !selected.size);
   $("yestSum").hidden = $("yestWrap").hidden = viewDay !== "yesterday";
+  if ($("bestBets") && viewDay === "yesterday") $("bestBets").hidden = true;
 }
 async function showYesterday() {
   viewDay = "yesterday"; setDayButtons();
@@ -1378,6 +1406,7 @@ function renderResult(res) {
     : `<div class="empty">No picks to show right now — see “Not predicted” for why.</div>`;
   document.querySelectorAll(".hero .pct").forEach(countUp);
   try { markBetRows(); } catch (e) { /* bets not loaded yet */ }
+  try { renderBestBets(); } catch (e) { /* before the page finished loading */ }
   $("skippedPanel").hidden = !res.skipped.length;
   $("skipped").innerHTML = res.skipped.map((s) => `<li><b>${esc(s.matchup)}</b><span>${esc(s.reason)}</span></li>`).join("");
   $("warnPanel").hidden = !res.notes.length;
@@ -1944,6 +1973,53 @@ setInterval(() => { renderTicker(); updateCardsLive();                         /
 
 
 
+
+/* ── Tonight's best bets: every starter in games that haven't started whose best price is a good deal, best first ── */
+let bbAll = false;
+function bestBets() {
+  const out = [];
+  for (const c of (lastResult?.cards || [])) {
+    if (!isPre(c)) continue;
+    const books = { FanDuel: c.fd_closed ? {} : (c.fanduel || {}), DraftKings: c.draftkings || {} };
+    for (const [name, team, prob] of (c.probs || c.picks.map(([n, t, p]) => [n, t, p]))) {
+      let best = null;
+      for (const [book, ps] of Object.entries(books)) {
+        const a = ps[name];
+        if (a === undefined || a === null) continue;
+        const ev = prob * payout(a) - (1 - prob);
+        if (!best || ev > best.ev) best = { book, american: a, ev };
+      }
+      if (best && best.ev >= VALUE_MIN) out.push({ c, name, team, prob, ...best });
+    }
+  }
+  return out.sort((a, b) => b.ev - a.ev);
+}
+function renderBestBets() {
+  const el = $("bestBets");
+  if (!el) return;
+  if (viewDay !== "today" || !lastResult) { el.hidden = true; return; }
+  const list = bestBets();
+  const anyOdds = (lastResult.cards || []).some((c) => isPre(c) && (Object.keys(c.fanduel || {}).length || Object.keys(c.draftkings || {}).length));
+  if (!anyOdds) { el.hidden = true; return; }
+  el.hidden = false;
+  const shown = bbAll ? list : list.slice(0, 5);
+  el.innerHTML = `<div class="bb-head"><h3>💰 Tonight's best bets</h3><span>${list.length ? `${list.length} good deal${list.length === 1 ? "" : "s"} · odds update live` : "odds update live"}</span></div>
+    <div class="bb-why">Where the sportsbook <b>pays more than the player's real chance is worth</b>. Most still lose on any one night — the profit comes over many bets. <button class="whats" data-learn="0">How does this work?</button></div>
+    ${list.length ? `<div class="bb-list">${shown.map((r, i) => `<button type="button" class="bb-row" data-bb="${i}" title="Tap to log this bet">
+        <span class="bb-rank">${i + 1}</span>
+        <span class="bb-who"><b>${esc(r.name)}</b><small>${esc(r.team)} · ${esc(r.c.away)} @ ${esc(r.c.home)} · ${esc(r.c.start)} · ${pct(r.prob, 0)} chance</small></span>
+        <span class="bb-odds">${esc(r.book)}<b>${american(r.american)}</b></span>
+        <span class="bb-ev"><b>${cents(r.ev)}</b><small>per $1</small></span></button>`).join("")}</div>
+      ${list.length > 5 ? `<button class="bb-more" id="bbMore">${bbAll ? "Show top 5" : `Show all ${list.length}`}</button>` : ""}`
+    : `<div class="bb-none">No good deals right now — every price is too small for the chance. This changes as odds move.</div>`}`;
+  el._rows = shown;
+}
+$("bestBets").addEventListener("click", (ev) => {
+  if (ev.target.closest("#bbMore")) { bbAll = !bbAll; renderBestBets(); return; }
+  const b = ev.target.closest("[data-bb]");
+  if (b) { const r = $("bestBets")._rows[+b.dataset.bb]; if (r) openBetFor(r.c, r.name, r.book); }
+});
+
 /* ── My bets: tap a player on Today's cards -> log the bet; "My bets" shows wins, losses, profit ── */
 let myBets = null, betResults = null, betDraft = null;
 const etDay = () => new Intl.DateTimeFormat("en-CA", { timeZone: "America/New_York" }).format(new Date()).replaceAll("-", "");
@@ -2023,13 +2099,15 @@ function betWinLine() {
 }
 function openBetDialog(row) {
   if (viewDay !== "today" || !lastResult) return;
-  const el = row.closest(".card"), name = row.dataset.name;
+  const el = row.closest(".card");
   const c = (lastResult.cards || []).find((x) => x.home === el.dataset.home && x.away === el.dataset.away);
-  if (!c) return;
-  const pick = c.picks.find((p) => p[0] === name) || [];
+  if (c) openBetFor(c, row.dataset.name);
+}
+function openBetFor(c, name, bookWanted) {
+  const pick = c.picks.find((p) => p[0] === name) || (c.probs || []).find((p) => p[0] === name) || [];
   const starter = [...(c.home_starters || []), ...(c.away_starters || [])].find((p) => p.name === name) || {};
   const g = gameOf(c.home, c.away) || {};
-  const book = (c.best_book || {})[name] || ((c.fanduel || {})[name] !== undefined ? "FanDuel" : (c.draftkings || {})[name] !== undefined ? "DraftKings" : "FanDuel");
+  const book = bookWanted || (c.best_book || {})[name] || ((c.fanduel || {})[name] !== undefined ? "FanDuel" : (c.draftkings || {})[name] !== undefined ? "DraftKings" : "FanDuel");
   const price = (book === "DraftKings" ? c.draftkings : c.fanduel || {})?.[name];
   betDraft = { day: etDay(), game_id: String(g.game_id || ""), away: c.away, home: c.home, player: name,
                player_id: String(starter.player_id || ""), team: pick[1] || "" };
