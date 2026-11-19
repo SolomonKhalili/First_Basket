@@ -346,7 +346,7 @@ class Job:
 # ──────────────────────────────────────────────
 DATA_TABS = ("scorecard", "picks", "lineups", "games", "odds")
 ODDS_LABELS = ["Date", "Game", "Player", "Sportsbook", "Opening price", "Closing price", "How it moved", "Times it changed",
-               "Every change (time)"]
+               "Every change (time)", "Market opened", "Market closed"]
 LINEUP_LABELS = ["Date", "Game", "Team", "NBA.com early lineup (Expected)", "NBA.com final lineup (Confirmed)",
                  "Who actually started", "Early lineup right?", "Final lineup right?"]
 GAME_LABELS = {"game_start": "Date", "away_team": "Away", "home_team": "Home", "tip_winner": "Tip won by",

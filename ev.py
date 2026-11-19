@@ -87,6 +87,7 @@ def log_odds(con, game_id: str, game_date: str, matchup: str, rows: list[dict],
     if new == sorted(key(*r) for r in _latest_snapshot(con, game_id)):
         return False
     at = logged_at or datetime.now().isoformat(timespec="seconds")
+    note_market(con, game_date, matchup, "FanDuel", opened=at)          # first time we saw this market: "opened at"
     con.executemany(
         """INSERT INTO odds_log (game_id, game_date, logged_at, matchup, player_id, player_name, team, prob,
                                  american, ev) VALUES (?,?,?,?,?,?,?,?,?,?)""",
@@ -246,10 +247,34 @@ def odds_moves(con) -> list:
                 r[3].append((at, a))
             r[1] = a
     rows = []
+    times = {}
+    try:
+        con.execute(MARKET_TIMES)
+        times = {(d, m, b): (o, c) for d, m, b, o, c in con.execute("SELECT * FROM market_times")}
+    except Exception:  # noqa: BLE001
+        pass
     for (d, m, name, book), (first, last, changes, steps) in seen.items():
+        opened_at, closed_at = times.get((d, m, book), (None, None))
         moved = ("same" if first == last else
                  "↓ payout dropped" if profit_per_dollar(last) < profit_per_dollar(first) else "↑ payout rose")
         rows.append([f"{d[4:6]}/{d[6:8]}/{d[2:4]}", m, name, book, f"{first:+d}", f"{last:+d}", moved, changes,
-                     " → ".join(f"{a:+d} ({_clock(at)})" for at, a in steps)])
+                     " → ".join(f"{a:+d} ({_clock(at)})" for at, a in steps),
+                     _clock(opened_at) if opened_at else _clock(steps[0][0]), _clock(closed_at) if closed_at else "–"])
     rows.sort(key=lambda r: (r[0][6:] + r[0][:5], r[1], r[2], r[3]), reverse=True)
     return rows
+
+
+MARKET_TIMES = """CREATE TABLE IF NOT EXISTS market_times (
+    game_date TEXT, matchup TEXT, book TEXT, opened_at TEXT, closed_at TEXT, PRIMARY KEY (game_date, matchup, book))"""
+
+
+def note_market(con, game_date: str, matchup: str, book: str, opened: str | None = None, closed: str | None = None):
+    """When a book's first-basket market was first seen open, and when it was first seen closed (kept once each)."""
+    con.execute(MARKET_TIMES)
+    con.execute("INSERT OR IGNORE INTO market_times (game_date, matchup, book) VALUES (?, ?, ?)", (game_date, matchup, book))
+    if opened:
+        con.execute("UPDATE market_times SET opened_at = ? WHERE game_date = ? AND matchup = ? AND book = ? AND opened_at IS NULL",
+                    (opened, game_date, matchup, book))
+    if closed:
+        con.execute("UPDATE market_times SET closed_at = ? WHERE game_date = ? AND matchup = ? AND book = ? AND closed_at IS NULL",
+                    (closed, game_date, matchup, book))

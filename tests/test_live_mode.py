@@ -89,3 +89,31 @@ def test_nap_without_github_just_waits(monkeypatch):
     monkeypatch.setattr(publish.time, "time", lambda: next(clock))
     monkeypatch.setattr(publish.time, "sleep", lambda s: slept.append(s))
     assert publish.nap(150) is False and slept and all(s <= 60 for s in slept)
+
+
+def test_quick_odds_logs_prices_and_the_close(monkeypatch):
+    import sqlite3
+    from datetime import datetime, timedelta
+    from zoneinfo import ZoneInfo
+    import ev
+    import fanduel_odds as fd
+    import publish
+    con = sqlite3.connect(":memory:")
+    tip = (datetime.now(ZoneInfo("UTC")) + timedelta(minutes=10)).strftime("%Y-%m-%dT%H:%MZ")
+    far = (datetime.now(ZoneInfo("UTC")) + timedelta(hours=3)).strftime("%Y-%m-%dT%H:%MZ")
+    result = {"schedule": [{"game_id": "g1", "away_team": "GS", "home_team": "MEM", "status": 1, "start_utc": tip},
+                           {"game_id": "g2", "away_team": "NY", "home_team": "MIN", "status": 1, "start_utc": far}],
+              "cards": [{"matchup": "GS @ MEM", "fd_market": {"id": "m1", "runners": {"7": "Zach Edey"}},
+                         "probs": [["Zach Edey", "MEM", 0.15]], "home_starters": [{"name": "Zach Edey", "player_id": "1"}]},
+                        {"matchup": "NY @ MIN", "fd_market": {"id": "m2", "runners": {}}, "probs": []}]}
+    asked = []
+    def prices(ids):
+        asked.append(list(ids))
+        return [{"marketId": "m1", "marketStatus": "OPEN", "runnerDetails": [
+            {"selectionId": 7, "winRunnerOdds": {"americanDisplayOdds": {"americanOddsInt": 650}}}]}]
+    monkeypatch.setattr(fd, "fetch_prices", prices)
+    assert publish.quick_odds(result, con) == 1 and asked == [["m1"]]          # only the game tipping soon
+    assert con.execute("SELECT player_name, american FROM odds_log").fetchall() == [("Zach Edey", 650)]
+    monkeypatch.setattr(fd, "fetch_prices", lambda ids: [{"marketId": "m1", "marketStatus": "SUSPENDED"}])
+    publish.quick_odds(result, con)
+    assert con.execute("SELECT closed_at IS NOT NULL FROM market_times WHERE book='FanDuel'").fetchone()[0] == 1

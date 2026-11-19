@@ -1898,7 +1898,7 @@ async function loadTab(tab, fresh = false) {
     $("dbody").innerHTML = '<div class="dempty">Loading…</div>';
     try { dstate.data[tab] = await getJSON(`/api/data?tab=${tab}`);
           if (tab === "odds") for (const r of dstate.data[tab].rows || [])          // {UTC time} -> viewer's own time
-            r[8] = String(r[8] || "").replace(/\{([^}]+)\}/g, (m, iso) => localTime(iso) || iso); }
+            for (const i of [8, 9, 10]) r[i] = String(r[i] || "").replace(/\{([^}]+)\}/g, (m, iso) => localTime(iso) || iso); }
     catch (e) { $("dbody").innerHTML = '<div class="dempty">Couldn\'t load this tab.</div>'; return; }
   }
   renderData();

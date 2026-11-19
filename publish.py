@@ -226,6 +226,94 @@ def code_changed(changed_files) -> bool:
     return any(f.startswith("gui/") or (f.endswith(CODE_FILES) and not f.startswith("tests/")) for f in changed_files)
 
 
+CLOSE_WATCH = 15 * 60         # in the last 15 min before a tip-off: FanDuel's prices every 30 s (exact closing)
+
+
+def quick_odds(result, con) -> int:
+    """Light check (no full update): FanDuel's current first-basket prices for games tipping within CLOSE_WATCH,
+    logged when they changed; the moment a market closes is saved (market_times). Returns games checked."""
+    import ev
+    import fanduel_odds as fd
+    now = datetime.now(ET)
+    sched = {f"{g.get('away_team')} @ {g.get('home_team')}": g for g in (result or {}).get("schedule", [])}
+    soon = []
+    for c in (result or {}).get("cards", []):
+        g = sched.get(c.get("matchup"), {})
+        if not c.get("fd_market") or g.get("status") != 1 or not g.get("start_utc"):
+            continue
+        tip = datetime.fromisoformat(str(g["start_utc"]).replace("Z", "+00:00"))
+        if -600 < (tip - now).total_seconds() <= CLOSE_WATCH:    # 15 min before tip-off .. 10 min after (to see it close)
+            soon.append((c, g))
+    if not soon:
+        return 0
+    live = {str(m.get("marketId")): m for m in fd.fetch_prices([c["fd_market"]["id"] for c, _ in soon])}
+    day, at = now.strftime("%Y%m%d"), now.strftime("%Y-%m-%dT%H:%M:%S")
+    for c, g in soon:
+        m = live.get(str(c["fd_market"]["id"]))
+        if not m or (m.get("marketStatus") or "OPEN") != "OPEN":
+            ev.note_market(con, day, c["matchup"], "FanDuel", closed=at)        # closed: tip-off is here
+            continue
+        probs = {n: p for n, _, p in c.get("probs") or []}
+        ids = {p["name"]: p["player_id"] for p in (c.get("home_starters") or []) + (c.get("away_starters") or [])}
+        teams = {n: t for n, t, _ in c.get("probs") or []}
+        rows = []
+        for run in m.get("runnerDetails") or []:
+            name = c["fd_market"]["runners"].get(str(run.get("selectionId"))) or c["fd_market"]["runners"].get(run.get("selectionId"))
+            a = ((run.get("winRunnerOdds") or {}).get("americanDisplayOdds") or {}).get("americanOddsInt")
+            if name and a is not None and name in probs and (run.get("runnerStatus") or "ACTIVE") == "ACTIVE":
+                rows.append({"id": ids.get(name, name), "name": name, "team": teams.get(name, ""), "prob": probs[name],
+                             "american": int(a), "ev": probs[name] * ev.profit_per_dollar(int(a)) - (1 - probs[name])})
+        ev.log_odds(con, str(g.get("game_id")), day, c["matchup"], rows)
+    con.commit()
+    return len(soon)
+
+
+def watch(seconds: float, result) -> bool:
+    """Wait between full checks: every 30 s near a tip-off take a light odds snapshot (quick_odds); look for new code
+    once a minute. True = new code arrived (stop waiting)."""
+    import nba
+    end, last_code = time.time() + seconds, time.time()
+    while time.time() < end:
+        near = seconds_to_next_tip(result) <= CLOSE_WATCH
+        time.sleep(max(0.0, min(30.0 if near else 60.0, end - time.time())))
+        if near:
+            try:
+                quick_odds(result, nba.db())
+            except Exception:  # noqa: BLE001 — FanDuel busy: next time
+                pass
+        if time.time() - last_code >= 60 and os.environ.get("STATE_REMOTE"):
+            last_code = time.time()
+            try:
+                _git("fetch", "-q", "--depth", "1", os.environ["STATE_REMOTE"], "main", cwd=HERE)
+                if newer_code(HERE):
+                    return True
+            except Exception:  # noqa: BLE001
+                pass
+    return False
+
+
+def odds_only() -> int:
+    """Overnight (midnight – 6 AM): just look for FanDuel's first-basket markets and log any prices — so we see when
+    a market OPENS within ~30 min, and its true opening price. No picks, no publishing."""
+    import ev
+    import fanduel_odds as fd
+    import nba
+    con, now = nba.db(), datetime.now(ET)
+    day = now.strftime("%Y%m%d")
+    games = {(g["away_team"], g["home_team"]): g for g in nba.get_todays_games()}
+    n = 0
+    for g in fd.fetch_first_basket_odds():
+        e = games.get((g["away_code"], g["home_code"]))
+        if not e or not g["players"]:
+            continue
+        rows = [{"id": "", "name": r["player"], "team": r.get("team", ""), "prob": 0.0, "american": r["american"], "ev": 0.0}
+                for r in g["players"]]
+        n += ev.log_odds(con, str(e["game_id"]), day, f"{g['away_code']} @ {g['home_code']}", rows)
+    save_state()
+    print(f"{now:%-I:%M %p}  overnight odds check: {n} game(s) logged")
+    return 0
+
+
 def nap(seconds: float) -> bool:
     """Wait between checks, looking for new code on GitHub once a minute. True = new code arrived (stop waiting)."""
     end = time.time() + seconds
@@ -400,7 +488,7 @@ def live(out: Path, once: bool = False) -> int:
         if sig != saved_sig and time.time() - last_save > SAVE_EVERY:
             save_state()
             last_save, saved_sig = time.time(), sig
-        if nap(FAST if wait < 100 * 60 else SLOW if wait != float("inf") else 10 * 60):
+        if watch(FAST if wait < 100 * 60 else SLOW if wait != float("inf") else 10 * 60, result):
             save_state()                                 # new code arrived while waiting: hand over now
             (HERE / ".restart").write_text("new code")
             say("new code on GitHub — restarting with it")
@@ -414,6 +502,8 @@ def main(argv) -> int:
         print(f"should run ({kind}): {'yes' if ok else 'no — no upcoming games today'}")
         return 0 if ok else 3
     out = Path(argv[argv.index("--out") + 1]) if "--out" in argv else HERE / "site_out"
+    if "--odds" in argv:                                 # overnight: odds only (opening prices)
+        return odds_only()
     if "--live" in argv or "--once" in argv:
         return live(out, once="--once" in argv)
     users = load_site_users()
