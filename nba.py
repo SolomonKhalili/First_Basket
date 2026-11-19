@@ -912,6 +912,12 @@ def _retrain_if_needed(con) -> str:
     labelled = {r[0] for r in con.execute("SELECT game_id FROM first_baskets f JOIN games g USING(game_id)")}
     new_games = len(labelled - in_training)
     fg_ok = os.path.exists("pregame_model_fg.json") and "team_labels" in open("pregame_model_fg.json").read()
+    try:                             # model files trained with another early-shot trust (pm.EARLY_M): retrain now
+        import pregame_model as _pm
+        fg_ok = fg_ok and json.load(open("pregame_model.json")).get("early_m") == _pm.EARLY_M["first_points"] \
+            and json.load(open("pregame_model_fg.json")).get("early_m") == _pm.EARLY_M["first_field_goal"]
+    except (OSError, ValueError):
+        fg_ok = False
     if not new_games and fg_ok:      # (the field-goal model: trained again if missing or its team part is the old kind)
         return "model up to date"
     # Games older than what's already trained on (e.g. the 2024-25 history season) change every later game's player

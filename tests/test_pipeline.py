@@ -89,7 +89,9 @@ def trained_through_yesterday(project):
     """Training matrices cover one game played 2 days ago."""
     add_game(project, "trained", ymd(2))
     json.dump(["trained"], open("game_ids.json", "w"))
-    json.dump({"team_labels": "first_field_goal"}, open("pregame_model_fg.json", "w"))   # the DraftKings (field-goal) model exists too
+    import pregame_model as pm
+    json.dump({"team_labels": "first_field_goal", "early_m": pm.EARLY_M["first_field_goal"]}, open("pregame_model_fg.json", "w"))
+    json.dump({"early_m": pm.EARLY_M["first_points"]}, open("pregame_model.json", "w"))   # both models current
     return project
 
 
@@ -564,3 +566,11 @@ def test_history_patch_loads_once(project, tmp_path, monkeypatch):
 def test_history_patch_missing_file_does_nothing(project, tmp_path, monkeypatch):
     monkeypatch.setattr(nba, "PATCH_DIR", tmp_path / "nothing_here")
     assert nba.apply_history_patch(project) == 0
+
+
+def test_retrain_when_model_used_another_early_shot_setting(trained_through_yesterday, monkeypatch):
+    json.dump({"early_m": 25}, open("pregame_model.json", "w"))              # trained before the 150 setting
+    calls = []
+    monkeypatch.setattr(subprocess, "run", fake_run({}, calls))
+    nba._retrain_if_needed(trained_through_yesterday)
+    assert any("train_pregame.py" in " ".join(c) for c in calls)

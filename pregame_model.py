@@ -52,6 +52,8 @@ def build_row(p: dict, t: dict, is_home: int, tip_win_prob: float = 0.5) -> list
         shrunk(p.get("early_shot_share", 0.0), p.get("early_shot_count", 0), M_EARLY, EARLY_PRIOR),
         float(p.get("opp_pos_share", 0.4)),     # context_features.Context.opp_pos_share
         float(p.get("vs_opp_rate", PRIOR)),     # context_features.Context.vs_opp_rate
+        # raw early-shot share + count (after the model inputs): each model re-shrinks them with its own strength
+        float(p.get("early_shot_share", 0.0)), float(p.get("early_shot_count", 0) or 0),
     ]
     return row
 
@@ -101,11 +103,28 @@ TEAM_STRETCH = 1.4
 # (2026-27 2.22965 -> 2.22865, Jan–Apr 2026 2.25417 -> 2.25336); for the FIELD-GOAL model (DraftKings) the old
 # settings stayed better (2.24909 / 2.26194 vs 2.24986 / 2.26238), so it keeps 1.4 + 20%.
 SETTINGS = {"first_points": (1.2, 0.25), "first_field_goal": (TEAM_STRETCH, SIMPLE_MIX)}
+# Early-shot trust per model (imaginary shots at 1 in 5), re-tuned 2026-11-19 with the history season: the first-points
+# model is better trusting it less (25 -> 150: 2026-27 2.22865 -> 2.22734, Jan–Apr 2026 2.25336 -> 2.25270); for the
+# field-goal model every looser value hurt Jan–Apr, so it keeps 25.
+EARLY_M = {"first_points": 150, "first_field_goal": M_EARLY}
+EARLY, RAW_EARLY = FEATURES.index("early_shot_shrunk"), len(FEATURES)
+
+
+def kind_of(model: dict) -> str:
+    return "first_field_goal" if model.get("labels") == "first_field_goal" else "first_points"
+
+
+def with_early(R, kind: str):
+    """Rows (any leading shape) with the early-shot input re-shrunk at this model's strength (needs the raw columns)."""
+    R = np.array(R, dtype=float)
+    if R.shape[-1] > RAW_EARLY + 1:
+        R[..., EARLY] = shrunk(R[..., RAW_EARLY], R[..., RAW_EARLY + 1], EARLY_M[kind], EARLY_PRIOR)
+    return R
 
 
 def settings_for(model: dict) -> tuple:
     """(team stretch, simple-rule mix) for this model file: the field-goal model has labels = first_field_goal."""
-    return SETTINGS["first_field_goal" if model.get("labels") == "first_field_goal" else "first_points"]
+    return SETTINGS[kind_of(model)]
 
 
 def stretch_teams(p: np.ndarray, is_home: np.ndarray, k: float = TEAM_STRETCH) -> np.ndarray:
@@ -123,7 +142,7 @@ def stretch_teams(p: np.ndarray, is_home: np.ndarray, k: float = TEAM_STRETCH) -
 
 
 def probabilities(model: dict, rows: list) -> np.ndarray:
-    R = np.array(rows, dtype=float)
+    R = with_early(rows, kind_of(model))
     if model.get("type") == "two_stage":
         p = two_stage(model["team"], model["w"], model["mu"], model["sd"], R)
         fb = R[:, FEATURES.index("fb_rate_shrunk")]

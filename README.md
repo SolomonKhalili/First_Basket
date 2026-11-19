@@ -99,7 +99,7 @@ python3 gui.py                      # the same picks in your web browser (cards,
 
 If you already have the database and `pregame_model.json`, you only need the last two commands.
 
-Run the tests any time: `python3 -m pytest` (259 tests, all in the `tests/` folder).
+Run the tests any time: `python3 -m pytest` (260 tests, all in the `tests/` folder).
 
 ---
 
@@ -164,7 +164,7 @@ A player's chance = his team's chance × his share within the team. Inputs built
 
 Trained on the **2025-26 regular season plus every 2026-27 game so far**. The **2024-25 season** (1,321 games, `data_patches/history_2024_25.json.gz`) is used only as **player history** — it makes every player's stats more complete, but its games are never training examples (rosters and roles change). Adding it improved the week-by-week test in both periods (2026-27 log-loss 2.2377 → 2.2342; Jan–Apr 2026 2.2725 → 2.2578).
 
-The final step mixes in each starter's season first-basket rate (25% FanDuel model / 20% DraftKings model) and stretches team chances (×1.2 / ×1.4) — each model keeps the settings that tested best for it.
+The final step mixes in each starter's season first-basket rate (25% FanDuel model / 20% DraftKings model) and stretches team chances (×1.2 / ×1.4); the early-shot share is trusted less in the FanDuel model (150 imaginary shots vs 25) — each model keeps the settings that tested best for it, re-tuned after the history season was added.
 
 **Tip-off call shown on the cards** (`tip_model.py`, `extended=True`): every opening tip since 2024-25, **this season's tips count double**, blended 50/50 with a **"who you beat" rating** (Elo) so beating a strong jumper counts more — calls the tip winner **67.9%** this season (64.5% last season).
 
@@ -187,7 +187,7 @@ With ~200 games the margin of error is about ±5.5 points. Results are re-measur
 - The first points are a free throw in 8.9% of games (135 of 1,515).
 - An earlier model reported ~60% accuracy, but it used features taken from the first plays of the game, which already contain the first basket. That number is invalid for pre-game use; the model has been deleted.
 - Public sources put the honest pre-game ceiling around 17–18% (e.g. StatsBench: 17.7% over 724 games, no ROI or closing-line data). Recent-form windows (L5/L10) add little.
-- **Tested and not adopted (2026-11-19)** — each had to win in both test periods: tip head-to-head, tip record vs a team, season-only tip rates, all tip signals weighted together, height for tips, other jumper rules, faster ratings for new jumpers, a smaller tip home edge, free-throw drawing, both teams' first scorers or the first shot attempt as extra examples, a per-player bonus, home court in "first team" (already captured), and blending DraftKings' prices. Details and numbers: `BLUEPRINT.md` and `experiments/`; the outside research behind them: `reports/First basket model improvements.md`.
+- **Tested and not adopted (2026-11-19)** — each had to win in both test periods: tip head-to-head, tip record vs a team, season-only tip rates, all tip signals weighted together, height for tips, other jumper rules, faster ratings for new jumpers, a smaller tip home edge, team scoring efficiency, a "boldness" dial, a minutes-rule blend, free-throw drawing, both teams' first scorers or the first shot attempt as extra examples, a per-player bonus, home court in "first team" (already captured), and blending DraftKings' prices. Details and numbers: `BLUEPRINT.md` and `experiments/`; the outside research behind them: `reports/First basket model improvements.md`.
 - News reports say the NBA asked its partner sportsbooks (Oct 2026) to stop offering "first basket" / opening-tip bets; FanDuel and DraftKings still list them for us, but that could change.
 
 ---

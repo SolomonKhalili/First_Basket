@@ -80,6 +80,7 @@ for k, gid in enumerate(gids):
         rows.append(pm.build_row(p, {"team_tipoff_win_pct": r[J["team_tipoff_win_pct"]]}, is_home,
                                  tip_win_prob=p_home if is_home else p_away))
 M = np.array(rows).reshape(len(gids), 10, -1)   # games x starters x features
+M = pm.with_early(M, "first_points")              # early-shot trust of the first-points model (pm.EARLY_M)
 Y = y.reshape(len(gids), 10)
 MINUTES = X.reshape(len(gids), 10, -1)[:, :, J["minutes_per_game"]]
 
@@ -234,9 +235,12 @@ try:
         Y = Y_FG                                        # field-goal labels for BOTH stages: which team made the first
         home_first = (Y_FG * home).sum(1) == 1          # field goal (team stage), then which of its starters (player)
         fg_idx = all_idx[Y_FG[all_idx].sum(1) == 1]     # games where a starter made the first field goal
+        _PL = PL
+        PL = pm.with_early(M, "first_field_goal")[:, :, pm.PLAYER_IDX]     # the field-goal model's early-shot trust
         team_fg, w_fg, mu_fg, sd_fg = fit2(fg_idx, l2)
-        Y, home_first = _Y, _hf
-        json.dump({"type": "two_stage", "labels": "first_field_goal", "team_labels": "first_field_goal", "features": pm.FEATURES,
+        Y, home_first, PL = _Y, _hf, _PL
+        json.dump({"type": "two_stage", "labels": "first_field_goal", "team_labels": "first_field_goal",
+                   "early_m": pm.EARLY_M["first_field_goal"], "features": pm.FEATURES,
                    "player_features": pm.PLAYER_FEATURES, "team": team_fg, "w": w_fg.tolist(), "mu": mu_fg.tolist(),
                    "sd": sd_fg.tolist(), "l2": l2, "train_games": int(len(all_idx)),
                    "trained_through": str(max(dates[all_idx]))}, open("pregame_model_fg.json", "w"), indent=2)
@@ -249,7 +253,7 @@ if wf_ll is not None and prev_ll is not None and wf_ll > prev_ll + WORSE_MARGIN:
     print(f"⚠️ Kept the previous model: new walk-forward log-loss {wf_ll:.4f} is worse than {prev_ll:.4f}")
     sys.exit(KEPT_PREVIOUS)
 
-json.dump({"type": "two_stage", "features": pm.FEATURES, "player_features": pm.PLAYER_FEATURES,
+json.dump({"type": "two_stage", "early_m": pm.EARLY_M["first_points"], "features": pm.FEATURES, "player_features": pm.PLAYER_FEATURES,
            "team": team, "w": w.tolist(), "mu": mu.tolist(), "sd": sd.tolist(), "l2": l2,
            "train_games": int(len(all_idx)), "trained_through": str(max(dates[all_idx])),
            "test_scheme": "walk_forward", "test_games": int(len(T)),

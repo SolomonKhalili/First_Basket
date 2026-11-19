@@ -45,6 +45,8 @@ session: §11 step 0. Full details of every change are in §10, newest first.)*
 
 **Right now**
 - **Everything is shipped and running.** 259 tests pass. The Mac's NBA folder follows GitHub every minute.
+- **Also shipped this evening:** FanDuel-model final step re-tuned (stretch 1.2, mix 25%, early-shot trust 150);
+  DraftKings model keeps 1.4 / 20% / 25. Cloud confirmed retrained with the history season at 5:39 PM (2,858 games).
 - **Just shipped (5:28 PM): the 2024-25 season as player history** (`data_patches/history_2024_25.json.gz`). The cloud
   loads it once on its next full update and rebuilds the training data from scratch (72 s on the Mac); training games
   stay 2025-26 + 2026-27 (`train_pregame.HISTORY_BEFORE`). Check that the state branch's `game_ids.json` has ~2,858
@@ -768,6 +770,14 @@ NBA/
   team stretch 1.4 → **1.2** and simple-rule mix 20% → **25%** (2026-27 2.22965 → 2.22865, Jan–Apr 2026 2.25417 →
   2.25336); field-goal model (DraftKings) keeps 1.4 / 20% (the new values were worse for it). Also tested on the new
   model and NOT adopted: a "boldness" dial (temperature 0.8–1.2) and a minutes-rule blend — each helped one period only.
+- **Adopted — early-shot trust per model** (`pregame_model.EARLY_M`, `with_early`; rows now carry the raw early-shot
+  share + count after the model inputs): first-points model 25 → **150** imaginary shots (2.22865 → 2.22734 /
+  2.25336 → 2.25270; tested 25…1500, best 150–250, worse past 400); field-goal model keeps 25 (looser hurt Jan–Apr).
+  Model files record `early_m`; `_retrain_if_needed` retrains when it doesn't match. Season/last-10 trust re-checked:
+  current 30 / 10 still best. (Note: `season_backtest.fill_fg_grades` grades the field-goal model with the
+  first-points early setting — re-grade only if those grades are re-run.)
+- **Rejected — team scoring efficiency in the first-team step** (points per shot attempt, pre-game): 0.67488 →
+  0.68299 (2025-26, worse) / 0.67507 → 0.67103 (2026-27) — correlation with scoring first only 0.08.
 
 ### 2026-11-18 (later) — where accuracy is lost, and what didn't help
 
