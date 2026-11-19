@@ -779,6 +779,9 @@ body.bets-mode .dayswitch, body.bets-mode #yestSum, body.bets-mode #dataView { d
 .book-sec .bk3 thead tr:first-child th { border-top: 0 !important; } .book-sec .bk3 tbody tr:last-child td { border-bottom: 0 !important; }
 .book-sec .bk3 thead th { background: color-mix(in srgb, var(--surface) 70%, transparent) !important; }
 .book-sec .bk3 tbody tr:nth-child(even) td { background: color-mix(in srgb, var(--surface) 45%, transparent) !important; }
+.tscroll .bk3 th:first-child, .tscroll .bk3 td:first-child { width: 38% !important; }
+.bk3 .chance { font-size: 15px; } .bk3 .our { color: var(--muted); font-weight: 600; }
+.book-sec { margin-top: 8px; }
 </style>
 </head>
 <body>
@@ -1262,8 +1265,8 @@ function card(c, i) {
         <div class="big"><div class="pct num" data-v="${top[2]}">${pct(top[2])}</div><div class="sub num">fair ${american(top[3])}${topFd}</div></div>
       </div>
       ${valueLine}
-      ${bookSection(c, "FanDuel", recLine, shortName)}
-      ${bookSection(c, "DraftKings", recLine, shortName)}
+      ${bookTabs(c)}
+      ${bookSection(c, bookView[c.matchup] || "FanDuel", recLine, shortName)}
       ${c.fd_closed ? `<div class="small-note">FanDuel has closed first-basket betting (tip-off is near) — its last prices are shown faded.</div>`
         : c.fanduel_note ? `<div class="small-note">${esc(c.fanduel_note)}</div>` : ""}
       <div class="facts" style="--i:${i}">
@@ -1303,6 +1306,21 @@ const bookView = {};                                       // matchup -> "FanDue
 const fairOdds = (p) => (p >= 0.5 ? -Math.round(100 * p / (1 - p)) : Math.round(100 * (1 - p) / p));
 /* One box per sportsbook: its OWN top 5 first-basket picks (FanDuel counts free throws -> our normal chances;
    DraftKings only field goals -> our field-goal chances) and its first-team-to-score odds. */
+function bookTabs(c) {
+  const on = bookView[c.matchup] || "FanDuel";
+  return `<div class="btabs bk-tabs" role="tablist">${["FanDuel", "DraftKings"].map((b) =>
+    `<button type="button" data-bk="${b}" class="${b === on ? "on" : ""}" role="tab">${b}</button>`).join("")}</div>`;
+}
+$("cards").addEventListener("click", (ev) => {             // switch a game between its FanDuel and DraftKings tables
+  const b = ev.target.closest("[data-bk]");
+  if (!b) return;
+  const el = b.closest(".card"), cards = lastResult?.cards || [];
+  const i = cards.findIndex((x) => x.home === el.dataset.home && x.away === el.dataset.away);
+  if (i < 0) return;
+  bookView[cards[i].matchup] = b.dataset.bk;
+  el.outerHTML = card(cards[i], i).replace('class="card enter"', 'class="card"');
+  try { markBetRows(); } catch (e) { /* bets not loaded yet */ }
+});
 function bookSection(c, book, recLine, shortName) {
   const isFD = book === "FanDuel", short = isFD ? "FD" : "DK";
   const fg = c.probs_fg || {}, prices = (isFD ? c.fanduel : c.draftkings) || {};
@@ -1311,7 +1329,8 @@ function bookSection(c, book, recLine, shortName) {
     .sort((a, b) => b[2] - a[2]).slice(0, 5);
   const teamOdds = (c.team_first_books || {})[book] || {};
   if (!isFD && !list.length && !Object.keys(prices).length && !Object.keys(teamOdds).length) return "";
-  const ourCell = (p) => `<span class="our">${american(fairOdds(p))}</span><span class="ourp">${pct(p, 0)} chance</span>`;
+  const ourCell = (p) => `<span class="our">${american(fairOdds(p))}</span>`;
+  const pctCell = (p) => `<b class="chance">${pct(p)}</b>`;
   const bookCell = (a, p) => {
     if (a === undefined || a === null) return missing(c, book);
     const ev = p * payout(a) - (1 - p), good = ev >= VALUE_MIN;
@@ -1319,19 +1338,19 @@ function bookSection(c, book, recLine, shortName) {
   };
   const rows = list.map(([name, team, p], r) => `<tr data-name="${esc(name)}" data-book="${book}" class="${r === 0 ? "pick1" : r === 1 ? "pick2" : ""}">
       <td><div class="player">${logo(team, 18)}<span class="pn"><span class="nm"><span class="nfull">${esc(name)}</span><span class="nshort">${esc(shortName(name))}</span></span><span class="sub2"><span class="tc">${esc(team)} · </span>${recLine(name)}</span></span> <small class="tcode">${esc(team)}</small></div></td>
-      <td class="r num">${ourCell(p)}</td><td class="r">${bookCell(prices[name], p)}</td></tr>`).join("");
+      <td class="r num">${pctCell(p)}</td><td class="r num">${ourCell(p)}</td><td class="r">${bookCell(prices[name], p)}</td></tr>`).join("");
   // team chance by this book's rule: FanDuel = the model's team chance; DraftKings = field-goal chances summed by team
   const teamP = {};
   if (isFD) Object.assign(teamP, c.first_team || {});
   else for (const [n, t] of all) if (fg[n] !== undefined) teamP[t] = (teamP[t] || 0) + fg[n];
   const teams = [c.away, c.home].filter((t) => teamP[t] !== undefined);
   const teamRows = teams.map((t) => `<tr><td><div class="player">${logo(t, 18)}<b>${esc(t)}</b></div></td>
-      <td class="r num">${ourCell(teamP[t])}</td><td class="r">${bookCell(teamOdds[t], teamP[t])}</td></tr>`).join("");
-  const head = (first) => `<thead><tr><th>${first}</th><th class="r">Our odds</th><th class="r">${short} odds</th></tr></thead>`;
+      <td class="r num">${pctCell(teamP[t])}</td><td class="r num">${ourCell(teamP[t])}</td><td class="r">${bookCell(teamOdds[t], teamP[t])}</td></tr>`).join("");
+  const head = (first) => `<thead><tr><th>${first}</th><th class="r">Chance</th><th class="r">Our odds</th><th class="r">${short} odds</th></tr></thead>`;
   return `<div class="book-sec ${isFD ? "is-fd" : "is-dk"}">
     <div class="book-h">${book} <small>${isFD ? "free throws count" : "only field goals count"}</small></div>
     <div class="sub-h">🏀 First basket <small>— top 5</small></div>
-    <div class="tscroll"><table class="bk-table bk3">${head("Player")}<tbody>${rows || `<tr><td colspan="3">${missing(c, book)}</td></tr>`}</tbody></table></div>
+    <div class="tscroll"><table class="bk-table bk3">${head("Player")}<tbody>${rows || `<tr><td colspan="4">${missing(c, book)}</td></tr>`}</tbody></table></div>
     ${teamRows ? `<div class="sub-h">🏀 First team to score${isFD ? "" : " <small>(1st field goal)</small>"}</div>
     <div class="tscroll"><table class="bk-table bk3">${head("Team")}<tbody>${teamRows}</tbody></table></div>` : ""}
   </div>`;
