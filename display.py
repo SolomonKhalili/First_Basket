@@ -76,9 +76,13 @@ def game_card(c: dict):
         picks.add_column("Season", justify="right", no_wrap=True)
     picks.add_column("Fair", justify="right")
     fanduel = c.get("fanduel")                     # {name: American odds}; None = odds not fetched
-    evs = c.get("ev") or {}                        # {name: EV per $1}
+    evs = c.get("ev") or {}                        # {name: EV per $1} at the better book's price
+    dk = c.get("draftkings") or {}                 # {name: American odds} at DraftKings
+    best_book = c.get("best_book") or {}           # {name: "FanDuel" | "DraftKings"}
     if fanduel is not None:
-        picks.add_column("FanDuel", justify="right")
+        picks.add_column("FD" if dk else "FanDuel", justify="right", no_wrap=True)   # short labels when both fit
+        if dk:
+            picks.add_column("DK", justify="right", no_wrap=True)
         picks.add_column("EV/$1", justify="right")
     top = c["picks"][0][2] if c["picks"] else 0
     for i, (name, team, p, fair) in enumerate(c["picks"], 1):
@@ -88,7 +92,12 @@ def game_card(c: dict):
             cells.append(season_cell(season.get(name)))
         cells.append(Text(f"{fair:+d}", style=bold))
         if fanduel is not None:
-            cells += [_fanduel_cell(fanduel.get(name), fair), ev_cell(evs.get(name))]
+            fd_p, dk_p = fanduel.get(name), dk.get(name)
+            both = fd_p is not None and dk_p is not None and fd_p != dk_p     # ★ only when the books differ
+            cells.append(_fanduel_cell(fd_p, fair, star=both and best_book.get(name) == "FanDuel", faded=both and best_book.get(name) != "FanDuel"))
+            if dk:
+                cells.append(_fanduel_cell(dk_p, fair, star=both and best_book.get(name) == "DraftKings", faded=both and best_book.get(name) != "DraftKings"))
+            cells.append(ev_cell(evs.get(name)))
         picks.add_row(*cells)
 
     # Headline: the two most likely first scorers and the predicted tip winner (by player)
@@ -182,11 +191,13 @@ def ev_cell(v) -> Text:
 
 
 def best_value_line(b) -> Text:
-    """The starter (of all 10) whose FanDuel price has the highest EV, or a note that none is positive."""
+    """The starter (of all 10) whose best price (FanDuel or DraftKings) has the highest EV, or a note that none is
+    positive."""
     if not b:
-        return Text("💰 No value at FanDuel's prices: every listed starter has negative EV.", style="dim")
+        return Text("💰 No value at the sportsbooks' prices: every listed starter has negative EV.", style="dim")
     return Text.assemble(("💰 Best value  ", "bold"), (f"{b['name']} ({b['team']}) ", "bold"),
-                         (f"{b['american']:+d}", "bold green"), (f"  · model {b['prob']:.1%}", "dim"),
+                         (f"{b['american']:+d}", "bold green"), (f" on {b['book']}" if b.get("book") else "", "bold"),
+                         (f"  · model {b['prob']:.1%}", "dim"),
                          ("  · EV ", "dim"), (f"{money(b['ev'])} per $1", "bold green"))
 
 
@@ -195,12 +206,15 @@ def _payout(american: int) -> float:
     return american / 100 if american > 0 else 100 / -american
 
 
-def _fanduel_cell(price, fair: int) -> Text:
-    """FanDuel's price; green when it pays more than the fair odds (the model sees value), dim otherwise."""
+def _fanduel_cell(price, fair: int, star: bool = False, faded: bool = False) -> Text:
+    """A sportsbook price; green when it pays more than the fair odds (the model sees value), dim otherwise.
+    star: the better of the two books for this player (★, gold); faded: the other book pays more."""
     if price is None:
         return Text("–", style="dim")
     better = _payout(price) > _payout(fair)
-    return Text(f"{price:+d}", style="bold green" if better else "dim")
+    if star:
+        return Text(f"★{price:+d}", style="bold green" if better else "bold yellow")
+    return Text(f"{price:+d}", style="dim" if faded or not better else "bold green")
 
 
 def _rate(s: dict) -> str:
@@ -334,12 +348,14 @@ def legend(any_projected: bool):
     t.add_row("Season", "His real record this season: scored the game's first basket in 4 of his 14 games = 4/14.")
     t.add_row("Fair", "Fair odds: the break-even price. A bet only makes sense if the sportsbook pays MORE "
                            "(e.g. +700 when fair is +500).")
-    t.add_row("FanDuel", "FanDuel's current First Basket price. Green = it pays more than the fair odds "
+    t.add_row("FanDuel / FD", "FanDuel's current First Basket price. Green = it pays more than the fair odds "
                          "(the model thinks the bet has value); grey = it pays less. Skip it with --no-odds.")
     t.add_row("EV/$1", "Expected value: the average profit per $1 if this bet were made many times, using the "
                        "model's chance (e.g. +$0.10 = you'd expect to win 10¢ per $1 in the long run). Green = "
                        "positive. It is only as good as the model; `nba.py eval` checks it on finished games.")
-    t.add_row("Best value", "The starter (of all 10, not only the top 5) with the highest EV at FanDuel's price.")
+    t.add_row("DK", "DraftKings' price for the same bet (\"1st Points Scorer\": free throws count). ★ = the "
+                            "better of the two books for that player (bet there); the other book's price is dimmed.")
+    t.add_row("Best value", "The starter (of all 10, not only the top 5) with the highest EV at the better book's price.")
     t.add_row("Top 2", "The two players most likely to score the game's first basket.")
     t.add_row("Scores first", "Each team's chance to score the game's first points (from the tip-off and home court).")
     t.add_row("Tip-off", "Who jumps for each team (away first) and each one's chance to win the opening jump ball; "

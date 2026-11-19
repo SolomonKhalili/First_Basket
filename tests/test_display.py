@@ -158,7 +158,7 @@ def test_game_card_shows_ev_column_and_best_value():
 
 
 def test_best_value_line_when_nothing_is_positive():
-    assert "No value at FanDuel's prices" in ui.best_value_line(None).plain
+    assert "No value at the sportsbooks' prices" in ui.best_value_line(None).plain
 
 
 def test_paper_betting_section():
