@@ -25,3 +25,4 @@ launcher/.app_updating
 
 # deep-research working notes (report itself is committed under reports/)
 research_notes/
+launcher/.last_git_clean

@@ -258,6 +258,25 @@ def due_full_check(now: float, path: Path) -> bool:
     return True
 
 
+CLEAN_EVERY = 24 * 3600
+
+
+def clean_git(now: float, path: Path) -> bool:
+    """Once a day: drop old downloaded copies of the cloud's data. Every sync fetches the cloud's newest database
+    (~18 MB) and git kept every old copy — 350 MB in two days (2026-11-19). Only unreachable copies go; the current
+    data, the code and its history stay. Returns True when it ran."""
+    try:
+        last = float(path.read_text())
+    except (OSError, ValueError):
+        last = 0.0
+    if now - last < CLEAN_EVERY:
+        return False
+    git("reflog", "expire", "--expire=now", "--all")
+    git("gc", "--prune=now", "--quiet")
+    path.write_text(str(now))
+    return True
+
+
 def main() -> int:
     full = due_full_check(time.time(), LOG.parent / ".last_full_check")
     if full:
@@ -280,6 +299,12 @@ def main() -> int:
     except Exception as e:  # noqa: BLE001 — offline, GitHub down, …: try again next time
         log(f"couldn't sync ({type(e).__name__}: {e}) — will try again")
         ok = False
+    if ok:
+        try:
+            if clean_git(time.time(), LOG.parent / ".last_git_clean"):
+                log("cleaned old copies of the cloud's data (git gc)")
+        except Exception as e:  # noqa: BLE001 — git busy: tomorrow
+            log(f"git clean skipped ({type(e).__name__}: {e})")
     if full or not ok:
         try:
             report_health(code_line, ok)

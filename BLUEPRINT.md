@@ -778,6 +778,10 @@ NBA/
   Model files record `early_m`; `_retrain_if_needed` retrains when it doesn't match. Season/last-10 trust re-checked:
   current 30 / 10 still best. (Note: `season_backtest.fill_fg_grades` grades the field-goal model with the
   first-points early setting — re-grade only if those grades are re-run.)
+- **Folder size 410 MB → 40 MB (2026-11-19):** 350 MB was old downloaded copies of the cloud's database inside `.git`
+  (every sync fetches the newest ~18 MB copy; git kept them all). Removed with `git reflog expire` + `git gc --prune`,
+  plus `iphone_shots/` and Python caches (all regenerable). `sync_from_cloud.clean_git` now does this once a day
+  (`launcher/.last_git_clean`, git-ignored) so it can't grow back.
 - **Yesterday's cards now have the DraftKings side** (`gui.day_cards`): closing DraftKings prices from the log (ESPN's copy
   first) and our week-by-week first-field-goal chances (`fg_grades`, rescaled over the 10 starters). Before, the
   rebuild only carried FanDuel, so DraftKings tiles showed "–". A tile with no data now says "No DraftKings data".
