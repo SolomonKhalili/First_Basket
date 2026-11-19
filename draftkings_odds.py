@@ -208,3 +208,93 @@ def push_to_relay(relay_url: str, games: list) -> int:
                       headers={"Origin": "http://127.0.0.1:8765", "User-Agent": "first-basket-mac"})
     r.raise_for_status()
     return int(r.json().get("saved", 0))
+
+
+# ──────────────────────────────────────────────
+# DRAFTKINGS VIA ESPN: ESPN's public odds feed (the same feed the cloud already reads for games) republishes
+# DraftKings' "First Basket" prices — current AND opening — for every game. DraftKings refuses cloud servers, ESPN
+# doesn't, so the cloud gets DraftKings all day without a Mac or a browser. ESPN refreshes them every few hours
+# (checked 2026-11-19: identical to DraftKings when fresh, a few hours behind otherwise); the Mac and viewers'
+# browsers still add DraftKings' live prices in between.
+# ──────────────────────────────────────────────
+ESPN_PROPS = ("https://sports.core.api.espn.com/v2/sports/basketball/leagues/nba/events/{g}/competitions/{g}"
+              "/odds/100/propBets?lang=en&region=us&limit=1000&page={p}")        # provider 100 = DraftKings
+
+
+def parse_espn_props(items: list, home: str, away: str, who: dict) -> dict:
+    """Pure (testable). ESPN propBets items -> one game in parse_first_points' shape, plus each player's
+    "open" price and "updated" time. who: ESPN athlete id -> (name, team)."""
+    rows = []
+    for i in items:
+        if (i.get("type") or {}).get("name") != "First Basket":
+            continue
+        aid = str((i.get("athlete") or {}).get("$ref", "")).split("/athletes/")[-1].split("?")[0]
+        name, team = who.get(aid, ("", ""))
+        am = (i.get("odds") or {}).get("american") or {}
+        try:
+            american = int(str(am.get("value", "")).replace("+", ""))
+        except ValueError:
+            continue
+        if not name or not (american >= 100 or american <= -100):
+            continue
+        try:
+            opened = int(str(am.get("open", "")).replace("+", ""))
+        except ValueError:
+            opened = american
+        decimal = 1 + (american / 100 if american > 0 else 100 / -american)
+        rows.append({"player": name, "team": team, "american": american, "decimal": decimal, "implied": 1 / decimal,
+                     "open": opened, "updated": i.get("lastUpdated", "")})
+    import fanduel_odds as fd
+    rows.sort(key=lambda r: r["decimal"])
+    return {"home_code": home, "away_code": away, "players": rows, "margin": fd.margin(rows) if rows else None,
+            "source": "ESPN"}
+
+
+def fetch_via_espn(games: list, con) -> list:
+    """DraftKings' first-basket prices for these games (each {game_id, home_team, away_team}) from ESPN's feed."""
+    who = {}
+    for pid, name, team in con.execute("SELECT player_id, player_name, team FROM lineups ORDER BY rowid"):
+        who[str(pid)] = (name, team)                        # latest team wins (trades)
+    out = []
+    for g in games:
+        items, page = [], 1
+        while page <= 5:
+            r = requests.get(ESPN_PROPS.format(g=g["game_id"], p=page), timeout=30)
+            if not r.ok:
+                break
+            data = r.json()
+            items += data.get("items", [])
+            if page >= int(data.get("pageCount") or 1):
+                break
+            page += 1
+        game = parse_espn_props(items, g["home_team"], g["away_team"], who)
+        if game["players"]:
+            out.append(game)
+    return out
+
+
+def log_espn(con, day: str, games: list) -> int:
+    """Save ESPN's DraftKings prices in dk_odds_log (same table as the browsers' log): the official opening price
+    (stamped 00:00:00 = "opening") and each price at the time ESPN says it changed. Returns rows added."""
+    from datetime import datetime
+    from zoneinfo import ZoneInfo
+    con.execute(DK_LOG_SCHEMA)
+    before = con.total_changes
+    d0 = f"{day[:4]}-{day[4:6]}-{day[6:]} 00:00:00"
+    for g in games:
+        m = f"{g['away_code']} @ {g['home_code']}"
+        for r in g["players"]:
+            con.execute("INSERT OR IGNORE INTO dk_odds_log VALUES (?, ?, ?, ?, ?, ?)",
+                        (day, m, d0, r["player"], r["team"], int(r["open"])))
+            try:
+                at = datetime.fromisoformat(r["updated"].replace("Z", "+00:00")).astimezone(ZoneInfo("America/New_York"))
+                at = at.strftime("%Y-%m-%d %H:%M:%S")
+            except ValueError:
+                continue
+            last = con.execute("SELECT american FROM dk_odds_log WHERE game_date = ? AND matchup = ? AND player_name = ? "
+                               "ORDER BY logged_at DESC LIMIT 1", (day, m, r["player"])).fetchone()
+            if not last or last[0] != r["american"]:
+                con.execute("INSERT OR IGNORE INTO dk_odds_log VALUES (?, ?, ?, ?, ?, ?)",
+                            (day, m, at, r["player"], r["team"], r["american"]))
+    con.commit()
+    return con.total_changes - before

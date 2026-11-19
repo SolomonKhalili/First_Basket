@@ -1257,9 +1257,17 @@ def _draftkings_prices(games: list, warn: list, ui=None):
         with ui.console.status("Getting DraftKings first-basket odds…"):
             return dk.fetch_first_basket_odds()
     except Exception as e:                 # odds are extra: never stop the predictions over them
-        games, age = dk.load_snapshot()   # the cloud: DraftKings refuses it, so use the Mac's latest prices
-        if games is not None:
-            return games
+        snap, age = dk.load_snapshot()    # the cloud: DraftKings refuses it — a Mac/browser price from minutes ago
+        try:                              # ...and DraftKings' prices as ESPN publishes them (no Mac needed; logged)
+            espn = dk.fetch_via_espn(games, db())
+            dk.log_espn(db(), date.today().strftime("%Y%m%d"), espn)
+        except Exception:  # noqa: BLE001
+            espn = []
+        if snap is not None:              # fresher where we have it; ESPN for any game it doesn't cover
+            have = {(g["home_code"], g["away_code"]) for g in snap}
+            return snap + [g for g in espn if (g["home_code"], g["away_code"]) not in have]
+        if espn:
+            return espn
         warn.append(f"DraftKings odds unavailable ({type(e).__name__}) — FanDuel only")
         return None
 

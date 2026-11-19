@@ -72,3 +72,17 @@ def test_relay_log_is_stored_and_used(tmp_path):
     games, age = dk.load_snapshot(f)
     assert [(g["away_code"], g["home_code"]) for g in games] == [("UTAH", "LAL")]   # the 1-hour-old line is left out
     assert games[0]["players"][0]["american"] == 365
+
+
+def test_draftkings_via_espn_feed():
+    """ESPN's public odds feed republishes DraftKings' First Basket prices (current + opening)."""
+    import draftkings_odds as dk
+    ref = lambda aid: {"$ref": f"http://x/athletes/{aid}?lang=en"}  # noqa: E731
+    items = [{"athlete": ref("1"), "type": {"name": "First Basket"}, "odds": {"american": {"value": "+499", "open": "+559"}},
+              "lastUpdated": "2026-11-19T12:34Z"},
+             {"athlete": ref("2"), "type": {"name": "Points Milestones"}, "odds": {"american": {"value": "-120"}}},
+             {"athlete": ref("9"), "type": {"name": "First Basket"}, "odds": {"american": {"value": "+700"}}}]   # unknown player
+    g = dk.parse_espn_props(items, "MEM", "GS", {"1": ("Ty Jerome", "MEM"), "2": ("X", "GS")})
+    assert g["home_code"] == "MEM" and len(g["players"]) == 1
+    p = g["players"][0]
+    assert (p["player"], p["team"], p["american"], p["open"]) == ("Ty Jerome", "MEM", 499, 559)
