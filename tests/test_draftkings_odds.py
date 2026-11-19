@@ -104,3 +104,17 @@ def test_team_first_from_espn_and_log():
     dk.log_team_first(con, "20261119", "GS @ MEM", "DraftKings", "GS", 105)          # same price: not logged again
     rows = con.execute("SELECT logged_at, american FROM team_first_log ORDER BY logged_at").fetchall()
     assert [a for _, a in rows] == [120, 105] and rows[0][0].endswith("00:00:00")
+
+
+def test_draftkings_valued_with_field_goal_chances():
+    """FanDuel at the first-points chance, DraftKings at the first-field-goal chance; the better deal wins."""
+    p = [{"name": "A", "team": "X", "prob": 0.15, "prob_fg": 0.16}, {"name": "B", "team": "X", "prob": 0.10}]
+    rows = {r["name"]: r for r in nba._best_value(p, {"A": 500, "B": 900}, {"A": 560, "B": 2000})}
+    assert rows["A"]["book"] == "DraftKings" and rows["A"]["prob"] == 0.16          # 0.16*5.6-0.84 > 0.15*5-0.85
+    assert rows["B"]["book"] == "FanDuel"                                           # no field-goal chance: FanDuel only
+
+
+def test_first_field_goal_skips_free_throws():
+    acts = [{"scoringPlay": True, "period": 1, "actionType": "free_throw", "shotType": "Free Throw - 1 of 2", "personId": "1", "teamTricode": "A"},
+            {"scoringPlay": True, "period": 1, "actionType": "2pt", "shotType": "Layup", "personId": "2", "teamTricode": "B"}]
+    assert nba.first_basket(acts)["personId"] == "1" and nba.first_field_goal(acts)["personId"] == "2"

@@ -20,7 +20,7 @@ import time
 from pathlib import Path
 
 HERE = Path(__file__).resolve().parent
-FILES = ["nba_first_basket.db", "first_basket_data.csv", "my_predictions.xlsx", "pregame_model.json", "X_train.npy",
+FILES = ["nba_first_basket.db", "first_basket_data.csv", "my_predictions.xlsx", "pregame_model.json", "pregame_model_fg.json", "X_train.npy",
          "y_train.npy", "groups.npy", "game_ids.json", "meta.json", "feature_names.json", "player_game_logs.pkl", "todays_cards.json"]
 LOG = HERE / "launcher" / "sync.log"
 

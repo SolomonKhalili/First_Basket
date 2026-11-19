@@ -215,6 +215,32 @@ print(f"  stage 1: P(home scores first) = sigmoid({team['a']:+.3f} {team['b']:+.
 for k, v in zip(pm.PLAYER_FEATURES, w):
     print(f"  {k:<22}{v:+.3f}")
 
+# ── Field-goal model (for DraftKings, whose bet pays on the first FIELD GOAL — free throws don't count) ──────
+# Same inputs, labels = who made the game's first field goal (table first_fg). Adopted 2026-11-19: better than the
+# first-points model at predicting the first field goal in both test periods (2026-27 log-loss 2.2473 -> 2.2466,
+# Jan–Apr 2026 2.2718 -> 2.2707, #1 pick 14.2% -> 14.7%).
+try:
+    _fg = dict(con.execute("SELECT game_id, scorer_player_id FROM first_fg"))
+    Y_FG = np.zeros_like(Y)
+    for k, gid in enumerate(gids):
+        _h, _a = info[gid][1], info[gid][2]
+        _s = bf.stored_starters(gid, _h, _a)
+        for j, pl in enumerate(((_s[_h] + _s[_a])[:10]) if _s else []):
+            if str(pl["player_id"]) == str(_fg.get(gid)):
+                Y_FG[k, j] = 1
+    if Y_FG.sum() > 0.9 * Y.sum():                  # only when first_fg covers (nearly) every game
+        _Y = Y
+        Y = Y_FG
+        team_fg, w_fg, mu_fg, sd_fg = fit2(all_idx, l2)
+        Y = _Y
+        json.dump({"type": "two_stage", "labels": "first_field_goal", "features": pm.FEATURES,
+                   "player_features": pm.PLAYER_FEATURES, "team": team_fg, "w": w_fg.tolist(), "mu": mu_fg.tolist(),
+                   "sd": sd_fg.tolist(), "l2": l2, "train_games": int(len(all_idx)),
+                   "trained_through": str(max(dates[all_idx]))}, open("pregame_model_fg.json", "w"), indent=2)
+        print("saved pregame_model_fg.json (first field goal — for DraftKings)")
+except Exception as e:  # noqa: BLE001 — never block the main model over the DraftKings one
+    print(f"⚠️ field-goal model not trained: {e}")
+
 prev_ll = prev.get("test_logloss") if prev.get("test_scheme") == "walk_forward" else None
 if wf_ll is not None and prev_ll is not None and wf_ll > prev_ll + WORSE_MARGIN:
     print(f"⚠️ Kept the previous model: new walk-forward log-loss {wf_ll:.4f} is worse than {prev_ll:.4f}")

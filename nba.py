@@ -224,6 +224,46 @@ def first_basket(actions: list[dict]) -> Optional[dict]:
             return a if a.get('personId') and a.get('teamTricode') else None
     return None
 
+def first_field_goal(actions: list[dict]) -> Optional[dict]:
+    """First made FIELD GOAL of the game (Q1-Q4; free throws don't count) — what DraftKings' first-scorer bet pays on.
+    Same safety rule as first_basket: no scorer or team -> None."""
+    for a in actions:
+        if a['scoringPlay'] and 1 <= a['period'] <= 4 and 'free_throw' not in a.get('actionType', '') \
+                and 'free throw' not in str(a.get('shotType', '')).lower():
+            return a if a.get('personId') and a.get('teamTricode') else None
+    return None
+
+
+FIRST_FG_SCHEMA = """CREATE TABLE IF NOT EXISTS first_fg (
+    game_id TEXT PRIMARY KEY, scorer_player_id TEXT, scorer_name TEXT, scorer_team TEXT, shot_type TEXT)"""
+
+
+def store_first_fg(con, game_id, actions) -> None:
+    con.execute(FIRST_FG_SCHEMA)
+    fg = first_field_goal(actions)
+    if fg:
+        con.execute("INSERT OR REPLACE INTO first_fg VALUES (?, ?, ?, ?, ?)",
+                    (str(game_id), fg['personId'], fg['playerName'], fg['teamTricode'], fg['shotType']))
+
+
+def fill_first_fg(con) -> int:
+    """first_fg for every labelled game: games whose first basket was a field goal copy it; games that started with a
+    free throw have their play-by-play read again (once each). Returns how many were read from play-by-play."""
+    con.execute(FIRST_FG_SCHEMA)
+    con.execute("""INSERT OR IGNORE INTO first_fg
+                   SELECT game_id, scorer_player_id, scorer_name, scorer_team, shot_type FROM first_baskets
+                   WHERE shot_type NOT LIKE '%Free Throw%'""")
+    todo = [g for (g,) in con.execute("""SELECT game_id FROM first_baskets WHERE shot_type LIKE '%Free Throw%'
+                                         AND game_id NOT IN (SELECT game_id FROM first_fg)""")]
+    for gid in todo:
+        actions = get_pbp(gid) or nba_com_backup(gid, con)
+        if actions:
+            store_first_fg(con, gid, actions)
+        con.commit()
+    con.commit()
+    return len(todo)
+
+
 def first_shots(actions: list[dict]) -> dict:
     """Each team's first field-goal attempt of the game (made or missed; free throws excluded), Q1 only.
     -> {team code: action}. Plays without a team or a player are skipped."""
@@ -318,6 +358,7 @@ def ingest_game(game_id: str, con):
 
     fb = first_basket(actions)
     tip = tip_jumpball(actions)
+    store_first_fg(con, game_id, actions)          # DraftKings pays on the first field goal (free throws don't count)
     con.execute(FIRST_SHOTS_SCHEMA)
     for team, a in first_shots(actions).items():
         con.execute("INSERT OR REPLACE INTO first_shots VALUES (?,?,?,?,?,?)",
@@ -792,7 +833,7 @@ def _retrain_if_needed(con) -> str:
     # Every labelled game not in the training data yet — including ones labelled late with an older date
     labelled = {r[0] for r in con.execute("SELECT game_id FROM first_baskets f JOIN games g USING(game_id)")}
     new_games = len(labelled - in_training)
-    if not new_games:
+    if not new_games and os.path.exists("pregame_model_fg.json"):   # (the field-goal model: trained once if missing)
         return "model up to date"
     for script in ("build_features.py", "train_pregame.py"):
         r = subprocess.run([sys.executable, script, "--incremental"], capture_output=True, text=True)
@@ -828,6 +869,7 @@ def sync_data() -> str:
     for key, (a, b) in SEASONS_TO_AUDIT.items():  # whole past seasons vs ESPN's schedule (once each)
         audit_season(con, key, a, b)
     repair_old_gaps(con)                       # older games still missing a first basket (once a week each)
+    fill_first_fg(con)                         # first FIELD GOAL of every game (DraftKings' rule), once each
     try:                                       # last season's re-created picks for the "overall" record (once)
         import season_backtest
         season_backtest.fill_last_season(con)
@@ -993,6 +1035,7 @@ def predict_today(first_pass: bool = True, teams: set = frozenset(), ui=None) ->
         return 0
 
     pg = pm.load() if os.path.exists('pregame_model.json') else None
+    pg_fg = pm.load('pregame_model_fg.json') if os.path.exists('pregame_model_fg.json') else None   # DraftKings' rule
     model_version = picks.model_id(pg) if pg else None
     if pg is None:
         ui.notes(warn + ["pregame_model.json is missing — run: python3 train_pregame.py"])
@@ -1127,6 +1170,7 @@ def predict_today(first_pass: bool = True, teams: set = frozenset(), ui=None) ->
             if p.get('id_matched') is False:
                 notes.append(f"{p['name']}: no past games found — scored with default stats")
         probs = pm.probabilities(pg, rows)
+        probs_fg = pm.probabilities(pg_fg, rows) if pg_fg else None      # first FIELD GOAL chances (DraftKings)
         order = [int(i) for i in np.argsort(probs)[::-1]]
 
         names = {p['player_id']: p['name'] for p in home_starters + away_starters}
@@ -1147,7 +1191,8 @@ def predict_today(first_pass: bool = True, teams: set = frozenset(), ui=None) ->
                     st.injury_flags([p['name'] for p in home_starters + away_starters], inj_report)}
         top5 = [(info[i]['name'], info[i]['team'], float(probs[i]), pm.fair_american(float(probs[i])))
                 for i in order[:5]]
-        everyone = [{**info[i], "prob": float(probs[i])} for i in order]       # all 10 starters, for EV
+        everyone = [{**info[i], "prob": float(probs[i]),                         # all 10 starters, for EV
+                     **({"prob_fg": float(probs_fg[i])} if probs_fg is not None else {})} for i in order]
         season_counts = season_first_baskets(con, [p['id'] for p in info], game_date)
         fd_card = _fanduel_card(fd_games, home_team, away_team, top5, everyone, dk_games)
         first_team = ({home_team: float(probs[:len(home_starters)].sum()),
@@ -1161,6 +1206,7 @@ def predict_today(first_pass: bool = True, teams: set = frozenset(), ui=None) ->
             # each starter's real record this season: first baskets / games played (games before today)
             "season": {info[i]['name']: season_counts.get(str(info[i]['id']), (0, 0)) for i in order},
             "probs": [[info[i]['name'], info[i]['team'], float(probs[i])] for i in order],   # all 10, for live odds
+            "probs_fg": ({info[i]['name']: float(probs_fg[i]) for i in order} if probs_fg is not None else None),
             "tip": {home_team: show_home, away_team: show_away}, "jumpers": jumpers,
             "tip_record": tip_record,             # each jumper's tips won / tips taken this season
             "first_team": first_team,
@@ -1282,6 +1328,24 @@ def _draftkings_prices(games: list, warn: list, ui=None):
         return None
 
 
+def _best_value(players: list, fd_prices: dict, dk_prices: dict) -> list:
+    """Each player's best deal: FanDuel at his first-points chance, DraftKings at his first-field-goal chance
+    (prob_fg; without it DraftKings isn't valued). -> rows {name, team, prob, american, ev, book}, best EV first."""
+    out = []
+    for p in players:
+        options = []
+        if p["name"] in fd_prices:
+            a = fd_prices[p["name"]]
+            options.append({"prob": p["prob"], "american": a, "book": "FanDuel",
+                            "ev": p["prob"] * ev.profit_per_dollar(a) - (1 - p["prob"])})
+        if p["name"] in dk_prices and p.get("prob_fg") is not None:
+            a, q = dk_prices[p["name"]], p["prob_fg"]
+            options.append({"prob": q, "american": a, "book": "DraftKings", "ev": q * ev.profit_per_dollar(a) - (1 - q)})
+        if options:
+            out.append({"name": p["name"], "team": p["team"], **max(options, key=lambda o: o["ev"])})
+    return sorted(out, key=lambda r: -r["ev"])
+
+
 def _best_prices(books: dict) -> tuple:
     """{"FanDuel": {name: american}, "DraftKings": {...}} -> ({name: best american}, {name: book}): the price that
     pays the most for each player (ties go to the first book listed)."""
@@ -1348,15 +1412,19 @@ def _fanduel_card(fd_games, home: str, away: str, top5: list, everyone: list = (
                 if fd_games is not None else "FanDuel odds unavailable right now."}
         if not dk_prices:
             return base
-        return {**base, "draftkings": dk_prices, "best_book": {}, "ev": {}, "fd_market": None,   # shown, not valued:
-                "best_value": None, "_priced": []}                                                  # field goals only
+        priced = _best_value(players, {}, dk_prices)
+        best = priced[0] if priced and ev.is_value(priced[0]["ev"]) else None
+        return {**base, "draftkings": dk_prices, "best_book": {r["name"]: r["book"] for r in priced},
+                "ev": {r["name"]: r["ev"] for r in priced}, "fd_market": None,
+                "best_value": ({**{k: best[k] for k in ("name", "team", "prob", "american", "ev")}, "book": best["book"]}
+                               if best else None), "_priced": []}
     matched = fd.match_prices(game["players"], [(p["name"], p["team"]) for p in players])
     prices = {name: row["american"] for name, row in matched.items()}
     fd_priced = ev.priced_players(players, prices)          # FanDuel only: what odds_log / paper betting record
-    # value uses FanDuel only: DraftKings' player market pays on the first FIELD GOAL (free throws don't count — its
-    # bet slip, 2026-11-19), a different bet from our first-POINTS chances (free throws decide ~9% of games)
-    best_prices, best_book = _best_prices({"FanDuel": prices})
-    priced = ev.priced_players(players, best_prices)        # value at whichever book pays more
+    # FanDuel pays on the first POINTS (free throws count) -> our first-points chances; DraftKings' player market pays
+    # on the first FIELD GOAL (its bet slip, 2026-11-19) -> the field-goal model's chances. The better deal wins.
+    priced = _best_value(players, prices, dk_prices)
+    best_book = {r["name"]: r["book"] for r in priced}
     note = ""
     if not fd.is_complete(game["players"]):
         note = f"FanDuel lists only {len(game['players'])} players so far (lineups not all posted)."
