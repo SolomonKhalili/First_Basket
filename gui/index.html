@@ -782,6 +782,7 @@ body.bets-mode .dayswitch, body.bets-mode #yestSum, body.bets-mode #dataView { d
 .tscroll .bk3 th:first-child, .tscroll .bk3 td:first-child { width: 38% !important; }
 .bk3 .chance { font-size: 15px; } .bk3 .our { color: var(--muted); font-weight: 600; }
 .book-sec { margin-top: 8px; }
+.ft-note { margin: 8px 2px 0; font-size: 12.5px; color: var(--muted); line-height: 1.45; } .ft-note b { color: var(--text); }
 </style>
 </head>
 <body>
@@ -1309,7 +1310,8 @@ const fairOdds = (p) => (p >= 0.5 ? -Math.round(100 * p / (1 - p)) : Math.round(
 function bookTabs(c) {
   const on = bookView[c.matchup] || "FanDuel";
   return `<div class="btabs bk-tabs" role="tablist">${["FanDuel", "DraftKings"].map((b) =>
-    `<button type="button" data-bk="${b}" class="${b === on ? "on" : ""}" role="tab">${b}</button>`).join("")}</div>`;
+    `<button type="button" data-bk="${b}" class="${b === on ? "on" : ""}" role="tab">${b}</button>`).join("")}</div>
+    <div class="ft-note">ℹ️ <b>FanDuel counts free throws</b> as the first basket. <b>DraftKings doesn't</b> — only field goals count. That's why the chances and top 5 can differ between the tabs.</div>`;
 }
 $("cards").addEventListener("click", (ev) => {             // switch a game between its FanDuel and DraftKings tables
   const b = ev.target.closest("[data-bk]");
