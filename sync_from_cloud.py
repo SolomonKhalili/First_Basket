@@ -179,23 +179,79 @@ def nudge_cloud() -> None:
         log(f"backup check: cloud {'is updating now' if busy else 'last updated ' + (last.strftime('%a %-I:%M %p') if last else 'never')} — OK")
 
 
+# ──────────────────────────────────────────────
+# HEALTH REPORT: the Mac tells GitHub how it's doing, so health_check.py (on GitHub) can raise an alert.
+# ──────────────────────────────────────────────
+LIBRARIES = ["numpy", "pandas", "scipy", "requests", "rich", "cryptography", "sportsdataverse"]
+STRIKES = 3                                       # a sync/code problem must repeat this many runs (1.5 h) to count
+
+
+def mac_problems(code_line: str, sync_ok: bool, missing_libs: list, app_up: bool, strikes: dict) -> list:
+    """Pure (testable). strikes: running counts from earlier runs (updated in place) so one blip — Wi-Fi drop,
+    GitHub hiccup — doesn't raise an alert; a missing library or a stopped app counts at once."""
+    p = []
+    if missing_libs:
+        p.append(f"the app's Python is missing {', '.join(missing_libs)} (game data can't load)")
+    if not app_up:
+        p.append("the Mac app isn't running (http://127.0.0.1:8765 doesn't answer)")
+    for key, bad, msg in (("code", "skipped" in code_line, f"GitHub's code isn't reaching the Mac — {code_line}"),
+                          ("sync", not sync_ok, "the Mac can't download the newest data from GitHub")):
+        strikes[key] = strikes.get(key, 0) + 1 if bad else 0
+        if strikes[key] >= STRIKES:
+            p.append(msg)
+    return p
+
+
+def report_health(code_line: str, sync_ok: bool) -> None:
+    import importlib.util
+    import json
+    import urllib.request
+    from datetime import datetime, timezone
+    missing = [m for m in LIBRARIES if importlib.util.find_spec(m) is None]
+    try:
+        urllib.request.urlopen("http://127.0.0.1:8765/", timeout=10)
+        app_up = True
+    except Exception:  # noqa: BLE001
+        app_up = False
+    sfile = LOG.parent / "health_strikes.json"
+    try:
+        strikes = json.loads(sfile.read_text())
+    except (OSError, ValueError):
+        strikes = {}
+    problems = mac_problems(code_line, sync_ok, missing, app_up, strikes)
+    try:
+        sfile.write_text(json.dumps(strikes))
+    except OSError:
+        pass
+    note = json.dumps({"at": datetime.now(timezone.utc).isoformat(timespec="seconds"), "problems": problems})
+    subprocess.run(["gh", "variable", "set", "MAC_HEALTH", "-R", REPO, "--body", note], check=True,
+                   capture_output=True, timeout=60)
+    log("health report sent: " + ("; ".join(problems) if problems else "all OK"))
+
+
 def main() -> int:
     try:
         nudge_cloud()
     except Exception as e:  # noqa: BLE001 — offline / not signed in to gh: the cloud's own schedule still runs
         log(f"backup check skipped ({type(e).__name__}: {e})")
     try:
-        log(update_code())
+        code_line = update_code()
     except Exception as e:  # noqa: BLE001 — offline / git busy: try again next time
-        log(f"code update skipped ({type(e).__name__}: {e})")
+        code_line = f"code update skipped ({type(e).__name__}: {e})"
+    log(code_line)
     try:
         changed = sync()
+        when = git("log", "-1", "--format=%cd", "--date=format:%a %-I:%M %p", "FETCH_HEAD")
+        log(f"updated {', '.join(changed)} (cloud copy from {when})" if changed else f"already up to date (cloud copy from {when})")
+        ok = True
     except Exception as e:  # noqa: BLE001 — offline, GitHub down, …: try again next time
         log(f"couldn't sync ({type(e).__name__}: {e}) — will try again")
-        return 1
-    when = git("log", "-1", "--format=%cd", "--date=format:%a %-I:%M %p", "FETCH_HEAD")
-    log(f"updated {', '.join(changed)} (cloud copy from {when})" if changed else f"already up to date (cloud copy from {when})")
-    return 0
+        ok = False
+    try:
+        report_health(code_line, ok)
+    except Exception as e:  # noqa: BLE001 — offline: the next run reports
+        log(f"health report not sent ({type(e).__name__}: {e})")
+    return 0 if ok else 1
 
 
 if __name__ == "__main__":
