@@ -778,10 +778,11 @@ NBA/
   Model files record `early_m`; `_retrain_if_needed` retrains when it doesn't match. Season/last-10 trust re-checked:
   current 30 / 10 still best. (Note: `season_backtest.fill_fg_grades` grades the field-goal model with the
   first-points early setting — re-grade only if those grades are re-run.)
+- **Card header:** "Expected/Projected lineup" now says "Confirmed lineup not out yet (~30 min before tip-off)" next to it.
 - **Website reloads itself on new code** (`publish.build_site` adds `<meta name="fb-build">` = hash of the page;
   `static_site.html` checks it every minute, never while a dialog is open) — changes show in ~2–3 min instead of after
   GitHub Pages' 10-minute browser cache.
-- **Table record line:** each player shows "MIL · 2/13 scored first" (2 first baskets in his 13 games this season); the
+- **Table record line:** each player shows "2/13 scored first basket" (2 first baskets in his 13 games this season); the
   separate explanation line under each table was removed (owner). The "💰 What's value?" button and guide link were
   removed (owner: not useful); the 💰 value tags stay.
 - **Owner's rule — DraftKings sources (2026-11-19):** prediction cards show the viewer's browser's live DraftKings
