@@ -5,7 +5,8 @@ you can also run it any time:
 
     python3 sync_from_cloud.py
 
-It only DOWNLOADS: the newest database, first_basket_data.csv, my_predictions.xlsx and model files from the private
+Backup: if GitHub's automatic update is late (over 70 min on game days, or no nightly run by 5 AM), it also starts the
+cloud update (see nudge_cloud). Otherwise it only DOWNLOADS: the newest database, first_basket_data.csv, my_predictions.xlsx and model files from the private
 repo's "state" branch replace the copies here. Nothing is uploaded. Only files that changed are touched, and each is
 swapped in whole (written to a temporary file, then renamed), so the app never reads a half-written file.
 Note: anything the Mac app saved locally since the last cloud update is replaced by the cloud copy — the cloud is
@@ -62,7 +63,59 @@ def sync() -> list:
     return changed
 
 
+# ──────────────────────────────────────────────
+# BACKUP: GitHub's timed runs are "best effort" (they can be late or skipped). If the cloud has gone quiet,
+# this Mac starts the cloud update itself. The cloud still does the work; this only presses its Run button.
+# ──────────────────────────────────────────────
+REPO = "SolomonKhalili/First_Basket"
+STALE_MIN = 70                        # hourly updates: start one if the last run is older than this
+
+
+def backup_action(now_et, last_run_et, busy: bool):
+    """Pure (testable). now_et / last_run_et: New York times (last_run_et None = never ran).
+    -> "nightly", "hourly" or None (nothing to do)."""
+    from datetime import timedelta
+    if busy:
+        return None                                                   # a run is already going
+    if 5 <= now_et.hour < 10:                                         # morning: did the nightly run happen?
+        since = now_et.replace(hour=4, minute=0, second=0, microsecond=0)
+        return "nightly" if last_run_et is None or last_run_et < since else None
+    if 10 <= now_et.hour <= 23:                                       # game-day hours
+        if last_run_et is None or now_et - last_run_et > timedelta(minutes=STALE_MIN):
+            return "hourly"                                           # (skips itself if no games are left)
+    return None
+
+
+def nudge_cloud() -> None:
+    import json
+    from datetime import datetime
+    from zoneinfo import ZoneInfo
+    et = ZoneInfo("America/New_York")
+
+    def gh(*args):
+        r = subprocess.run(["gh", *args, "-R", REPO], capture_output=True, text=True, timeout=60)
+        if r.returncode != 0:
+            raise RuntimeError(r.stderr.strip()[:200])
+        return r.stdout
+
+    runs = json.loads(gh("run", "list", "-w", "update-site.yml", "-L", "5", "--json", "createdAt,status"))
+    busy = any(r["status"] in ("queued", "in_progress", "waiting", "pending", "requested") for r in runs)
+    last = max((datetime.fromisoformat(r["createdAt"].replace("Z", "+00:00")).astimezone(et) for r in runs),
+               default=None)
+    kind = backup_action(datetime.now(et), last, busy)
+    if kind:
+        gh("workflow", "run", "update-site.yml", "-f", f"kind={kind}")
+        log(f"backup: the cloud hadn't updated since {last.strftime('%-I:%M %p') if last else 'ever'} — "
+            f"started a {kind} cloud update")
+    else:
+        log(f"backup check: cloud {'is updating now' if busy else 'last updated ' + (last.strftime('%a %-I:%M %p') if last else 'never')} — OK")
+
+
 def main() -> int:
+    try:
+        nudge_cloud()
+    except Exception as e:  # noqa: BLE001 — offline / not signed in to gh: the cloud's own schedule still runs
+        log(f"backup check skipped ({type(e).__name__}: {e})")
     try:
         changed = sync()
     except Exception as e:  # noqa: BLE001 — offline, GitHub down, …: try again next time
