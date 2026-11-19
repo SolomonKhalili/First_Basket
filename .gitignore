@@ -10,3 +10,4 @@ users.json
 users.tmp
 launcher/ngrok.log
 launcher/sync.log
+todays_cards.json

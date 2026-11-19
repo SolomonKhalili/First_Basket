@@ -77,7 +77,7 @@ def run_update() -> dict:
     st._FEED_CACHE.clear(); st._SB_CACHE.clear()
     out = gui.Collector(lambda msg: print(f"  … {msg}", flush=True))
     nba.predict_today(first_pass=True, teams=set(), ui=out)
-    return out.result
+    return gui.keep_todays_cards(out.result)
 
 
 def build_bundle(result) -> dict:

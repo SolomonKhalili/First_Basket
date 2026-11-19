@@ -11,6 +11,7 @@ Only reachable from this computer (127.0.0.1). Uses the Python standard library 
 """
 import contextlib
 import json
+import os
 import sys
 import threading
 import time
@@ -61,6 +62,34 @@ class Collector:
         pass
 
 
+CARDS_FILE = Path(__file__).parent / "todays_cards.json"
+
+
+def keep_todays_cards(result: dict, path: Path = CARDS_FILE) -> dict:
+    """Games that already tipped off are skipped by later runs (the model is pre-game only), so their picks card
+    would vanish. Keep every card made today: a new run's card replaces that game's old one; the others stay."""
+    try:
+        saved = json.loads(path.read_text())
+    except (OSError, ValueError):
+        saved = {}
+    old = saved.get("cards", []) if saved.get("date") == result.get("date") else []
+    new_ids = {c.get("game_id") for c in result.get("cards", [])}
+    kept = [dict(c, earlier=True) for c in old if c.get("game_id") not in new_ids]
+    cards = [dict(c, earlier=False) for c in result.get("cards", [])] + kept
+    order = {g.get("game_id"): i for i, g in enumerate(result.get("schedule", []))}
+    cards.sort(key=lambda c: order.get(c.get("game_id"), len(order)))
+    have = {c.get("matchup") for c in cards}
+    result = dict(result, cards=cards,
+                  skipped=[x for x in result.get("skipped", []) if x.get("matchup") not in have])
+    try:
+        tmp = path.with_name(path.name + ".tmp")
+        tmp.write_bytes(to_json({"date": result.get("date"), "cards": cards}))
+        os.replace(tmp, path)
+    except OSError:
+        pass
+    return result
+
+
 def to_json(obj) -> bytes:
     """JSON that tolerates numpy numbers (the model's probabilities)."""
     return json.dumps(obj, default=lambda o: o.item() if hasattr(o, "item") else str(o)).encode()
@@ -95,7 +124,7 @@ class Job:
             st._FEED_CACHE.clear(); st._SB_CACHE.clear()
             out = Collector(self._step)
             nba.predict_today(first_pass=True, teams=teams, ui=out)
-            self.state["result"] = out.result
+            self.state["result"] = keep_todays_cards(out.result)
             threading.Thread(target=BOARD.refresh, daemon=True).start()   # new picks -> board knows them
         except Exception as e:  # noqa: BLE001 — any failure is shown on the page instead of lost
             traceback.print_exc()

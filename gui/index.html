@@ -557,11 +557,11 @@ body.viewer #runAll, body.viewer #runSelected, body.viewer #ddown { display: non
   </section>
 
   <div class="board-wrap">
-    <div class="section-title"><span>Tonight</span><span id="boardUpdated" style="font-weight:400;text-transform:none;letter-spacing:0"></span><button class="clear-btn" id="clearTop" hidden>✕ Clear selection</button></div>
+    <div class="section-title"><span>Tonight</span><span id="boardUpdated" style="font-weight:400;text-transform:none;letter-spacing:0"></span></div>
     <div class="board" id="board">
       <div class="tile skel" style="height:78px"></div><div class="tile skel" style="height:78px"></div><div class="tile skel" style="height:78px"></div>
     </div>
-    <div class="hint" id="boardHint"><span id="boardHintText">Tap games to show only those below. To re-run the model for them, press <b>Selected</b>; for every game, <b>All games</b>.</span> <button class="clear-btn" id="clearSel" hidden>✕ Clear selection</button></div>
+    <div class="hint" id="boardHint"><span id="boardHintText">Tap games to show only those below. To re-run the model for them, press <b>Selected</b>; for every game, <b>All games</b>.</span></div>
   </div>
 
   <div class="progress" id="progress"><span class="bouncer">🏀</span><span id="step">Working…</span><span class="elapsed num" id="elapsed"></span></div>
@@ -730,9 +730,6 @@ function renderTicker() {
 function syncButtons() {
   const n = selected.size;
   $("runSelected").hidden = !n;
-  $("clearSel").hidden = !n;
-  $("clearTop").hidden = !n;
-  $("clearTop").textContent = `✕ Clear selection (${n})`;
   $("runSelected").textContent = `Selected (${n})`;
   applyCardFilter();
 }
@@ -753,8 +750,8 @@ function applyCardFilter() {
   }
   note.hidden = !picked.length;
   if (picked.length) {
-    note.innerHTML = `Showing <b>${picked.length}</b> selected game${picked.length > 1 ? "s" : ""}` +
-      (shown < picked.length ? ` · ${picked.length - shown} ha${picked.length - shown > 1 ? "ve" : "s"} no picks card yet` : "") +
+    note.innerHTML = `<span>Showing <b>${picked.length}</b> selected game${picked.length > 1 ? "s" : ""}` +
+      (shown < picked.length ? ` · ${picked.length - shown} ha${picked.length - shown > 1 ? "ve" : "s"} no picks card yet` : "") + `</span>` +
       ` <button class="clear-btn" id="showAllCards">✕ Clear selection</button>`;
     $("showAllCards").onclick = () => { selected.clear(); syncButtons(); renderBoard(); };
   }
@@ -874,6 +871,7 @@ function card(c, i) {
       </div>
       <div class="head-meta">
         <span class="badge ${esc(c.label)}">${LINEUP[c.label] || esc(c.label)}</span>
+        ${c.earlier ? `<span class="badge" title="This game has started; these are the picks we made before tip-off">Picked before tip-off</span>` : ""}
         <span class="status">${esc(c.start)}</span>
       </div>
     </div>
@@ -1480,8 +1478,6 @@ window.addEventListener("hashchange", () => {                  // a #data/... li
 $("runAll").addEventListener("click", () => run([]));
 $("runSelected").addEventListener("click", () =>
   run(board.filter((g) => selected.has(g.game_id)).flatMap((g) => [g.home_team, g.away_team])));
-$("clearSel").addEventListener("click", () => { selected.clear(); syncButtons(); renderBoard(); });
-$("clearTop").addEventListener("click", () => { selected.clear(); syncButtons(); renderBoard(); });
 
 setInterval(() => refreshBoard(), 30000);                                       // live scores
 setInterval(() => { renderTicker(); updateCardsLive();                         // countdowns tick
