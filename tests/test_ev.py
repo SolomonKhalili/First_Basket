@@ -136,3 +136,20 @@ def test_odds_moves_log_both_books():
     assert rows["FanDuel"][4:8] == ["+700", "+600", "↓ payout dropped", 2]
     assert rows["FanDuel"][8].count("→") == 2                        # every change listed
     assert rows["DraftKings"][4:8] == ["+800", "+800", "same", 0]
+
+
+def test_us_vs_draftkings_judged_over_the_same_starters():
+    import sqlite3
+    import ev
+    con = sqlite3.connect(":memory:")
+    con.execute("CREATE TABLE games (game_id TEXT, game_date TEXT, home_team TEXT, away_team TEXT)")
+    con.execute("INSERT INTO games VALUES ('g', '20261101', 'B', 'A')")
+    con.execute("CREATE TABLE first_fg (game_id TEXT, scorer_name TEXT)"); con.execute("INSERT INTO first_fg VALUES ('g', 'Player A')")
+    con.execute("CREATE TABLE fg_grades (game_id TEXT, player_id TEXT, player_name TEXT, prob REAL)")
+    con.execute("CREATE TABLE dk_odds_log (game_date TEXT, matchup TEXT, logged_at TEXT, player_name TEXT, team TEXT, american INTEGER)")
+    for i in range(10):
+        con.execute("INSERT INTO fg_grades VALUES ('g', ?, ?, ?)", (str(i), f"Player {'ABCDEFGHIJ'[i]}", 0.2 if i == 0 else 0.8 / 9))
+        con.execute("INSERT INTO dk_odds_log VALUES ('20261101', 'A @ B', '2026-11-01 23:59:59', ?, '', 900)", (f"Player {'ABCDEFGHIJ'[i]}",))
+    con.execute("INSERT INTO dk_odds_log VALUES ('20261101', 'A @ B', '2026-11-01 23:59:59', 'Bench Guy', '', 900)")   # didn't start
+    r = ev.dk_market_results(con)
+    assert r["games"] == 1 and r["us_closer"] == 1                  # us 20% vs DraftKings 10% (bench player left out)

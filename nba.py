@@ -878,6 +878,7 @@ def sync_data() -> str:
     try:                                       # last season's re-created picks for the "overall" record (once)
         import season_backtest
         season_backtest.fill_last_season(con)
+        season_backtest.fill_fg_grades(con)    # field-goal picks for past games: us vs DraftKings
     except Exception as e:  # noqa: BLE001 — never block the update over the record
         print(f"  ⚠️ last season's record not filled in: {e}")
     # NBA.com's official starters + positions for every day already played (teaches the tip-off model

@@ -278,3 +278,48 @@ def note_market(con, game_date: str, matchup: str, book: str, opened: str | None
     if closed:
         con.execute("UPDATE market_times SET closed_at = ? WHERE game_date = ? AND matchup = ? AND book = ? AND closed_at IS NULL",
                     (closed, game_date, matchup, book))
+
+
+def _norm(name: str) -> str:
+    import unicodedata
+    s = unicodedata.normalize("NFKD", name or "").encode("ascii", "ignore").decode().lower()
+    return " ".join(w for w in "".join(ch if ch.isalpha() or ch == " " else " " for ch in s).split()
+                    if w not in ("jr", "sr", "ii", "iii", "iv"))
+
+
+def dk_market_results(con) -> dict:
+    """Who guesses better, us or DraftKings? DraftKings' first-scorer bet pays on the first FIELD GOAL, so we use the
+    field-goal model's honest week-by-week chances (table fg_grades) and each game's DraftKings CLOSING board (last price
+    before tip-off, dk_odds_log), its cut removed over the same 10 actual starters (the board also lists players who
+    didn't start; keeping them would unfairly thin DraftKings' chances). Whoever gave the real first field-goal scorer the higher chance
+    "was closer". Same shape as market_results."""
+    import math
+    try:
+        ours = {}
+        for gid, name, p in con.execute("SELECT game_id, player_name, prob FROM fg_grades"):
+            ours.setdefault(gid, {})[_norm(name)] = p
+        scorer = {g: _norm(n) for g, n in con.execute("SELECT game_id, scorer_name FROM first_fg")}
+        games = {(d, f"{a} @ {h}"): g for g, d, h, a in con.execute("SELECT game_id, game_date, home_team, away_team FROM games")}
+        board = {}
+        for d, m, name, a in con.execute("SELECT game_date, matchup, player_name, american FROM dk_odds_log ORDER BY logged_at"):
+            gid = games.get((d, m))
+            if gid:
+                board.setdefault(gid, {})[_norm(name)] = a          # later rows overwrite: the closing price
+    except Exception:  # noqa: BLE001 — tables not there yet
+        return {"games": 0, "us_closer": 0, "book_closer": 0, "ties": 0, "logloss_us": None, "logloss_book": None}
+    us = them = ties = 0
+    ll_us, ll_them = [], []
+    for gid, b in board.items():
+        who, mine = scorer.get(gid), ours.get(gid)
+        if not who or not mine or who not in b or who not in mine:
+            continue                                   # scorer not on DraftKings' board / no honest pick: can't compare
+        starters = {k: a for k, a in b.items() if k in mine}  # judge both over the same 10 actual starters (the board
+        if len(starters) < 8:                                  # also lists players who didn't start — unfair to them)
+            continue
+        total = sum(implied(a) for a in starters.values())
+        p_us, p_them = mine[who], implied(starters[who]) / total
+        us += p_us > p_them; them += p_them > p_us; ties += p_us == p_them
+        ll_us.append(-math.log(max(p_us, 1e-9))); ll_them.append(-math.log(max(p_them, 1e-9)))
+    n = len(ll_us)
+    return {"games": n, "us_closer": us, "book_closer": them, "ties": ties,
+            "logloss_us": sum(ll_us) / n if n else None, "logloss_book": sum(ll_them) / n if n else None}

@@ -701,6 +701,7 @@ body.bets-mode .dayswitch, body.bets-mode #yestSum, body.bets-mode #dataView { d
 .tscroll tbody tr.pick2 .nm { color: #93c5fd; font-weight: 700; }
 .tscroll tbody tr.scored td { background: var(--good-soft) !important; }
 .tf-table { margin-top: 8px; width: 100%; font-size: 13px; border-collapse: collapse; } .tf-table th, .tf-table td { padding: 4px 6px; text-align: center; color: var(--muted); } .tf-table td:first-child { text-align: left; } .tf-table b { color: var(--text); } .tf-table b.g { color: var(--good); } .tf-table .tf-best { box-shadow: inset 0 0 0 1.5px var(--gold); border-radius: 6px; padding: 0 4px; } .tf-table .mv { display: inline; margin-left: 3px; }
+.mk-row { margin-top: 10px; } .mk-book { font-weight: 800; margin-bottom: 4px; } .mk-book small { color: var(--muted); font-weight: 500; }
 </style>
 </head>
 <body>
@@ -1528,21 +1529,27 @@ const homeAway = (m) => {                        // 'MEM @ CLE' -> 'MEM (away) a
   return h ? `${esc(a)} <i>(away)</i> at ${esc(h)} <i>(home)</i>` : esc(m);
 };
 /* Closing line value: did FanDuel's price for our good-deal picks get shorter before tip-off? (ev.clv_results) */
-/* Who guesses better, us or FanDuel? (ev.market_results) — plain words only */
-function marketBlock(m) {
-  if (!m || !m.games) return "";
-  const lead = m.us_closer > m.fanduel_closer ? "us" : m.fanduel_closer > m.us_closer ? "fd" : "tie";
-  const verdict = m.games < 100
-    ? `${lead === "us" ? "👍 We're ahead so far" : lead === "fd" ? "🤏 FanDuel is a little ahead so far" : "🤝 Tied so far"} — but it's early (${m.games} games). We'll know for sure after about 100.`
-    : lead === "us" ? "👍 We guess better than FanDuel — that's what makes our good bets real."
-    : "👎 FanDuel guesses better than us — treat our \"good bets\" with caution.";
-  return `<div class="paper"><div class="section-title">🥊 Who guesses better: us or FanDuel?</div>
-    <p class="clv-simple">FanDuel's prices are its guess at who scores first. After each game we check <b>who gave the real first scorer the better chance</b>.</p>
-    <div class="paper-stats" style="grid-template-columns:1fr 1fr">
-      <div><b class="${lead === "us" ? "pos" : ""}">${m.us_closer} games</b><span>🏀 we were closer</span></div>
-      <div><b>${m.fanduel_closer} games</b><span>🏦 FanDuel was closer</span></div>
-    </div>
-    <div class="verdict-line ${m.games < 100 ? "ok" : lead === "us" ? "good" : "warn"}">${verdict}</div></div>`;
+/* Who guesses better, us or the sportsbooks? FanDuel since we started saving its odds; DraftKings the whole season
+   (its closing odds, judged with our field-goal chances since DraftKings only counts field goals) — plain words only */
+function marketBlock(fd, dk) {
+  const rows = [];
+  if (dk && dk.games) rows.push(["DraftKings", dk.us_closer, dk.book_closer, dk.games, "all season"]);
+  if (fd && fd.games) rows.push(["FanDuel", fd.us_closer, fd.fanduel_closer, fd.games, "since Nov 18"]);
+  if (!rows.length) return "";
+  const line = ([book, us, them, n, when]) => {
+    const lead = us > them ? "us" : them > us ? "them" : "tie";
+    const v = n < 100 ? `${lead === "us" ? "👍 we're ahead" : lead === "them" ? `🤏 ${book} is a little ahead` : "🤝 tied"} so far — still early (${n} games)`
+      : Math.abs(us - them) <= n * 0.03 ? `🤝 about even with ${book} — that's very good: their final odds are hard to beat`
+      : lead === "us" ? `👍 we guess better than ${book}` : `👎 ${book} guesses better than us`;
+    return `<div class="mk-row"><div class="mk-book">${book} <small>${when}</small></div>
+      <div class="paper-stats" style="grid-template-columns:1fr 1fr">
+        <div><b class="${lead === "us" ? "pos" : ""}">${us} games</b><span>🏀 we were closer</span></div>
+        <div><b>${them} games</b><span>🏦 ${book} was closer</span></div></div>
+      <div class="verdict-line ${n < 100 ? "ok" : lead === "them" && Math.abs(us - them) > n * 0.03 ? "warn" : "good"}">${v}</div></div>`;
+  };
+  return `<div class="paper"><div class="section-title">🥊 Who guesses better: us or the sportsbooks?</div>
+    <p class="clv-simple">A sportsbook's prices are its guess at who scores first. After each game we check <b>who gave the real first scorer the better chance</b> — us, or the sportsbook's final prices right before tip-off.</p>
+    ${rows.map(line).join("")}</div>`;
 }
 function clvBlock(c) {
   if (!c || !c.picks) return "";
@@ -1635,7 +1642,7 @@ async function renderRecord() {
       <ul class="recent">${r.recent.map((g) => `<li>
         <span class="${g.hit ? "ok" : "no"}">${g.hit ? "✓" : "✗"}</span>
         <span>${esc(g.pick)} <small>${esc(g.matchup)} · scored: ${esc(g.actual)}</small></span></li>`).join("")}</ul>
-      ${marketBlock(r.market)}
+      ${marketBlock(r.market, r.market_dk)}
       ${clvBlock(r.clv)}
       ${paperBlock(r.paper)}`;
     const ring = $("ring"), target = rate * 100;      // fill the ring

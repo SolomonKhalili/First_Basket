@@ -137,6 +137,69 @@ def fill_last_season(con) -> int:
     return made
 
 
+FG_PLAN = "fg-v1"
+
+
+def fill_fg_grades(con) -> int:
+    """The field-goal model's honest picks for every past regular-season and playoff game that has an earlier week to
+    learn from: each week predicted by a field-goal model trained only on earlier games (same as the main grading),
+    with the live model's final simple-rule mix. Stored per starter in table fg_grades — used to score us against
+    DraftKings' closing odds (its first-scorer bet pays on the first FIELD GOAL). Re-run when the training data grows."""
+    import json
+    con.execute("""CREATE TABLE IF NOT EXISTS fg_grades (game_id TEXT, player_id TEXT, player_name TEXT, prob REAL,
+                   PRIMARY KEY (game_id, player_id))""")
+    con.execute("CREATE TABLE IF NOT EXISTS backtest_meta (key TEXT PRIMARY KEY, value TEXT)")
+    try:
+        n = len(json.load(open("game_ids.json")))
+    except (OSError, ValueError):
+        n = 0
+    plan = f"{FG_PLAN}:{n}"
+    done = con.execute("SELECT value FROM backtest_meta WHERE key = 'fg_grades'").fetchone()
+    if done and done[0] == plan:
+        return 0
+    ns = load_training()
+    gids, dates, season, Y = ns["gids"], ns["dates"], ns["season"], ns["Y"]
+    fg = dict(con.execute("SELECT game_id, scorer_player_id FROM first_fg"))
+    info = {g: (h, a) for g, h, a in con.execute("SELECT game_id, home_team, away_team FROM games")}
+    starters, y_fg = [], np.zeros_like(Y)
+    for k, gid in enumerate(gids):
+        h, a = info[gid]
+        s = bf.stored_starters(gid, h, a)
+        order = (s[h] + s[a])[:10] if s else []
+        starters.append(order)
+        for j, pl in enumerate(order):
+            if str(pl["player_id"]) == str(fg.get(gid)):
+                y_fg[k, j] = 1
+    if not fg or y_fg.sum() < 0.9 * Y.sum():
+        return 0                                          # first_fg not filled yet: next time
+    pool, l2 = season != "playoffs", pm.load().get("l2", 1e-3)
+    idx = np.where((dates >= LAST_SEASON_FROM))[0]
+    con.execute("DELETE FROM fg_grades")
+    ns["Y"] = y_fg
+    made = 0
+    try:
+        first, last = min(dates[idx]), max(dates[idx])
+        week = date(int(first[:4]), int(first[4:6]), int(first[6:]))
+        while week.strftime("%Y%m%d") <= last:
+            lo, hi = week.strftime("%Y%m%d"), (week + timedelta(days=7)).strftime("%Y%m%d")
+            test = [k for k in idx if lo <= dates[k] < hi and len(starters[k]) == 10]
+            if test:
+                P = with_simple_mix(ns["predict2"](ns["fit2"](np.where(pool & (dates < lo))[0], l2), test), ns["M"], test)
+                for k, probs in zip(test, P):
+                    probs = np.asarray(probs) / np.sum(probs)
+                    con.executemany("INSERT OR REPLACE INTO fg_grades VALUES (?, ?, ?, ?)",
+                                    [(gids[k], str(pl["player_id"]), pl["name"], float(probs[j]))
+                                     for j, pl in enumerate(starters[k])])
+                    made += 1
+            week += timedelta(days=7)
+    finally:
+        ns["Y"] = Y
+    con.execute("INSERT OR REPLACE INTO backtest_meta VALUES ('fg_grades', ?)", (plan,))
+    con.commit()
+    print(f"  📈 Field-goal picks re-created for {made} games (for us vs DraftKings)")
+    return made
+
+
 def main() -> int:
     con = sqlite3.connect(DB)
     picks.ensure_table(con)
