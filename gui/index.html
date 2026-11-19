@@ -817,6 +817,7 @@ function applyCardFilter() {
 }
 
 function toast(html, kind = "") {
+  return;                                          // pop-ups turned off (owner's choice, 2026-11-18): tiles show results
   const t = document.createElement("div");
   t.className = `toast ${kind}`;
   t.innerHTML = html;
