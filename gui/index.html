@@ -1705,7 +1705,8 @@ function updateCardsLive() {
         row.querySelector(".pn")?.insertAdjacentHTML("beforeend", `<span class="fb-tag">🏀 Scored first</span>`);
       }
     } else if (g.status === 2) {
-      if (v.dataset.k !== "wait") { v.className = "verdict on wait"; v.textContent = "Game on — waiting for the first basket…"; v.dataset.k = "wait"; }
+      const tip = tipResult(g, el);
+      if (v.dataset.k !== "wait" + tip) { v.className = "verdict on wait"; v.innerHTML = "Game on — waiting for the first basket…" + tip; v.dataset.k = "wait" + tip; }
     } else { v.className = "verdict"; v.dataset.k = ""; }
   });
 }

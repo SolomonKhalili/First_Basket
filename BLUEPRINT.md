@@ -796,7 +796,7 @@ NBA/
   transaction (anyone reading sees the old picks or the new ones, never a half-empty record); if it fails or makes
   far fewer picks, nothing changes.
 - **Tip result on the card** (2026-11-19): once a game has a first basket, the result box also says who won the
-  opening tip and whether we called it (`static_site.html` reads ESPN's first "Jumpball" play — its first
+  opening tip and whether we called it — shown from the tip on, before anyone scores (`static_site.html` reads ESPN's first "Jumpball" play — its first
   participant won; `index.html` `tipResult`). The result box had shrunk to 64 px wide: a `.miss` rule meant for
   "not offered" odds cells also matched `.verdict.miss` (now `:not(.verdict)`).
 - **Checked an Instagram first-basket tipster** (2026-11-19, reel transcribed locally): his method is tip winner ->
