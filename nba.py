@@ -613,6 +613,35 @@ def audit_recent_days(con, days: int = None) -> int:
     return added
 
 
+def short_box_scores(con, since: str = "20260801") -> list:
+    """Pure (database only). Games of this season, finished more than a day ago, where a team's stored minutes add up
+    to less than a full game (5 x 48 = 240; we allow 236 for rounding) — a box score saved while the game was still
+    being played (2026-11-19: PHX @ SAC 11/18/26 had 193 / 191 minutes and 6 players missing)."""
+    end = (date.today() - timedelta(days=1)).strftime("%Y%m%d")
+    return [g for (g,) in con.execute(
+        """SELECT DISTINCT l.game_id FROM lineups l JOIN games g USING(game_id)
+           WHERE g.game_date >= ? AND g.game_date < ? GROUP BY l.game_id, l.team HAVING SUM(l.minutes) < 236""",
+        (since, end))]
+
+
+def refetch_short_box_scores(con) -> int:
+    """Fetch those games' box scores again (each at most once a day). Returns how many came back complete."""
+    con.execute("CREATE TABLE IF NOT EXISTS box_checks (game_id TEXT PRIMARY KEY, checked TEXT)")
+    today = date.today().isoformat()
+    fixed = 0
+    for gid in short_box_scores(con):
+        if con.execute("SELECT 1 FROM box_checks WHERE game_id = ? AND checked = ?", (gid, today)).fetchone():
+            continue
+        st.store_game_lineup(con, gid)
+        con.execute("INSERT OR REPLACE INTO box_checks VALUES (?, ?)", (gid, today))
+        con.commit()
+        fixed += gid not in short_box_scores(con)
+        time.sleep(SLEEP)
+    if fixed:
+        print(f"  🩹 {fixed} box score(s) saved mid-game fetched again")
+    return fixed
+
+
 PATCH_DIR = Path(__file__).parent / "data_patches"
 
 
@@ -979,6 +1008,7 @@ def sync_data() -> str:
     for key, (a, b) in SEASONS_TO_AUDIT.items():  # whole past seasons vs ESPN's schedule (once each)
         audit_season(con, key, a, b)
     audit_recent_days(con)                     # each finished day of this season vs ESPN's schedule (once each)
+    refetch_short_box_scores(con)              # box scores saved mid-game (minutes don't add up to a full game)
     repair_old_gaps(con)                       # older games still missing a first basket (once a week each)
     fill_first_fg(con)                         # first FIELD GOAL of every game (DraftKings' rule), once each
     try:                                       # DraftKings' opening + closing odds for past games (ESPN), all at once

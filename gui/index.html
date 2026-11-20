@@ -195,6 +195,7 @@ button { font: inherit; cursor: pointer; border: 0; color: inherit; }
 .verdict.miss { background: color-mix(in srgb, var(--accent) 18%, var(--surface)); color: var(--text); border: 1.5px solid var(--accent); border-left-width: 5px; }
 .verdict.miss b { color: var(--accent); }
 .verdict.wait { background: var(--surface-2); color: var(--muted); font-weight: 500; }
+.verdict .tipres { margin-top: 4px; font-size: 13px; font-weight: 500; color: var(--text); }
 
 .hero { display: flex; align-items: flex-end; gap: 14px; padding: 12px 16px 0 10px; border-radius: 16px; min-height: 104px;
   position: relative; overflow: hidden;
@@ -746,7 +747,7 @@ body.bets-mode .dayswitch, body.bets-mode #yestSum, body.bets-mode #dataView { d
 .oa { font-size: 16px; margin-left: 2px; } .oa.dn { color: var(--warn); } .oa.up { color: var(--muted); }
 .spark { width: 100%; height: 22px; } .spark path, .spark line { fill: none; stroke-width: 2; stroke: var(--muted); vector-effect: non-scaling-stroke; }
 .spark.up path { stroke: var(--warn); } .spark.down path { stroke: #60a5fa; }
-.miss:not(.tag) { font-size: 10.5px; line-height: 1.2; color: var(--muted); font-weight: 600; display: inline-block; max-width: 64px; } .miss.unavailable:not(.tag) { color: var(--warn); }
+.miss:not(.tag):not(.verdict) { font-size: 10.5px; line-height: 1.2; color: var(--muted); font-weight: 600; display: inline-block; max-width: 64px; } .miss.unavailable:not(.tag):not(.verdict) { color: var(--warn); }
 
 /* calm tables (owner: "too overstimulating" on phones) */
 .bk-table .bk-fd, .bk-table .bk-dk { background: none !important; }
@@ -1667,6 +1668,15 @@ function countUp(el) {
 }
 
 /* Card headers follow the live board: countdown → LIVE score → Final, plus the first-basket verdict. */
+/* " · ⛹️ Tip: Wembanyama (SA) won it — our call ✅" under the first-basket result (added 2026-11-19) */
+function tipResult(g, el) {
+  if (!g.tip_winner && !g.tip_winner_team) return "";
+  const c = (lastResult?.cards || []).find((x) => x.home === el.dataset.home && x.away === el.dataset.away);
+  const t = c && c.tip, fav = t ? (t[c.home] >= t[c.away] ? c.home : c.away) : null;
+  const call = fav && g.tip_winner_team ? (fav === g.tip_winner_team ? " — our call ✅" : " — we had the other team ❌") : "";
+  return `<div class="tipres">⛹️ Tip: <b>${esc(g.tip_winner || "")}</b>${g.tip_winner_team ? ` (${esc(g.tip_winner_team)})` : ""} won it${call}</div>`;
+}
+
 function updateCardsLive() {
   try { markBetRows(); } catch (e) { /* bets not loaded yet */ }
   try { renderBestBets(); } catch (e) { /* before the page finished loading */ }
@@ -1687,7 +1697,8 @@ function updateCardsLive() {
       const text = { hit: `✓ ${esc(g.first_basket.name)} scored first — our top pick!`,
                      top3: `🏀 ${esc(g.first_basket.name)} scored first — ${g.rank ? `our #${g.rank} pick` : "in our top 3"}`,
                      miss: `🏀 <b>${esc(g.first_basket.name)}</b> scored first${g.rank ? ` — our <b>#${g.rank}</b> pick` : " — <b>not in our picks</b>"}` }[r];
-      if (v.dataset.k !== r + g.first_basket.name) { v.className = `verdict on ${r}`; v.innerHTML = text; v.dataset.k = r + g.first_basket.name; }
+      const tip = tipResult(g, el);
+      if (v.dataset.k !== r + g.first_basket.name + tip) { v.className = `verdict on ${r}`; v.innerHTML = text + tip; v.dataset.k = r + g.first_basket.name + tip; }
       const row = [...el.querySelectorAll("tbody tr")].find((t) => normName(t.dataset.name) === normName(g.first_basket.name));
       if (row) {                                   // green row + say it in words
         row.classList.add("scored");

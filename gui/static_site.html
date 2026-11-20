@@ -199,7 +199,10 @@
       const p = (s.plays || []).find((x) => x.scoringPlay && x.period && x.period.number >= 1 && x.period.number <= 4);
       if (!p || !p.participants || !p.participants[0]) return null;
       const id = String(p.participants[0].athlete.id);
-      firstFound[gid] = { id, name: names[id] || "", team: (p.team && teams[p.team.id]) || "" };
+      // the opening tip: ESPN's first "Jump Ball" play with a player — the first participant won it
+      const j = (s.plays || []).find((x) => /jump ?ball/i.test((x.type || {}).text || "") && x.participants && x.participants[0]);
+      const tip = j ? { name: names[String(j.participants[0].athlete.id)] || "", team: (j.team && teams[j.team.id]) || "" } : null;
+      firstFound[gid] = { id, name: names[id] || "", team: (p.team && teams[p.team.id]) || "", tip };
       return firstFound[gid];
     } catch (e) { return null; }
   }
@@ -220,6 +223,7 @@
         const fb = await firstBasket(g.game_id);
         if (fb) {
           g.first_basket = fb;
+          if (fb.tip && fb.tip.name) { g.tip_winner = fb.tip.name; g.tip_winner_team = fb.tip.team; }
           const op = g.our_pick;
           g.result = !op ? null : fb.id === String(op.id) ? "hit"
             : (op.top3 || []).some((n) => norm(n) === norm(fb.name)) ? "top3" : "miss";

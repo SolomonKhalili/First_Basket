@@ -123,16 +123,28 @@ def fill_last_season(con) -> int:
     done = con.execute("SELECT value FROM backtest_meta WHERE key = 'last_season'").fetchone()
     if done and done[0] == plan:                  # same games as last time: nothing to do (re-grades ~8 s a night)
         return 0
-    con.execute("DELETE FROM pick_log WHERE lineup_type = ?", (LABEL,))   # both seasons' re-created picks
-    ns = load_training()
-    gids, dates, season = ns["gids"], ns["dates"], ns["season"]
-    info = {g: (h, a) for g, h, a in con.execute("SELECT game_id, home_team, away_team FROM games")}
-    names = dict(con.execute("SELECT player_id, player_name FROM lineups"))
-    live = {g for (g,) in con.execute("SELECT DISTINCT game_id FROM pick_log WHERE lineup_type != ?", (LABEL,))}
-    made = hits = 0
-    for idx in (np.where(season == "new")[0], last_season_games(season, dates)):
-        m, h = recreate(con, ns, idx, live, pm.load().get("l2", 1e-3), info, names, season != "playoffs")
-        made += m; hits += h
+    # Keep the old re-created picks until the new ones are all made (2026-11-19: a re-grade that stopped halfway had
+    # already deleted them, and the record showed 17 games instead of 1,457 until the next run).
+    cols = [r[1] for r in con.execute("PRAGMA table_info(pick_log)")]
+    old = con.execute(f"SELECT {', '.join(cols)} FROM pick_log WHERE lineup_type = ?", (LABEL,)).fetchall()
+    try:
+        con.execute("DELETE FROM pick_log WHERE lineup_type = ?", (LABEL,))   # both seasons' re-created picks
+        ns = load_training()
+        gids, dates, season = ns["gids"], ns["dates"], ns["season"]
+        info = {g: (h, a) for g, h, a in con.execute("SELECT game_id, home_team, away_team FROM games")}
+        names = dict(con.execute("SELECT player_id, player_name FROM lineups"))
+        live = {g for (g,) in con.execute("SELECT DISTINCT game_id FROM pick_log WHERE lineup_type != ?", (LABEL,))}
+        made = hits = 0
+        for idx in (np.where(season == "new")[0], last_season_games(season, dates)):
+            m, h = recreate(con, ns, idx, live, pm.load().get("l2", 1e-3), info, names, season != "playoffs")
+            made += m; hits += h
+        if old and made < len(old) * 0.9:          # far fewer than before: something went wrong — keep the old ones
+            raise RuntimeError(f"re-grade made {made} picks, had {len(old)}")
+    except BaseException:
+        con.execute("DELETE FROM pick_log WHERE lineup_type = ?", (LABEL,))
+        con.executemany(f"INSERT INTO pick_log ({', '.join(cols)}) VALUES ({', '.join('?' * len(cols))})", old)
+        con.commit()
+        raise
     con.execute("INSERT OR REPLACE INTO backtest_meta VALUES ('last_season', ?)", (plan,))
     con.commit()
     print(f"  📈 Re-graded both seasons: {made} games, #1 pick right in {hits / max(made, 1):.1%}")

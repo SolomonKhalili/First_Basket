@@ -784,6 +784,19 @@ NBA/
 - **Health check watches the data** (`health_check.data_gaps`, every 30 min on the Mac): any day of this season not
   yet compared with ESPN's schedule, and any game missing its first basket, a starting five, early/first shots or
   players' box-score lines shows up in HEALTH.md as a problem.
+- **Box scores saved mid-game** (2026-11-19): PHX @ SAC 11/18 was stored with 20 of 26 players (193 / 191 team
+  minutes). `nba.refetch_short_box_scores` (in `sync_data`) fetches again, once a day, any game of this season over
+  a day old where a team's minutes add up to < 236; `build_player_game_logs` drops and re-fetches a game whose
+  box-score lines are fewer than its players with minutes. The health check flags short box scores too. Checked
+  player by player against ESPN for every game since Oct 2025, and every team's game count against the standings.
+- **Track record safety** (2026-11-19): adding the 7 missing games grew the training data, which re-grades every
+  re-created pick (`season_backtest.fill_last_season`); that run deleted them first and stopped halfway, so the
+  website showed 17 games instead of 1,457 until the next run. The old picks are now kept until the new ones are
+  all made (restored if anything fails, or if far fewer come out).
+- **Tip result on the card** (2026-11-19): once a game has a first basket, the result box also says who won the
+  opening tip and whether we called it (`static_site.html` reads ESPN's first "Jumpball" play — its first
+  participant won; `index.html` `tipResult`). The result box had shrunk to 64 px wide: a `.miss` rule meant for
+  "not offered" odds cells also matched `.verdict.miss` (now `:not(.verdict)`).
 - **Checked an Instagram first-basket tipster** (2026-11-19, reel transcribed locally): his method is tip winner ->
   first possession, the player's share of his team's first shots, and first baskets in the last 10 games. All three
   are already model inputs (tip chance in stage 1, early-shot share, last-10 rate; a pure first-shot share was tested

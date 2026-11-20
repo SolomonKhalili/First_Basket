@@ -366,3 +366,17 @@ def test_vs_team_first_baskets_counts_only_games_against_that_team():
     con.executemany("INSERT INTO first_baskets VALUES (?,?)", [("1", "w"), ("3", "w"), ("4", "w")])
     assert nba.vs_team_first_baskets(con, [("w", "LAC")], "20261119") == {"w": (1, 2)}   # game 4 is later, 3 is NY
     assert nba.data_since(con) == "Nov 2024"
+
+
+def test_failed_regrade_keeps_the_old_record(monkeypatch):
+    import sqlite3, pytest, picks, season_backtest as sb
+    con = sqlite3.connect(":memory:")
+    for g in ("1", "2"):
+        picks.log_pick(con, {"game_id": g, "game_date": "20251201", "lineup_type": sb.LABEL, "lineup_sig": "a",
+                             "model_id": "m", "players": [{"id": "p", "name": "P", "team": "T", "prob": .2}]})
+    def boom():
+        raise MemoryError("stopped halfway")
+    monkeypatch.setattr(sb, "load_training", boom)
+    with pytest.raises(MemoryError):
+        sb.fill_last_season(con)
+    assert con.execute("SELECT COUNT(*) FROM pick_log WHERE lineup_type = ?", (sb.LABEL,)).fetchone()[0] == 2

@@ -68,6 +68,7 @@ def test_sync_retries_recent_gaps_drops_orphans_and_rewrites_the_csv(project, mo
     monkeypatch.setattr(st, "store_official_lineups", lambda c, d: fetched.append(d))
     monkeypatch.setattr(nba, "SLEEP", 0)
     monkeypatch.setattr(nba, "audit_season", lambda *a: 0)          # (whole-season check: network, tested apart)
+    monkeypatch.setattr(nba, "refetch_short_box_scores", lambda con: 0)   # (tested apart)
     monkeypatch.setattr(nba, "apply_data_patches", lambda c: 0)      # (tested apart)
     monkeypatch.setattr(nba, "repair_old_gaps", lambda c: {})
 
@@ -597,3 +598,15 @@ def test_audit_recent_days_checks_each_finished_day_once(monkeypatch):
     added = nba.audit_recent_days(None, days=4)
     assert [k for k, _, _ in seen] == [f"day:{a}" for _, a, _ in seen] and len(seen) == 3   # 4, 3 and 2 days ago
     assert added == 6
+
+
+def test_short_box_scores_finds_games_saved_mid_game():
+    import sqlite3, nba
+    con = sqlite3.connect(":memory:")
+    con.execute("CREATE TABLE games (game_id TEXT, game_date TEXT)")
+    con.execute("CREATE TABLE lineups (game_id TEXT, team TEXT, player_id TEXT, minutes REAL)")
+    con.executemany("INSERT INTO games VALUES (?, ?)", [("full", "20261101"), ("half", "20261101"), ("today", "29990101")])
+    for g, mins in (("full", 48), ("half", 30), ("today", 10)):
+        for t in ("A", "B"):
+            con.executemany("INSERT INTO lineups VALUES (?, ?, ?, ?)", [(g, t, f"{t}{i}", mins) for i in range(5)])
+    assert nba.short_box_scores(con) == ["half"]      # today's game isn't over yet: not counted

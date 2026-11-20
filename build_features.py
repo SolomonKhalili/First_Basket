@@ -110,7 +110,20 @@ def build_player_game_logs():
     known = {g['game_id'] for logs in player_logs.values() for g in logs}
 
     con = db()
-    changed = sync_first_basket_flags(player_logs, con)
+    # A game saved while it was still being played has too few box-score lines: drop them so it's fetched again
+    # (2026-11-19: PHX @ SAC 11/18/26 had 20 of 26 players). Compared with the players who had minutes (lineups).
+    played = dict(con.execute("""SELECT l.game_id, COUNT(*) FROM lineups l JOIN games g USING(game_id)
+                                 WHERE l.minutes > 0 AND g.game_date >= '20260801' GROUP BY l.game_id"""))
+    have_n = defaultdict(int)
+    for logs in player_logs.values():
+        for g in logs:
+            have_n[g['game_id']] += 1
+    short = {gid for gid, n in played.items() if 0 < have_n.get(gid, 0) < n}
+    if short:
+        for pid in list(player_logs):
+            player_logs[pid] = [g for g in player_logs[pid] if g['game_id'] not in short]
+        known -= short
+    changed = sync_first_basket_flags(player_logs, con) + len(short)
 
     # Get all games with first basket info
     all_games = [r for r in con.execute('''

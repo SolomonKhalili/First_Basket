@@ -42,6 +42,7 @@ accounts only by the owner: `python3 site_users.py add NAME`). Everything below 
 | Retraining (first-points model + field-goal model) | Nightly ~4 AM ET (when new games arrive) | same job |
 | Re-checking every day of the season for any game we missed (each day once) | Every update | ESPN schedule |
 | Checking every stored game is complete (first basket, starters, shots, box scores) | Every 30 min | health check on the Mac → HEALTH.md |
+| Fetching again any box score saved before a game ended | Every update (each game once a day) | ESPN |
 | Keeping the job switched on | Every 10 min | Cloudflare timer (backup: this Mac) |
 | New code reaches the live job | Within ~1 min of being pushed (the job restarts itself) | same job |
 | Open website pages pick up new code | Within ~1 min of the site being rebuilt (the page reloads itself; no refresh needed) | the page (`static_site.html`) |

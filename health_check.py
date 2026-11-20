@@ -110,6 +110,9 @@ def data_gaps(con, today: str, season_start: str = "20260801") -> list:
         "first shots missing": q(f"""SELECT g.game_id {base} AND (SELECT COUNT(DISTINCT team) FROM first_shots e
                                   WHERE e.game_id = g.game_id) < 2"""),
     }
+    checks["a box score that doesn't add up to a full game"] = q(
+        f"""SELECT g.game_id {base} AND g.game_id IN (SELECT game_id FROM lineups GROUP BY game_id, team
+             HAVING SUM(minutes) < 236)""")
     for what, gids in checks.items():
         if gids:
             out.append(f"{len(gids)} game(s) this season with {what} (e.g. {', '.join(gids[:3])}).")
