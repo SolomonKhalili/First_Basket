@@ -789,6 +789,9 @@ NBA/
   a day old where a team's minutes add up to < 236; `build_player_game_logs` drops and re-fetches a game whose
   box-score lines are fewer than its players with minutes. The health check flags short box scores too. Checked
   player by player against ESPN for every game since Oct 2025, and every team's game count against the standings.
+  Result: 1,495 of 1,532 games match ESPN exactly (every player who played, every starter). The other 37 are
+  last-season games (many Chicago) where ESPN's own box score has a nameless player with no id and no minutes —
+  ESPN's gap, nothing we can fetch; that is also why 11 Chicago games add up to 223–235 minutes.
 - **Track record safety** (2026-11-19): adding the 7 missing games grew the training data, which re-grades every
   re-created pick (`season_backtest.fill_last_season`); it deleted them first and wrote the new ones one by one,
   and the website (published every minute during games) caught it mid-way: 17 games instead of 1,457. Now the
