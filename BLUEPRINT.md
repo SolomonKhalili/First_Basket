@@ -759,6 +759,9 @@ NBA/
   (`first_shot_label_test.py`, w=0.1: 2.27248 → 2.27171 Jan–Apr but 2.23766 → 2.23773 this season — re-test at the
   All-Star break); per-player bonus (`player_bonus_test.py`, worse in both); faster Elo for new jumpers / smaller tip
   home edge (`tip_newjumper_test.py`, each helps one season only). Per-feature shrinkage was already tuned 11/17.
+  Public tip-off rating systems (`tip_systems_test.py`, 1,238 games): Glicko-2, TrueSkill, new-season pull toward
+  average, opponent-adjusted (Bradley-Terry) rate — none better in both seasons; best was the opponent-adjusted
+  rate (0.62539 vs 0.62644 this season but 0.62811 vs 0.62687 last season). Our rate + Elo blend stays.
   Context: our top pick ≈ StatsBench's published 17.7%; first-team accuracy ceiling ≈ 55–58% (tip winner scores
   first 66%); press reports the NBA asked partner books to stop "first-of" markets from Oct 2026.
 - **Adopted — 2024-25 season as player HISTORY** (`data_patches/history_2024_25.json.gz`, 0.7 MB: 1,321 games with

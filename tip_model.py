@@ -134,6 +134,8 @@ def home_advantage(con, before: str, extended: bool = False) -> float:
 # Also tested 2026-11-19 on top of this (weights learned on one season, checked on the other): this-season-only rate,
 # last-season-only rate, head-to-head, record vs that team, and all six signals weighted together — none was better
 # in both seasons (all six together: 0.6394 / 0.6356, clearly worse). Keep it simple until there's more data.
+# Also tested 2026-11-19 against public rating systems (experiments/tip_systems_test.py): Glicko-2, TrueSkill, a
+# new-season pull toward average, and an opponent-adjusted (Bradley-Terry) rate — none better in both seasons.
 ELO_K, ELO_HOME, ELO_BLEND = 24, 15, 0.5
 _elo_cache: dict = {}
 

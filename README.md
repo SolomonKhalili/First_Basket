@@ -170,7 +170,7 @@ Trained on the **2025-26 regular season plus every 2026-27 game so far**. The **
 
 The final step mixes in each starter's season first-basket rate (25% FanDuel model / 20% DraftKings model) and stretches team chances (×1.2 / ×1.4); the early-shot share is trusted less in the FanDuel model (150 imaginary shots vs 25) — each model keeps the settings that tested best for it, re-tuned after the history season was added.
 
-**Tip-off call shown on the cards** (`tip_model.py`, `extended=True`): every opening tip since 2024-25, **this season's tips count double**, blended 50/50 with a **"who you beat" rating** (Elo) so beating a strong jumper counts more — calls the tip winner **67.9%** this season (64.5% last season).
+**Tip-off call shown on the cards** (`tip_model.py`, `extended=True`): every opening tip since 2024-25, **this season's tips count double**, blended 50/50 with a **"who you beat" rating** (Elo) so beating a strong jumper counts more — calls the tip winner **67.9%** this season (64.5% last season). We also tried the rating systems other public projects use (Glicko-2, TrueSkill, and others) — none beat it in both seasons.
 
 ### Results (walk-forward test, 215 games of 2026-27)
 
