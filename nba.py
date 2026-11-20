@@ -598,11 +598,14 @@ def audit_season(con, key: str, start: str, end: str) -> int:
     return added
 
 
-def audit_recent_days(con, days: int = 30) -> int:
-    """Each day from `days` ago to 2 days ago is compared once with ESPN's schedule, and any finished game we don't
-    have is filed (added 2026-11-19: all 7 games of 11/06/26 were missing — the catch-up only moves forward from
-    the newest stored day, so a day that failed in the middle was never retried). A day ESPN doesn't answer is
-    asked again next time. Returns how many games were added."""
+def audit_recent_days(con, days: int = None) -> int:
+    """Each day of this season (or the last `days`) up to 2 days ago is compared once with ESPN's schedule, and any
+    finished game we don't have is filed (added 2026-11-19: all 7 games of 11/06/26 were missing — the catch-up only
+    moves forward from the newest stored day, so a day that failed in the middle was never retried). A day ESPN
+    doesn't answer is asked again next time. Returns how many games were added."""
+    if days is None:
+        start = date(int(picks.SEASON_START[:4]), int(picks.SEASON_START[4:6]), int(picks.SEASON_START[6:]))
+        days = max((date.today() - start).days, 1)
     added = 0
     for k in range(days, 1, -1):
         day = (date.today() - timedelta(days=k)).strftime("%Y%m%d")
@@ -975,7 +978,7 @@ def sync_data() -> str:
     apply_history_patch(con)                   # 2024-25 season as player history (once)
     for key, (a, b) in SEASONS_TO_AUDIT.items():  # whole past seasons vs ESPN's schedule (once each)
         audit_season(con, key, a, b)
-    audit_recent_days(con)                     # each finished day of the last 30 vs ESPN's schedule (once each)
+    audit_recent_days(con)                     # each finished day of this season vs ESPN's schedule (once each)
     repair_old_gaps(con)                       # older games still missing a first basket (once a week each)
     fill_first_fg(con)                         # first FIELD GOAL of every game (DraftKings' rule), once each
     try:                                       # DraftKings' opening + closing odds for past games (ESPN), all at once

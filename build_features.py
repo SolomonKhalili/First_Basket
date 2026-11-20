@@ -96,6 +96,18 @@ def build_player_game_logs():
             if add:
                 player_logs[pid].extend(add); player_logs[pid].sort(key=lambda g: g["game_date"], reverse=True)
         known = {g['game_id'] for logs in player_logs.values() for g in logs}
+    import glob as _glob, json as _json2                 # games only NBA.com has (data_patches/*.json, "logs")
+    for f in sorted(_glob.glob(os.path.join("data_patches", "*.json"))):
+        try:
+            games = _json2.load(open(f)).get("games", [])
+        except Exception:  # noqa: BLE001 — a broken patch never blocks the logs
+            continue
+        for gm in games:
+            for pid, entry in (gm.get("logs") or {}).items():
+                if entry["game_id"] not in known:
+                    player_logs[pid].append(dict(entry))
+                    player_logs[pid].sort(key=lambda g: g["game_date"], reverse=True)
+    known = {g['game_id'] for logs in player_logs.values() for g in logs}
 
     con = db()
     changed = sync_first_basket_flags(player_logs, con)

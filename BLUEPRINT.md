@@ -771,8 +771,19 @@ NBA/
   `vs_since`; `recLine` shows it under "x/y scored first basket this season" for starters and backups.
 - **Missing-day fix** (2026-11-19): all 7 games of 11/06/26 were missing (Wembanyama showed 5/14 with the Spurs at
   15 games) — `catchup_missing_games` only moves forward from the newest stored day, so a day that failed in the
-  middle was never retried. `nba.audit_recent_days` (in `sync_data`) now compares each day from 30 to 2 days ago
-  with ESPN's schedule once (`audits` key `day:YYYYMMDD`, re-asked if ESPN didn't answer) and files what's missing.
+  middle was never retried. `nba.audit_recent_days` (in `sync_data`) now compares every day of this season up to
+  2 days ago with ESPN's schedule once (`audits` key `day:YYYYMMDD`, re-asked if ESPN didn't answer) and files
+  what's missing.
+- **Full data audit** (2026-11-19, every ESPN day since 10/22/2024, 525 days): only the 7 games of 11/06/26 were
+  missing. 13 "extra" games are neutral-site games ESPN writes "A VS B" (fine). Per-game check of all 2,858 games:
+  every game has its first basket, first field goal, early/first shots and 5 starters a side; 2 short box scores
+  are real (teams with 6 players); 2 games of 2024-25 have no tip jumpers (ESPN: a jump-ball violation / no jump
+  ball logged). The 4 NBA.com-only 2026 playoff games had no box-score lines (75 player-games): now in
+  `data_patches/playoffs_2026_nba_com.json` ("logs", from `nba_com.box_logs`; points match the final scores) and
+  merged by `build_features.build_player_game_logs`.
+- **Health check watches the data** (`health_check.data_gaps`, every 30 min on the Mac): any day of this season not
+  yet compared with ESPN's schedule, and any game missing its first basket, a starting five, early/first shots or
+  players' box-score lines shows up in HEALTH.md as a problem.
 - **Checked an Instagram first-basket tipster** (2026-11-19, reel transcribed locally): his method is tip winner ->
   first possession, the player's share of his team's first shots, and first baskets in the last 10 games. All three
   are already model inputs (tip chance in stage 1, early-shot share, last-10 rate; a pure first-shot share was tested

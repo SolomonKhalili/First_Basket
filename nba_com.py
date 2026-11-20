@@ -116,3 +116,27 @@ def game(espn_gid: str, nba_gid: str, con) -> Optional[dict]:
             "home_score": box["homeTeam"].get("score"), "away_score": box["awayTeam"].get("score"),
             "unmatched": sorted(p["name"] for p in who.values() if p["id"].startswith("nba") and
                                 (p["starter"] or p["minutes"] > 0))}
+
+
+def box_logs(box: dict, espn_gid: str, game_date: str, lineups: list) -> dict:
+    """Pure. NBA.com box score -> {ESPN player id: player-log entry} (the format of player_game_logs.pkl), for players
+    who played. ESPN ids come from the game's stored lineup rows [game_id, team, id, name, starter, minutes].
+    Added 2026-11-19: the 4 NBA.com-only playoff games had starters but no box-score lines."""
+    ids = {st.norm_name(r[3]): str(r[2]) for r in lineups}
+    out = {}
+    for side in ("homeTeam", "awayTeam"):
+        for p in box[side].get("players", []):
+            s = p.get("statistics") or {}
+            name = p.get("name") or f"{p.get('firstName', '')} {p.get('familyName', '')}".strip()
+            m = re.match(r"PT(\d+)M([\d.]+)S", s.get("minutes") or "")
+            mins = round(int(m.group(1)) + float(m.group(2)) / 60, 1) if m else 0.0
+            pid = ids.get(st.norm_name(name))
+            if not pid or mins <= 0:
+                continue
+            out[pid] = {"game_date": game_date, "game_id": espn_gid, "minutes": mins,
+                        "fgm": int(s.get("fieldGoalsMade") or 0), "fga": int(s.get("fieldGoalsAttempted") or 0),
+                        "fg3m": int(s.get("threePointersMade") or 0), "fg3a": int(s.get("threePointersAttempted") or 0),
+                        "ftm": int(s.get("freeThrowsMade") or 0), "fta": int(s.get("freeThrowsAttempted") or 0),
+                        "pts": int(s.get("points") or 0), "plus_minus": float(s.get("plusMinusPoints") or 0),
+                        "first_basket": 0}
+    return out

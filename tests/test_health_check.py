@@ -94,3 +94,30 @@ def test_health_file_shows_problems_then_records_the_fix(tmp_path, monkeypatch):
     health_check.write_report([], at(13))
     text = (tmp_path / "HEALTH.md").read_text()
     assert text.startswith("# ✅ All good") and "✅ fixed: The website" in text
+
+
+def test_data_gaps_flags_unchecked_days_and_incomplete_games(tmp_path, monkeypatch):
+    import sqlite3, pickle, health_check as h
+    monkeypatch.setattr(h, "HERE", tmp_path)
+    pickle.dump({"p1": [{"game_id": "g1"}]}, open(tmp_path / "player_game_logs.pkl", "wb"))
+    con = sqlite3.connect(":memory:")
+    con.execute("CREATE TABLE games (game_id TEXT, game_date TEXT)")
+    con.execute("CREATE TABLE first_baskets (game_id TEXT)")
+    con.execute("CREATE TABLE lineups (game_id TEXT, team TEXT, player_id TEXT, is_starter INT, minutes REAL)")
+    con.execute("CREATE TABLE early_shots (game_id TEXT, team TEXT)")
+    con.execute("CREATE TABLE first_shots (game_id TEXT, team TEXT)")
+    con.execute("CREATE TABLE audits (key TEXT, done TEXT)")
+    con.executemany("INSERT INTO games VALUES (?, ?)", [("g1", "20261101"), ("g2", "20261102")])
+    con.execute("INSERT INTO first_baskets VALUES ('g1')")
+    for g in ("g1", "g2"):
+        for t in ("A", "B"):
+            con.execute("INSERT INTO early_shots VALUES (?, ?)", (g, t)); con.execute("INSERT INTO first_shots VALUES (?, ?)", (g, t))
+            for i in range(5):
+                con.execute("INSERT INTO lineups VALUES (?, ?, ?, 1, 30)", (g, t, "p1" if (g, t, i) == ("g1", "A", 0) else f"{g}{t}{i}"))
+    con.execute("INSERT INTO audits VALUES ('day:20261101', 'x')")
+    out = h.data_gaps(con, "20261104")
+    assert any("1 day(s) not yet checked" in x and "11/2" in x for x in out)
+    assert any("no first basket" in x and "g2" in x for x in out)
+    assert any("box-score lines" in x for x in out)
+    con.execute("INSERT INTO audits VALUES ('day:20261102', 'x')")
+    assert not any("not yet checked" in x for x in h.data_gaps(con, "20261104"))

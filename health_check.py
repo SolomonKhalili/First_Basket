@@ -69,10 +69,62 @@ def find_problems(now: datetime, f: dict) -> list:
             p.append(f"The live job hasn't started in {_ago(now, last) if last else 'a long time'} — "
                      "GitHub's timer and the Cloudflare backup both seem stuck.")
 
+    p += f.get("data_gaps") or []                         # data_gaps(): stored games missing a piece
+
     mac = f.get("mac")                                   # {"at": dt, "problems": [...]} or None
     if mac and mac.get("problems") and now - mac["at"] < timedelta(days=2):
         p += [f"Mac: {x}" for x in mac["problems"]]
     return p
+
+
+def data_gaps(con, today: str, season_start: str = "20260801") -> list:
+    """Pure-ish (reads the database only). Added 2026-11-19 after a whole day (11/06) went missing. For this season's
+    games up to 2 days ago: any day the cloud hasn't compared with ESPN's schedule, and any stored game missing its
+    first basket, either team's starting five, early/first shots, or its players' box-score lines. -> problems."""
+    from datetime import date as _d, timedelta as _td
+    out = []
+    end = (_d(int(today[:4]), int(today[4:6]), int(today[6:])) - _td(days=2)).strftime("%Y%m%d")
+    try:
+        checked = {k[4:] for (k,) in con.execute("SELECT key FROM audits WHERE key LIKE 'day:%'")}
+    except Exception:  # noqa: BLE001 — table not made yet
+        checked = set()
+    days = {d for (d,) in con.execute("SELECT DISTINCT game_date FROM games WHERE game_date >= ? AND game_date <= ?",
+                                      (season_start, end))}
+    first = min(days) if days else end
+    d, unchecked = _d(int(first[:4]), int(first[4:6]), int(first[6:])), []
+    while d.strftime("%Y%m%d") <= end:
+        if d.strftime("%Y%m%d") not in checked:
+            unchecked.append(d.strftime("%-m/%-d"))
+        d += _td(days=1)
+    if unchecked:
+        out.append(f"{len(unchecked)} day(s) not yet checked against ESPN's schedule for missing games "
+                   f"({', '.join(unchecked[:5])}{'…' if len(unchecked) > 5 else ''}).")
+    q = lambda sql: [g for (g,) in con.execute(sql, (season_start, end))]
+    base = "FROM games g WHERE g.game_date >= ? AND g.game_date <= ?"
+    checks = {
+        "no first basket": q(f"SELECT g.game_id {base} AND g.game_id NOT IN (SELECT game_id FROM first_baskets)"),
+        "a team's starting five missing": q(f"""SELECT g.game_id {base} AND (SELECT COUNT(*) FROM lineups l
+                                             WHERE l.game_id = g.game_id AND l.is_starter = 1) != 10"""),
+        "early shots missing": q(f"""SELECT g.game_id {base} AND (SELECT COUNT(DISTINCT team) FROM early_shots e
+                                  WHERE e.game_id = g.game_id) < 2"""),
+        "first shots missing": q(f"""SELECT g.game_id {base} AND (SELECT COUNT(DISTINCT team) FROM first_shots e
+                                  WHERE e.game_id = g.game_id) < 2"""),
+    }
+    for what, gids in checks.items():
+        if gids:
+            out.append(f"{len(gids)} game(s) this season with {what} (e.g. {', '.join(gids[:3])}).")
+    try:                                                  # every player who played has a box-score line
+        import pickle
+        logs = pickle.load(open(HERE / "player_game_logs.pkl", "rb"))
+        have = {(str(pid), x["game_id"]) for pid, lst in logs.items() for x in lst}
+        miss = {g for g, p in con.execute(f"""SELECT l.game_id, l.player_id FROM lineups l JOIN games g USING(game_id)
+                 WHERE l.minutes > 0 AND g.game_date >= ? AND g.game_date <= ?""", (season_start, end))
+                if (str(p), g) not in have}
+        if miss:
+            out.append(f"{len(miss)} game(s) this season missing players' box-score lines (e.g. {', '.join(sorted(miss)[:3])}).")
+    except OSError:
+        pass
+    return out
 
 
 # ── gathering the facts (network) ─────────────────────────────────────────────
@@ -117,6 +169,12 @@ def gather() -> dict:
     except (OSError, subprocess.SubprocessError, ValueError):
         f["live_runs"] = None                            # couldn't ask GitHub
     f["mac"] = None
+    try:
+        import sqlite3
+        con = sqlite3.connect(HERE / "nba_first_basket.db")
+        f["data_gaps"] = data_gaps(con, datetime.now(ET).strftime("%Y%m%d"))
+    except Exception as e:  # noqa: BLE001
+        f["data_gaps"] = [f"Couldn't check the stored games for gaps ({type(e).__name__})."]
     return f
 
 
