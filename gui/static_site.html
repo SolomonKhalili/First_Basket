@@ -184,10 +184,18 @@
     catch (e) { espnEvents = espnEvents || []; }
     return espnEvents;
   }
-  async function firstBasket(gid) {
-    if (firstFound[gid]) return firstFound[gid];
-    if (firstTried[gid] && Date.now() - firstTried[gid] < 60000) return null;
+  // Two scoreboard requests at once (the page asks twice when it opens) share ONE lookup per game: the second waits
+  // for the first's answer instead of skipping the game (2026-11-19: the first game's tip showed up 30 s late).
+  const fbPending = {};
+  function firstBasket(gid) {
+    if (firstFound[gid]) return Promise.resolve(firstFound[gid]);
+    if (fbPending[gid]) return fbPending[gid];
+    if (firstTried[gid] && Date.now() - firstTried[gid] < 60000) return Promise.resolve(null);
     firstTried[gid] = Date.now();
+    fbPending[gid] = firstBasketFetch(gid).finally(() => { delete fbPending[gid]; });
+    return fbPending[gid];
+  }
+  async function firstBasketFetch(gid) {
     try {
       const s = await (await realFetch(ESPN_SUMMARY + gid, { cache: "no-store" })).json();
       const names = {}, teams = {};
