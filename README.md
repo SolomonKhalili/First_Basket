@@ -172,6 +172,8 @@ The final step mixes in each starter's season first-basket rate (25% FanDuel mod
 
 **Tip-off call shown on the cards** (`tip_model.py`, `extended=True`): every opening tip since 2024-25, **this season's tips count double**, blended 50/50 with a **"who you beat" rating** (Elo) so beating a strong jumper counts more — calls the tip winner **67.9%** this season (64.5% last season). We also tried the rating systems other public projects use (Glicko-2, TrueSkill, and others) — none beat it in both seasons.
 
+We also tried giving new players a smarter starting guess (by position or by how much they score) — no better than the plain 1 in 10, so it stays.
+
 ### Results (walk-forward test, 215 games of 2026-27)
 
 Each week of the current season is predicted by a model trained only on games before that week, the way it is used in real life.

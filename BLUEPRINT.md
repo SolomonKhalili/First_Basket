@@ -762,6 +762,10 @@ NBA/
   Public tip-off rating systems (`tip_systems_test.py`, 1,238 games): Glicko-2, TrueSkill, new-season pull toward
   average, opponent-adjusted (Bradley-Terry) rate — none better in both seasons; best was the opponent-adjusted
   rate (0.62539 vs 0.62644 this season but 0.62811 vs 0.62687 last season). Our rate + Elo blend stays.
+- **Tested — smarter starting guess for the season first-basket rate** (`prior_test.py`): shrink toward his position's
+  league rate (C 12.0%, G 9.5%, F 9.6%) or his share of the team's starters' points, at 15/30/60 imaginary games —
+  none better in both periods (position, 30 games: 2.22499 vs 2.22477 this season, 2.25011 vs 2.25075 Jan–Apr). The
+  tip and early-shot inputs already carry what position adds. Kept 1 in 10 with 30 games.
   Context: our top pick ≈ StatsBench's published 17.7%; first-team accuracy ceiling ≈ 55–58% (tip winner scores
   first 66%); press reports the NBA asked partner books to stop "first-of" markets from Oct 2026.
 - **Adopted — 2024-25 season as player HISTORY** (`data_patches/history_2024_25.json.gz`, 0.7 MB: 1,321 games with
