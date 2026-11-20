@@ -1337,6 +1337,14 @@ def predict_today(first_pass: bool = True, teams: set = frozenset(), ui=None) ->
         everyone = [{**info[i], "prob": float(probs[i]),                         # all 10 starters, for EV
                      **({"prob_fg": float(probs_fg[i])} if probs_fg is not None else {})} for i in order]
         season_counts = season_first_baskets(con, [p['id'] for p in info] + [b['id'] for b in backup_chance.values()], game_date)
+        opp_of = {home_team: away_team, away_team: home_team}
+        vs_people = [(p['id'], p['name'], opp_of.get(p['team'], '')) for p in info] + \
+                    [(b['id'], b['name'], opp_of.get(b['team'], '')) for b in backup_chance.values()]
+        try:
+            vs_counts = vs_team_first_baskets(con, [(i, o) for i, _, o in vs_people], game_date)
+            vs_opp = {n: [*vs_counts.get(str(i), (0, 0)), o] for i, n, o in vs_people}
+        except Exception:  # noqa: BLE001 — an extra line on the table never blocks the picks
+            vs_opp = {}
         fd_card = _fanduel_card(fd_games, home_team, away_team, top5, everyone, dk_games)
         first_team = ({home_team: float(probs[:len(home_starters)].sum()),
                        away_team: float(probs[len(home_starters):].sum())} if pg.get("type") == "two_stage" else None)
@@ -1362,6 +1370,7 @@ def predict_today(first_pass: bool = True, teams: set = frozenset(), ui=None) ->
             "home_starters": home_starters, "away_starters": away_starters,
             "injuries": injuries, "injury_list": injury_list, "backups": backups, "backup_chance": backup_chance, "notes": notes,
             "dropped": dropped,
+            "vs_opp": vs_opp, "vs_since": data_since(con),   # each player's record vs tonight's opponent
         })
 
     st.save_seen_lineups(con)                  # keep NBA.com's Expected and Confirmed lists (Lineups tab)
@@ -1388,6 +1397,28 @@ def season_first_baskets(con, player_ids, before_date: str, season_start: str = 
             WHERE g.game_date >= ? AND g.game_date < ? AND l.player_id IN ({",".join("?" * len(ids))})
             GROUP BY l.player_id""", (season_start, before_date, *ids)).fetchall()
     return {str(pid): (int(fb or 0), int(gp or 0)) for pid, gp, fb in rows}
+
+
+def vs_team_first_baskets(con, players: list, before_date: str) -> dict:
+    """players = [(player_id, opponent team)] -> player_id -> (first baskets, games played) against that team in every
+    stored game before `before_date` (our data starts with the 2024-25 season). Added 2026-11-19 for the table."""
+    out = {}
+    for pid, opp in players:
+        r = con.execute(
+            """SELECT SUM(l.minutes > 0), SUM(l.minutes > 0 AND f.scorer_player_id = l.player_id)
+               FROM lineups l JOIN games g ON g.game_id = l.game_id
+               LEFT JOIN first_baskets f ON f.game_id = l.game_id
+               WHERE l.player_id = ? AND g.game_date < ? AND l.team != ? AND (g.home_team = ? OR g.away_team = ?)""",
+            (str(pid), before_date, opp, opp, opp)).fetchone()
+        out[str(pid)] = (int(r[1] or 0), int(r[0] or 0))
+    return out
+
+
+def data_since(con) -> str:
+    """'Oct 2024': the month of the first stored game (the start of the 'vs this team' records)."""
+    import calendar
+    d = con.execute("SELECT MIN(game_date) FROM games").fetchone()[0] or ""
+    return f"{calendar.month_abbr[int(d[4:6])]} {d[:4]}" if len(d) >= 6 else ""
 
 
 def season_tip_records(con, player_ids, before_date: str, season_start: str = picks.SEASON_START) -> dict:

@@ -352,3 +352,17 @@ def test_dropped_from_top5_warns_for_ruled_out_and_benched():
     # nothing dropped when he's still starting; picks from an earlier day don't count
     assert picks.dropped_from_top5(con, "1", "20261119", now + ["Deni Avdija"], {}, True) == []
     assert picks.dropped_from_top5(con, "1", "20261120", now, {}, True) == []
+
+
+def test_vs_team_first_baskets_counts_only_games_against_that_team():
+    import sqlite3, nba
+    con = sqlite3.connect(":memory:")
+    con.execute("CREATE TABLE games (game_id TEXT, game_date TEXT, home_team TEXT, away_team TEXT)")
+    con.execute("CREATE TABLE lineups (game_id TEXT, team TEXT, player_id TEXT, player_name TEXT, is_starter INT, minutes REAL)")
+    con.execute("CREATE TABLE first_baskets (game_id TEXT, scorer_player_id TEXT)")
+    con.executemany("INSERT INTO games VALUES (?,?,?,?)", [("1", "20241101", "SA", "LAC"), ("2", "20251201", "LAC", "SA"),
+                                                          ("3", "20251205", "SA", "NY"), ("4", "20261120", "SA", "LAC")])
+    con.executemany("INSERT INTO lineups VALUES (?,?,?,?,?,?)", [(g, "SA", "w", "Wemby", 1, 30) for g in "1234"])
+    con.executemany("INSERT INTO first_baskets VALUES (?,?)", [("1", "w"), ("3", "w"), ("4", "w")])
+    assert nba.vs_team_first_baskets(con, [("w", "LAC")], "20261119") == {"w": (1, 2)}   # game 4 is later, 3 is NY
+    assert nba.data_since(con) == "Nov 2024"

@@ -766,6 +766,9 @@ NBA/
   Checked 2026-11-19: the NBA's official injury report (ak-static.cms.nba.com/referee/injury/Injury-Report_<date>_<time>.pdf,
   every 15 min) is more detailed ("Left Foot Inflammation / Soreness" vs ESPN "Foot"), but it's only a PDF — owner
   decided it isn't worth the extra parts. ESPN stays the only injury source.
+- **Record vs tonight's opponent** (2026-11-19): `nba.vs_team_first_baskets` (first baskets / games played against
+  that team, every stored game since `nba.data_since` = Oct 2024) -> card `vs_opp` {name: [fb, games, opp]} +
+  `vs_since`; `recLine` shows it under "x/y scored first basket this season" for starters and backups.
 - **Tested — a learned backup guess** (`experiments/backup_test.py`, 1,019 past games where one regular starter sat):
   a logit over minutes, recent starts, season starts, who started his earlier absences, last-game start. Jan–Apr
   2026 33.1% (current rule) vs 32.4% (learned); 2026-27 27.1% vs 28.6% (70 games). Not better in both — the current

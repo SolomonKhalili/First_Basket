@@ -874,6 +874,7 @@ tr.bk-row td { background: rgba(251,191,36,.06); } tr.bk-row .rank { background:
 tr.bk-row .itag.bk { color: #fbbf24; }
 .itag-sub { display: block; font-weight: 600; color: #c9ced8; font-size: 11.5px; }
 .rec-w { white-space: normal; }
+.rec.vs { display: block; margin-top: 1px; }
 .sub2 { white-space: normal; }
 .nolineup { font-size: 12.5px; color: var(--muted); font-weight: 600; }
 .alerts { display: grid; gap: 6px; margin: 0 0 10px; }
@@ -1307,8 +1308,13 @@ function card(c, i) {
   const rec = (name) => { const r = season[name]; return r && r[1] ? r : null; };
   function recLine(name) {
     const r = rec(name);
-    return r ? `<span class="rec" title="Scored the game's first basket in ${r[0]} of his ${r[1]} games this season"><b>${r[0]}</b>/${r[1]} <span class="rec-w">scored first basket</span></span>`
+    const main = r ? `<span class="rec" title="Scored the game's first basket in ${r[0]} of his ${r[1]} games this season"><b>${r[0]}</b>/${r[1]} <span class="rec-w">scored first basket this season</span></span>`
              : (c.season ? `<span class="rec">no games yet this season</span>` : "");
+    // his record against tonight's opponent, every game we have (since Oct 2024)
+    const v = (c.vs_opp || {})[name];
+    const vs = v && v[1] ? `<span class="rec vs" title="Scored the first basket in ${v[0]} of his ${v[1]} games against ${esc(v[2])} since ${esc(c.vs_since || "")}"><b>${v[0]}</b>/${v[1]} <span class="rec-w">vs ${esc(v[2])}${c.vs_since ? ` since ${esc(c.vs_since)}` : ""}</span></span>`
+             : (v ? `<span class="rec vs">no games vs ${esc(v[2])} yet</span>` : "");
+    return main + vs;
   }
   const topRec = rec(top[0]);
   const heroRec = topRec ? `<div class="rec-hero">🏀 First basket in <b>${topRec[0]} of ${topRec[1]}</b> games this season</div>` : "";

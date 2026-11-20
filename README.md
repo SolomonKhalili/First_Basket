@@ -62,7 +62,7 @@ viewer's own time zone.
   - **🏀 First basket prediction** — the top pick's photo and two equal tiles, *Our prediction to score first*:
     **FanDuel** (incl. free throws) and **DraftKings** (excl. free throws), each with that book's odds.
   - **FanDuel / DraftKings tabs** — each book's own **top 5** table (rank, face, Chance, Our odds, FD/DK odds;
-    "2/13 scored first basket" = he scored first in 2 of his 13 games this season). **💰 value** only for top-5 players and only for the team
+    "2/13 scored first basket this season" = he scored first in 2 of his 13 games this season; under it "1/5 vs LAC since Oct 2024" = his record against tonight's opponent in every game we have). **💰 value** only for top-5 players and only for the team
     we favor. A questionable starter shows ⚠️ and his likely **backup**; if the backup's chance (whole lineup
     re-scored) would make the top 5, he gets his own "↳ only if X sits" row.
   - **🚨 Warnings at the top of the card** — red: a player who was in our top 5 earlier today is now out of the
