@@ -219,7 +219,7 @@
           if (c.homeAway === "home") g.home_score = +c.score || 0; else g.away_score = +c.score || 0;
         }
       }
-      if (g.status !== 1 && !g.first_basket) {
+      if (g.status !== 1 && (!g.first_basket || !g.tip_winner)) {   // also when only the tip is still unknown
         const fb = await firstBasket(g.game_id);
         const tw = tipFound[g.game_id];                    // shown from the opening tip on, before anyone scores
         if (tw && tw.name && !g.tip_winner) { g.tip_winner = tw.name; g.tip_winner_team = tw.team; }
