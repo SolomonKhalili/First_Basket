@@ -880,6 +880,7 @@ tr.bk-row .itag.bk { color: #fbbf24; }
 .alert { border-radius: 10px; padding: 9px 12px; font-size: 13.5px; line-height: 1.35; font-weight: 600;
          border: 1px solid; }
 .alert b { font-weight: 800; }
+.snote.scratch { color: var(--text); background: rgba(229, 72, 77, .12); border: 1px solid rgba(229, 72, 77, .45); border-radius: 8px; padding: 7px 10px; }
 .alert-out { background: rgba(229, 72, 77, .14); border-color: rgba(229, 72, 77, .55); color: var(--text); }
 .alert-q { background: rgba(245, 166, 35, .13); border-color: rgba(245, 166, 35, .5); color: var(--text); }
 .itag.in.ok { color: var(--good); }
@@ -3138,11 +3139,17 @@ async function drawStarters() {
           : conf ? (conf.includes(n) ? ` <span class="itag in ok">✅ playing</span>` : ` <span class="itag in">❌ not starting</span>`)
           : ` <span class="itag in">⚠️ ${esc(/day/i.test((c.injuries || {})[n] || "") ? "Questionable" : ((c.injuries || {})[n] || "Questionable"))}</span>`;
         const list = (arr, isConf) => arr ? `<ol class="slist">${arr.map((n) => `<li>${esc(n)}${tag(n)}${(c.backups || {})[n] && !conf ? `<div class="sbk">↳ if he sits: ${esc(c.backups[n])}</div>` : ""}</li>`).join("")}</ol>` : "";
-        const swapped = proj && used.length && used.some((n) => !proj.includes(n))
-          ? `<div class="snote">🔁 Our picks use: ${used.map(esc).join(", ")} (we swapped out players ruled out after NBA.com posted).</div>` : "";
+        const base = conf || proj;
+        const swapped = base && used.length && used.some((n) => !base.includes(n))
+          ? `<div class="snote">🔁 Our picks use: ${used.map(esc).join(", ")} (a player was ruled out after this lineup was posted).</div>` : "";
+        // late scratches: listed questionable earlier today, now ruled out — say so instead of quietly dropping him
+        const scratched = ((c.injury_list || {})[tm] || []).filter((x) => /out/i.test(x.status) && (x.history || []).some(([st]) => !/out/i.test(st)));
+        const scratchNote = scratched.map((x) => { const h = x.history || [], at = h.length ? shortTime(h[h.length - 1][1]) : "";
+          const d = (c.dropped || []).find((y) => y.name === x.name);
+          return `<div class="snote scratch">❌ <b>${esc(x.name)}</b> was questionable — <b>ruled out</b>${at ? ` at ${at}` : ""}${d ? ` (was our #${d.rank} pick)` : ""}, so he's not in these lineups.</div>`; }).join("");
         return `<div class="steam"><div class="iteam-h">${logo(tm, 18)}${esc(TEAM_NAMES[tm] || tm)}</div>
           <div class="scols"><div><div class="sh">Projected</div>${list(proj, false) || `<div class="inone">Not posted yet</div>`}</div>
-            <div><div class="sh">Confirmed</div>${list(conf, true) || `<div class="inone">Not confirmed yet<br><small>~30 min before tip-off</small></div>`}</div></div>${swapped}</div>`;
+            <div><div class="sh">Confirmed</div>${list(conf, true) || `<div class="inone">Not confirmed yet<br><small>~30 min before tip-off</small></div>`}</div></div>${scratchNote}${swapped}</div>`;
       }).join("")}</div>`).join("");
 }
 $("injBtn").addEventListener("click", () => openView("injView", "#injuries", drawInjuries));

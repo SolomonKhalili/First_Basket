@@ -68,6 +68,8 @@ viewer's own time zone.
   - **🚨 Warnings at the top of the card** — red: a player who was in our top 5 earlier today is now out of the
     starting five ("Deni Avdija (was our #4 pick) is ruled out — picks updated without him"); yellow: a player in our
     top 5 right now is questionable, with who'd likely start if he sits.
+  - **👥 Starters page** — a player who was questionable and then ruled out gets a red note under his team
+    ("❌ Deni Avdija was questionable — ruled out at 7:24 PM (was our #4 pick), so he's not in these lineups").
   - **🏀 First team to score prediction** — the top team's logo and the same two tiles, then both teams' odds
     (FanDuel "Team to Score First" counts free throws; DraftKings "Team to Score 1st FG" doesn't).
   - **👥 Starters** (expected / confirmed) and **🩹 Injuries** (every listed player, always with the injury).
