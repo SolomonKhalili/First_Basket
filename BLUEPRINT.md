@@ -800,7 +800,7 @@ NBA/
   far fewer picks, nothing changes.
 - **Tip result on the card** (2026-11-19): once a game has a first basket, the result box also says who won the
   opening tip and whether we called it — shown from the tip on, before anyone scores — plus the TEAM that scored first and
-  whether our first-team call was right (`teamResult`); scoreboard tiles show the scorer's team and the tip winner (`static_site.html` reads ESPN's first "Jumpball" play — its first
+  whether our first-team call was right (`teamResult`); scoreboard tiles show the same three lines (tip winner, first team to score, first scorer), each with our call (`static_site.html` reads ESPN's first "Jumpball" play — its first
   participant won; `index.html` `tipResult`). The result box had shrunk to 64 px wide: a `.miss` rule meant for
   "not offered" odds cells also matched `.verdict.miss` (now `:not(.verdict)`).
 - **Checked an Instagram first-basket tipster** (2026-11-19, reel transcribed locally): his method is tip winner ->

@@ -1166,7 +1166,13 @@ function tile(g) {
     const fbTxt = fb && fb[1] ? `<span class="rec" title="Scored the game's first basket in ${fb[0]} of his ${fb[1]} games this season"> · 1st basket <b>${fb[0]}</b>/${fb[1]}</span>` : "";
     res = `<div class="res">${live ? "Waiting for the first basket · " : ""}Our pick: <b>${esc(g.our_pick.name)}</b> <span class="num">${pct(g.our_pick.prob, 0)}</span>${fbTxt}</div>`;
   }
-  res = tipRes + res;
+  let teamRes = "";                                   // which team scored first, and whether we called it (same as the card)
+  if (g.first_basket && g.first_basket.team && !g.past) {
+    const c = (lastResult?.cards || []).find((x) => x.home === g.home_team && x.away === g.away_team);
+    const ft = c && c.first_team, fav = ft ? (ft[c.home] >= ft[c.away] ? c.home : c.away) : null, t = g.first_basket.team;
+    teamRes = `<div class="res">🏀 First team to score: <b>${esc(TEAM_NAMES[t] || t)}</b>${fav ? (fav === t ? ` <span class="tag hit">✓ our call</span>` : ` <span class="tag miss">✗ not our call</span>`) : ""}</div>`;
+  }
+  res = tipRes + teamRes + res;
   const op = g.our_pick;
   if (g.past && op?.name) res += `<div class="res">Our pick: <b>${esc(op.name)}</b> <span class="num">${pct(op.prob, 0)}</span></div>`;
   if (g.past && g.tip_call) {                                            // yesterday: our tip call and how it went
