@@ -12,11 +12,20 @@ import numpy as np
 
 FEATURES = ["is_home", "fb_rate_shrunk", "L10_fb_shrunk", "shot_attempts_per36",
             "true_shooting", "minutes_per_game", "points_per_game", "team_tipoff_win_pct",
-            "tip_win_prob", "early_shot_shrunk", "opp_pos_share", "vs_opp_rate"]
+            "tip_win_prob", "early_shot_shrunk", "opp_pos_share", "vs_opp_rate", "three_rate"]
+# points_per_game is log(1 + points) and three_rate = 3-point attempts / field-goal attempts (shrunk toward 0.38 with
+# 100 attempts) — adopted 2026-11-19 from public first-basket models (experiments/opensource_test.py): FanDuel model
+# 2026-27 2.22734 -> 2.22406, Jan–Apr 2026 2.25270 -> 2.25233; field-goal model log points only (2.24909 -> 2.24810,
+# 2.26194 -> 2.26073; the 3-point rate made it worse this season, so it doesn't use it).
+FEATURE_VERSION = 2
 # opp_pos_share / vs_opp_rate (adopted 2026-11-18): tonight's opponent — see context_features.py for the tests.
 HOME, TIP = FEATURES.index("is_home"), FEATURES.index("tip_win_prob")
 PLAYER_FEATURES = [f for f in FEATURES if f not in ("is_home", "team_tipoff_win_pct", "tip_win_prob")]
 PLAYER_IDX = [FEATURES.index(f) for f in PLAYER_FEATURES]
+# each model's player inputs (the field-goal model leaves out the 3-point rate)
+PLAYER_FEATURES_BY_KIND = {"first_points": PLAYER_FEATURES,
+                           "first_field_goal": [f for f in PLAYER_FEATURES if f != "three_rate"]}
+PLAYER_IDX_BY_KIND = {k: [FEATURES.index(f) for f in v] for k, v in PLAYER_FEATURES_BY_KIND.items()}
 PRIOR = 0.10   # ~1 in 10 starters scores first
 # Shrink strengths (imaginary games at the 10% prior). Tested 2026-11-17: with the L2 held at 0.001, M_SEASON = 100
 # looked better (2026-27 21.7% / 2.2307), but the real training procedure (L2 chosen on 2025-26) then picked L2 = 0.3
@@ -46,12 +55,13 @@ def build_row(p: dict, t: dict, is_home: int, tip_win_prob: float = 0.5) -> list
         p.get("shot_attempts_per36", 0.0),
         p.get("true_shooting_pct", 0.0),
         p.get("minutes_per_game", 0.0),
-        p.get("points_per_game", 0.0),
+        float(np.log1p(max(float(p.get("points_per_game", 0.0) or 0.0), 0.0))),
         t.get("team_tipoff_win_pct", 0.5),
         float(tip_win_prob),
         shrunk(p.get("early_shot_share", 0.0), p.get("early_shot_count", 0), M_EARLY, EARLY_PRIOR),
         float(p.get("opp_pos_share", 0.4)),     # context_features.Context.opp_pos_share
         float(p.get("vs_opp_rate", PRIOR)),     # context_features.Context.vs_opp_rate
+        float(p.get("three_rate", 0.38)),       # build_features.three_point_rate
         # raw early-shot share + count (after the model inputs): each model re-shrinks them with its own strength
         float(p.get("early_shot_share", 0.0)), float(p.get("early_shot_count", 0) or 0),
     ]
@@ -73,11 +83,12 @@ def home_scores_first(team: dict, tip_home) -> np.ndarray:
     return 1 / (1 + np.exp(-(team["a"] + team["b"] * logit(tip_home))))
 
 
-def two_stage(team: dict, w, mu, sd, R: np.ndarray) -> np.ndarray:
+def two_stage(team: dict, w, mu, sd, R: np.ndarray, idx=None) -> np.ndarray:
     """R = one game's 10 feature rows (FEATURES order) -> P(each starter scores first), sums to 1."""
     home = R[:, HOME] > 0.5
     ph = float(home_scores_first(team, R[home, TIP][0] if home.any() else 0.5))
-    idx = PLAYER_IDX[:len(w)]                     # an older model file with fewer inputs ignores the newer ones
+    if idx is None:
+        idx = PLAYER_IDX[:len(w)]                 # an older model file with fewer inputs ignores the newer ones
     s = ((R[:, idx] - np.asarray(mu)) / np.asarray(sd)) @ np.asarray(w)
     out = np.zeros(len(R))
     for side, p_team in ((home, ph), (~home, 1 - ph)):
@@ -144,7 +155,9 @@ def stretch_teams(p: np.ndarray, is_home: np.ndarray, k: float = TEAM_STRETCH) -
 def probabilities(model: dict, rows: list) -> np.ndarray:
     R = with_early(rows, kind_of(model))
     if model.get("type") == "two_stage":
-        p = two_stage(model["team"], model["w"], model["mu"], model["sd"], R)
+        names = model.get("player_features") or PLAYER_FEATURES      # the inputs this model file was trained on
+        idx = [FEATURES.index(f) for f in names if f in FEATURES][:len(model["w"])]
+        p = two_stage(model["team"], model["w"], model["mu"], model["sd"], R, idx)
         fb = R[:, FEATURES.index("fb_rate_shrunk")]
         k, mix = settings_for(model)
         p = (1 - mix) * p + mix * fb / fb.sum() if fb.sum() > 0 else p

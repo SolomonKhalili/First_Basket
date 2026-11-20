@@ -57,6 +57,8 @@ import build_features as bf
 import context_features as cf
 ctx = cf.Context(con)                            # opponent-by-position + head-to-head, point-in-time
 rows = []
+import pickle as _pickle
+_LOGS = _pickle.load(open(bf.PLAYER_LOGS_CACHE, "rb")) if os.path.exists(bf.PLAYER_LOGS_CACHE) else {}
 for k, gid in enumerate(gids):
     d, home, away = info[gid]
     s = bf.stored_starters(gid, home, away)
@@ -77,6 +79,7 @@ for k, gid in enumerate(gids):
             team, opp = (home, away) if j < n_home else (away, home)
             p["opp_pos_share"] = ctx.opp_pos_share(opp, ctx.group_that_night(d, team, pl["name"]), d)
             p["vs_opp_rate"] = ctx.vs_opp_rate(pl["player_id"], opp, d)
+            p["three_rate"] = bf.three_point_rate(_LOGS, pl["player_id"], d)
         rows.append(pm.build_row(p, {"team_tipoff_win_pct": r[J["team_tipoff_win_pct"]]}, is_home,
                                  tip_win_prob=p_home if is_home else p_away))
 M = np.array(rows).reshape(len(gids), 10, -1)   # games x starters x features
@@ -133,7 +136,7 @@ def logloss(P, idx):
 home = M[:, :, pm.HOME] > 0.5                                    # games x 10
 home_first = (Y * home).sum(1) == 1                              # did the home team score first?
 tip_home = np.array([M[k, home[k], pm.TIP][0] for k in range(len(Y))])
-PL = M[:, :, pm.PLAYER_IDX]                                      # player inputs only
+PL = M[:, :, pm.PLAYER_IDX_BY_KIND["first_points"]]               # player inputs only (first-points model)
 
 
 def fit_team(idx, l2=1e-3):
@@ -236,12 +239,12 @@ try:
         home_first = (Y_FG * home).sum(1) == 1          # field goal (team stage), then which of its starters (player)
         fg_idx = all_idx[Y_FG[all_idx].sum(1) == 1]     # games where a starter made the first field goal
         _PL = PL
-        PL = pm.with_early(M, "first_field_goal")[:, :, pm.PLAYER_IDX]     # the field-goal model's early-shot trust
+        PL = pm.with_early(M, "first_field_goal")[:, :, pm.PLAYER_IDX_BY_KIND["first_field_goal"]]   # its own inputs
         team_fg, w_fg, mu_fg, sd_fg = fit2(fg_idx, l2)
         Y, home_first, PL = _Y, _hf, _PL
         json.dump({"type": "two_stage", "labels": "first_field_goal", "team_labels": "first_field_goal",
                    "early_m": pm.EARLY_M["first_field_goal"], "features": pm.FEATURES,
-                   "player_features": pm.PLAYER_FEATURES, "team": team_fg, "w": w_fg.tolist(), "mu": mu_fg.tolist(),
+                   "player_features": pm.PLAYER_FEATURES_BY_KIND["first_field_goal"], "feature_version": pm.FEATURE_VERSION, "team": team_fg, "w": w_fg.tolist(), "mu": mu_fg.tolist(),
                    "sd": sd_fg.tolist(), "l2": l2, "train_games": int(len(all_idx)),
                    "trained_through": str(max(dates[all_idx]))}, open("pregame_model_fg.json", "w"), indent=2)
         print("saved pregame_model_fg.json (first field goal — for DraftKings)")
@@ -253,7 +256,7 @@ if wf_ll is not None and prev_ll is not None and wf_ll > prev_ll + WORSE_MARGIN:
     print(f"⚠️ Kept the previous model: new walk-forward log-loss {wf_ll:.4f} is worse than {prev_ll:.4f}")
     sys.exit(KEPT_PREVIOUS)
 
-json.dump({"type": "two_stage", "early_m": pm.EARLY_M["first_points"], "features": pm.FEATURES, "player_features": pm.PLAYER_FEATURES,
+json.dump({"type": "two_stage", "early_m": pm.EARLY_M["first_points"], "feature_version": pm.FEATURE_VERSION, "features": pm.FEATURES, "player_features": pm.PLAYER_FEATURES_BY_KIND["first_points"],
            "team": team, "w": w.tolist(), "mu": mu.tolist(), "sd": sd.tolist(), "l2": l2,
            "train_games": int(len(all_idx)), "trained_through": str(max(dates[all_idx])),
            "test_scheme": "walk_forward", "test_games": int(len(T)),

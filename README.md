@@ -164,6 +164,7 @@ A player's chance = his team's chance × his share within the team. Inputs built
 | `early_shot_shrunk` | His share of his team's first 5 shot attempts in earlier starts (the team's early first option) |
 | `tip_win_prob` | Chance the player's team wins tonight's opening tip (`tip_model.py`: the expected jumper for each team — its regular jumper, else NBA.com's listed center, else its most experienced starter — their past tip results and home court; earlier games only) |
 | `opp_pos_share`, `vs_opp_rate` | Tonight's opponent: how often it gives up the first basket to his position, and his own record against that team |
+| `three_rate` | His 3-point attempts ÷ field-goal attempts (FanDuel model only; more threes = slightly less likely to score first). Points per game enter as log(1 + points). |
 
 Trained on the **2025-26 regular season plus every 2026-27 game so far**. The **2024-25 season** (1,321 games, `data_patches/history_2024_25.json.gz`) is used only as **player history** — it makes every player's stats more complete, but its games are never training examples (rosters and roles change). Adding it improved the week-by-week test in both periods (2026-27 log-loss 2.2377 → 2.2342; Jan–Apr 2026 2.2725 → 2.2578).
 

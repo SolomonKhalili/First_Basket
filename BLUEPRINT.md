@@ -778,6 +778,13 @@ NBA/
   Model files record `early_m`; `_retrain_if_needed` retrains when it doesn't match. Season/last-10 trust re-checked:
   current 30 / 10 still best. (Note: `season_backtest.fill_fg_grades` grades the field-goal model with the
   first-points early setting — re-grade only if those grades are re-run.)
+- **Adopted — inputs from public first-basket models** (research: `research_notes/.../opensource_first_basket.md`, 9 repos
+  read; none beats our top pick): points per game now enters as log(1 + points) in both models; new input **3-point
+  attempt rate** (`build_features.three_point_rate`, shrunk to 0.38 with 100 FGA) in the FanDuel model only
+  (`pregame_model.PLAYER_FEATURES_BY_KIND`; model files store their `player_features` and `feature_version`;
+  `_retrain_if_needed` retrains when it changes). FanDuel 2.22734 → **2.22406** / 2.25270 → **2.25233**; DraftKings
+  2.24909 → **2.24810** / 2.26194 → **2.26073**. Not adopted: early-shot make rate (worse), log of shots+points
+  (worse Jan–Apr), 3-pt rate for DraftKings (worse this season).
 - **Folder size 410 MB → 40 MB (2026-11-19):** 350 MB was old downloaded copies of the cloud's database inside `.git`
   (every sync fetches the newest ~18 MB copy; git kept them all). Removed with `git reflog expire` + `git gc --prune`,
   plus `iphone_shots/` and Python caches (all regenerable). `sync_from_cloud.clean_git` now does this once a day

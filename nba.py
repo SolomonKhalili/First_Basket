@@ -914,8 +914,10 @@ def _retrain_if_needed(con) -> str:
     fg_ok = os.path.exists("pregame_model_fg.json") and "team_labels" in open("pregame_model_fg.json").read()
     try:                             # model files trained with another early-shot trust (pm.EARLY_M): retrain now
         import pregame_model as _pm
-        fg_ok = fg_ok and json.load(open("pregame_model.json")).get("early_m") == _pm.EARLY_M["first_points"] \
-            and json.load(open("pregame_model_fg.json")).get("early_m") == _pm.EARLY_M["first_field_goal"]
+        main_m, fg_m = json.load(open("pregame_model.json")), json.load(open("pregame_model_fg.json"))
+        fg_ok = fg_ok and main_m.get("early_m") == _pm.EARLY_M["first_points"] \
+            and fg_m.get("early_m") == _pm.EARLY_M["first_field_goal"] \
+            and main_m.get("feature_version") == _pm.FEATURE_VERSION == fg_m.get("feature_version")
     except (OSError, ValueError):
         fg_ok = False
     if not new_games and fg_ok:      # (the field-goal model: trained again if missing or its team part is the old kind)

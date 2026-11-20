@@ -90,8 +90,10 @@ def trained_through_yesterday(project):
     add_game(project, "trained", ymd(2))
     json.dump(["trained"], open("game_ids.json", "w"))
     import pregame_model as pm
-    json.dump({"team_labels": "first_field_goal", "early_m": pm.EARLY_M["first_field_goal"]}, open("pregame_model_fg.json", "w"))
-    json.dump({"early_m": pm.EARLY_M["first_points"]}, open("pregame_model.json", "w"))   # both models current
+    json.dump({"team_labels": "first_field_goal", "early_m": pm.EARLY_M["first_field_goal"],
+               "feature_version": pm.FEATURE_VERSION}, open("pregame_model_fg.json", "w"))
+    json.dump({"early_m": pm.EARLY_M["first_points"], "feature_version": pm.FEATURE_VERSION},
+              open("pregame_model.json", "w"))                       # both models current
     return project
 
 

@@ -194,6 +194,14 @@ def build_player_game_logs():
 # ──────────────────────────────────────────────
 # SEASON STATS COMPUTATION (no leakage — up to game_date)
 # ──────────────────────────────────────────────
+def three_point_rate(player_logs, player_id, game_date) -> float:
+    """3-point attempts / field-goal attempts in his games BEFORE game_date, shrunk toward 0.38 with 100 attempts."""
+    d = str(game_date).replace('-', '')[:8]
+    g = [x for x in player_logs.get(str(player_id), []) if x['game_date'] < d]
+    fga = sum(x.get('fga', 0) for x in g); f3 = sum(x.get('fg3a', 0) for x in g)
+    return (f3 + 0.38 * 100) / (fga + 100)
+
+
 def compute_player_season_stats(player_id, game_date, team_abbrev, player_logs):
     """A player's stats from his games BEFORE game_date (no leakage). Logs are newest first.
     Keys: first_basket_rate, L10_first_basket_rate, games_played, shot_attempts_per36
@@ -204,7 +212,7 @@ def compute_player_season_stats(player_id, game_date, team_abbrev, player_logs):
     if n == 0:
         return {'first_basket_rate': 0.0, 'L10_first_basket_rate': 0.0, 'games_played': 0,
                 'shot_attempts_per36': 0.0, 'true_shooting_pct': 0.0,
-                'minutes_per_game': 0.0, 'points_per_game': 0.0}
+                'minutes_per_game': 0.0, 'points_per_game': 0.0, 'three_rate': 0.38}
 
     total_min = sum(g['minutes'] for g in prior)
     total_fga = sum(g['fga'] for g in prior)
@@ -220,6 +228,7 @@ def compute_player_season_stats(player_id, game_date, team_abbrev, player_logs):
         'true_shooting_pct': total_pts / (2 * shots) if shots > 0 else 0.0,
         'minutes_per_game': total_min / n,
         'points_per_game': total_pts / n,
+        'three_rate': three_point_rate(player_logs, player_id, game_date),
     }
 
 
