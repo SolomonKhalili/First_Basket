@@ -766,6 +766,9 @@ NBA/
   league rate (C 12.0%, G 9.5%, F 9.6%) or his share of the team's starters' points, at 15/30/60 imaginary games —
   none better in both periods (position, 30 games: 2.22499 vs 2.22477 this season, 2.25011 vs 2.25075 Jan–Apr). The
   tip and early-shot inputs already carry what position adds. Kept 1 in 10 with 30 games.
+- **Tested — 2023-24 as a second history season** (downloaded in a copy: 1,319 games, starters, early shots, box
+  scores; same harness): 2026-27 2.22477 -> 2.23340 (clearly worse), Jan–Apr 2026 2.25075 -> 2.24893 (better). Not
+  adopted — two-year-old roles and rates blur this season's picks. History stays 2024-25 only.
   Context: our top pick ≈ StatsBench's published 17.7%; first-team accuracy ceiling ≈ 55–58% (tip winner scores
   first 66%); press reports the NBA asked partner books to stop "first-of" markets from Oct 2026.
 - **Adopted — 2024-25 season as player HISTORY** (`data_patches/history_2024_25.json.gz`, 0.7 MB: 1,321 games with
