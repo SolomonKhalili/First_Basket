@@ -769,6 +769,14 @@ NBA/
 - **Record vs tonight's opponent** (2026-11-19): `nba.vs_team_first_baskets` (first baskets / games played against
   that team, every stored game since `nba.data_since` = Oct 2024) -> card `vs_opp` {name: [fb, games, opp]} +
   `vs_since`; `recLine` shows it under "x/y scored first basket this season" for starters and backups.
+- **Missing-day fix** (2026-11-19): all 7 games of 11/06/26 were missing (Wembanyama showed 5/14 with the Spurs at
+  15 games) — `catchup_missing_games` only moves forward from the newest stored day, so a day that failed in the
+  middle was never retried. `nba.audit_recent_days` (in `sync_data`) now compares each day from 30 to 2 days ago
+  with ESPN's schedule once (`audits` key `day:YYYYMMDD`, re-asked if ESPN didn't answer) and files what's missing.
+- **Checked an Instagram first-basket tipster** (2026-11-19, reel transcribed locally): his method is tip winner ->
+  first possession, the player's share of his team's first shots, and first baskets in the last 10 games. All three
+  are already model inputs (tip chance in stage 1, early-shot share, last-10 rate; a pure first-shot share was tested
+  11/17 and not adopted). His two Spurs picks (Wembanyama +300, Vassell +820) were also our #1 and #2.
 - **Tested — a learned backup guess** (`experiments/backup_test.py`, 1,019 past games where one regular starter sat):
   a logit over minutes, recent starts, season starts, who started his earlier absences, last-game start. Jan–Apr
   2026 33.1% (current rule) vs 32.4% (learned); 2026-27 27.1% vs 28.6% (70 games). Not better in both — the current

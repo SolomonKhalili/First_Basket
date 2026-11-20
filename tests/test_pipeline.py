@@ -588,3 +588,12 @@ def test_injury_list_marks_a_cleared_player_active(project):
     got = nba._injury_list(project, "20261119", ("POR", "MIL"), other_team, {})
     assert [(r["name"], r["cleared"]) for r in got["POR"]] == [("Deni Avdija", True)]
     assert nba._injury_list(project, "20261119", ("POR", "MIL"), [], {})["POR"] == []
+
+
+def test_audit_recent_days_checks_each_finished_day_once(monkeypatch):
+    import nba
+    seen = []
+    monkeypatch.setattr(nba, "audit_season", lambda con, key, a, b: seen.append((key, a, b)) or (2 if a == b and key.endswith(a) else 0))
+    added = nba.audit_recent_days(None, days=4)
+    assert [k for k, _, _ in seen] == [f"day:{a}" for _, a, _ in seen] and len(seen) == 3   # 4, 3 and 2 days ago
+    assert added == 6
