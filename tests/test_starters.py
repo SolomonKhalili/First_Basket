@@ -565,3 +565,11 @@ def test_espn_forward_who_nba_listed_at_centre_becomes_the_centre():
                               espn_fetch=lambda gid: st.parse_espn_starters(_espn_summary({"SA": sa, "TOR": tor})))
     assert st.listed_center(con, "20261102", "SA") == "wemby"
     assert st.listed_center(con, "20261102", "TOR") is None      # no history, no ESPN C: no centre (model's backup)
+
+
+def test_injury_detail_includes_the_injury_itself():
+    import starters as st
+    p = {"details": {"type": "Hamstring", "location": "Leg", "detail": "Strain", "side": "Left", "returnDate": "2026-12-12"}}
+    assert st._detail(p) == "Left Hamstring Strain, est. return 12/12/2026"
+    p = {"details": {"type": "Back", "detail": "Not Specified", "returnDate": "2026-11-20"}}
+    assert st._detail(p) == "Back, est. return 11/20/2026"

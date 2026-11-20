@@ -509,10 +509,13 @@ NBA_TO_ESPN = {v: k for k, v in ESPN_TO_NBA.items()}
 
 
 def _detail(p: dict) -> str:
-    """'Left Toe, est. return 2026-11-13' from ESPN's details block; falls back to the short comment."""
+    """'Left Hamstring Strain, est. return 12/12/2026' from ESPN's details block (side, body part and — when ESPN
+    gives it, about 3 in 4 players — the injury itself: Strain / Sprain / Fracture / ...); falls back to the short
+    comment."""
     d = p.get("details") or {}
     if isinstance(d, dict) and (d.get("type") or d.get("returnDate")):
-        what = " ".join(x for x in (d.get("side"), d.get("type")) if x)
+        kind = d.get("detail") if str(d.get("detail") or "").lower() not in ("", "not specified", "other") else ""
+        what = " ".join(x for x in (d.get("side"), d.get("type"), kind) if x)
         ret = d.get("returnDate")
         m = re.match(r"(\d{4})-(\d{2})-(\d{2})", str(ret or ""))
         ret_txt = f"{m[2]}/{m[3]}/{m[1]}" if m else ret                 # month/day/year (owner's choice)

@@ -761,6 +761,8 @@ NBA/
   The Starters page (`drawStarters`) also shows a red note for each late scratch (injury_list entry now Out whose
   history had a non-Out status today), and the "Our picks use" note now compares against the confirmed five when
   it's out (it used to compare against the projected five and blamed NBA.com).
+- **Injury wording** (2026-11-19): `starters._detail` now adds ESPN's `details.detail` (Strain / Sprain / Fracture /
+  Inflammation …) after the side and body part — ESPN fills it for ~3 in 4 players; "Not Specified" is dropped.
 - **Tested — a learned backup guess** (`experiments/backup_test.py`, 1,019 past games where one regular starter sat):
   a logit over minutes, recent starts, season starts, who started his earlier absences, last-game start. Jan–Apr
   2026 33.1% (current rule) vs 32.4% (learned); 2026-27 27.1% vs 28.6% (70 games). Not better in both — the current

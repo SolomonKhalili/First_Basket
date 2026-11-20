@@ -73,7 +73,7 @@ viewer's own time zone.
   - **🏀 First team to score prediction** — the top team's logo and the same two tiles, then both teams' odds
     (FanDuel "Team to Score First" counts free throws; DraftKings "Team to Score 1st FG" doesn't).
   - **👥 Starters** (expected / confirmed) and **🩹 Injuries** (every listed player, always with the injury).
-- **🩹 Injuries** — every game: Out / Questionable / Active, with what changed today ("was questionable — now ruled
+- **🩹 Injuries** — every game: Out / Questionable / Active (the injury itself when ESPN gives it, e.g. "Left Hamstring Strain" — about 3 in 4 players; otherwise just the body part), with what changed today ("was questionable — now ruled
   out", "now in the confirmed starting lineup") and the likely replacement. Updates on every refresh.
 - **👥 Starters** — every game: NBA.com's projected five next to the confirmed five (~30 min before tip-off).
 - **📈 Odds tracker** — tabs **First basket** / **First team to score**; per player and book: opening → now, a small
