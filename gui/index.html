@@ -876,6 +876,12 @@ tr.bk-row .itag.bk { color: #fbbf24; }
 .rec-w { white-space: normal; }
 .sub2 { white-space: normal; }
 .nolineup { font-size: 12.5px; color: var(--muted); font-weight: 600; }
+.alerts { display: grid; gap: 6px; margin: 0 0 10px; }
+.alert { border-radius: 10px; padding: 9px 12px; font-size: 13.5px; line-height: 1.35; font-weight: 600;
+         border: 1px solid; }
+.alert b { font-weight: 800; }
+.alert-out { background: rgba(229, 72, 77, .14); border-color: rgba(229, 72, 77, .55); color: var(--text); }
+.alert-q { background: rgba(245, 166, 35, .13); border-color: rgba(245, 166, 35, .5); color: var(--text); }
 .itag.in.ok { color: var(--good); }
 .ctile.empty .t-none { color: var(--muted); font-size: 13px; margin-top: 14px; }
 @media (min-width: 900px) {                 /* laptop: the two teams side by side on Injuries and Starters */
@@ -1276,6 +1282,23 @@ function moveArrow(c, book, name, price) {
   return m < 0 ? `<span class="mv dn" title="${book} opened at ${american(o)}, now ${american(price)}: the payout DROPPED — the sportsbook thinks he's more likely now">↓</span>`
                : `<span class="mv up" title="${book} opened at ${american(o)}, now ${american(price)}: the payout went UP — the sportsbook thinks he's less likely now">↑</span>`;
 }
+/* Important warnings at the top of a card (added 2026-11-19):
+   red    = a player who was in our top 5 earlier today is now out of the starting five (ruled out / not starting)
+   yellow = a player in our top 5 right now is questionable (game-time decision) */
+function cardAlerts(c) {
+  if (c.earlier) return "";
+  const out = (c.dropped || []).map((d) => `<div class="alert alert-out">🚨 <b>${esc(d.name)}</b> (was our #${d.rank} pick) is ${esc(d.why)} — picks updated without him.</div>`);
+  const top = new Set([...(c.picks || []).map((p) => p[0]),
+    ...Object.entries(c.probs_fg || {}).sort((a, b) => b[1] - a[1]).slice(0, 5).map((x) => x[0])]);
+  const rank = (n) => 1 + (c.picks || []).findIndex((p) => p[0] === n);
+  const q = Object.entries(c.injuries || {}).filter(([n, s]) => top.has(n) && !/^out$/i.test(s)).map(([n]) => {
+    const b = (c.backup_chance || {})[n];
+    return `<div class="alert alert-q">⚠️ <b>${esc(n)}</b>${rank(n) ? ` (our #${rank(n)} pick)` : " (in our top 5)"} is questionable — game-time decision${b ? `. If he sits: ${esc(b.name)}` : ""}.</div>`;
+  });
+  const all = [...out, ...q];
+  return all.length ? `<div class="alerts">${all.join("")}</div>` : "";
+}
+
 function card(c, i) {
   const top = c.picks[0];
   // His real record this season: first baskets / games played
@@ -1377,6 +1400,7 @@ function card(c, i) {
       </div>
     </div>
     <div class="card-body" style="--i:${i}">
+      ${cardAlerts(c)}
       <div class="verdict"></div>
       <div class="facts tip-top" style="--i:${i}">${tipBlock}</div>
       <div class="sec-title">🏀 First basket prediction</div>

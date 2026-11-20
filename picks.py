@@ -425,3 +425,34 @@ def scorecard(rows: list, today: str = "") -> list:
                   ["Re-created = games before live picks began: picked afterwards, week by week, with the real"],
                   ["starting lineup and only games played before (as if we had run nba.py before tip-off)."]]
     return lines
+
+
+def _nn(name) -> str:
+    return " ".join(str(name or "").lower().replace(".", "").replace("'", "").split())
+
+
+def dropped_from_top5(con, game_id, game_date: str, starters_now: list, statuses: dict, confirmed: bool) -> list:
+    """Players who were in our top 5 earlier today (any logged pick for this game on game day) but are no longer in
+    the starting five — ruled out, or left out of the lineup. The card shows a warning for each (added 2026-11-19).
+    statuses = {name: injury status}. -> [{'name', 'team', 'rank', 'prob', 'why'}] best rank first."""
+    ensure_table(con)
+    now = {_nn(n) for n in starters_now}
+    st_by = {_nn(k): v for k, v in (statuses or {}).items()}
+    day = f"{game_date[:4]}-{game_date[4:6]}-{game_date[6:8]}"
+    seen = {}
+    for (pj,) in con.execute("SELECT players_json FROM pick_log WHERE game_id = ? AND logged_at >= ? ORDER BY id",
+                             (str(game_id), day)):
+        for r, p in enumerate(json.loads(pj)[:5], 1):
+            seen[_nn(p["name"])] = {"name": p["name"], "team": p.get("team", ""), "rank": r, "prob": float(p["prob"])}
+    out = []
+    for k, p in seen.items():
+        if k in now:
+            continue
+        s = str(st_by.get(k, "")).lower()
+        if s in ("available", "active", "probable"):     # healthy: the coach just didn't start him
+            s = ""
+        why = ("ruled out" if s == "out" else
+               f"listed {s}" if s else
+               "not in the confirmed starting lineup" if confirmed else "no longer expected to start")
+        out.append({**p, "why": why})
+    return sorted(out, key=lambda x: x["rank"])

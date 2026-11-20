@@ -1327,6 +1327,13 @@ def predict_today(first_pass: bool = True, teams: set = frozenset(), ui=None) ->
                         pass
         top5 = [(info[i]['name'], info[i]['team'], float(probs[i]), pm.fair_american(float(probs[i])))
                 for i in order[:5]]
+        # a player from our top 5 earlier today who's now out of the starting five (injury or lineup change)
+        try:
+            all_status = {r["name"]: r["status"] for r in inj_report if r.get("status")}
+            dropped = picks.dropped_from_top5(con, game_id, game_date, [p["name"] for p in info], all_status,
+                                              label == "CONFIRMED")
+        except Exception:  # noqa: BLE001 — a warning never blocks the picks
+            dropped = []
         everyone = [{**info[i], "prob": float(probs[i]),                         # all 10 starters, for EV
                      **({"prob_fg": float(probs_fg[i])} if probs_fg is not None else {})} for i in order]
         season_counts = season_first_baskets(con, [p['id'] for p in info] + [b['id'] for b in backup_chance.values()], game_date)
@@ -1354,6 +1361,7 @@ def predict_today(first_pass: bool = True, teams: set = frozenset(), ui=None) ->
             "home": home_team, "away": away_team,
             "home_starters": home_starters, "away_starters": away_starters,
             "injuries": injuries, "injury_list": injury_list, "backups": backups, "backup_chance": backup_chance, "notes": notes,
+            "dropped": dropped,
         })
 
     st.save_seen_lineups(con)                  # keep NBA.com's Expected and Confirmed lists (Lineups tab)

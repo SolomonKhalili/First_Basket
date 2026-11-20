@@ -332,3 +332,23 @@ def test_team_stretch_keeps_shares_and_totals():
     assert abs(q.sum() - 1) < 1e-12 and q[home].sum() > 0.6        # the favourite gets more
     assert np.allclose(q[home] / q[home].sum(), p[home] / p[home].sum())   # same shares inside the team
     assert np.allclose(pm.stretch_teams(p, home, 1.0), p)
+
+
+def test_dropped_from_top5_warns_for_ruled_out_and_benched():
+    import sqlite3, picks
+    con = sqlite3.connect(":memory:")
+    players = [{"id": str(i), "name": n, "team": "POR", "prob": p}
+               for i, (n, p) in enumerate([("A Star", .2), ("Deni Avdija", .15), ("C Guy", .12), ("D Guy", .1),
+                                           ("E Guy", .09), ("F Guy", .05)])]
+    picks.log_pick(con, {"game_id": "1", "game_date": "20261119", "lineup_type": "EXPECTED", "lineup_sig": "a",
+                         "model_id": "m", "players": players, "logged_at": "2026-11-19T18:00:00"})
+    now = ["A Star", "C Guy", "D Guy", "E Guy", "F Guy", "New Guy"]
+    out = picks.dropped_from_top5(con, "1", "20261119", now, {"Deni Avdija": "Out"}, False)
+    assert [(d["name"], d["rank"], d["why"]) for d in out] == [("Deni Avdija", 2, "ruled out")]
+    out = picks.dropped_from_top5(con, "1", "20261119", now, {}, True)
+    assert out[0]["why"] == "not in the confirmed starting lineup"
+    out = picks.dropped_from_top5(con, "1", "20261119", now, {"Deni Avdija": "Available"}, True)
+    assert out[0]["why"] == "not in the confirmed starting lineup"
+    # nothing dropped when he's still starting; picks from an earlier day don't count
+    assert picks.dropped_from_top5(con, "1", "20261119", now + ["Deni Avdija"], {}, True) == []
+    assert picks.dropped_from_top5(con, "1", "20261120", now, {}, True) == []

@@ -65,6 +65,9 @@ viewer's own time zone.
     "2/13 scored first basket" = he scored first in 2 of his 13 games this season). **💰 value** only for top-5 players and only for the team
     we favor. A questionable starter shows ⚠️ and his likely **backup**; if the backup's chance (whole lineup
     re-scored) would make the top 5, he gets his own "↳ only if X sits" row.
+  - **🚨 Warnings at the top of the card** — red: a player who was in our top 5 earlier today is now out of the
+    starting five ("Deni Avdija (was our #4 pick) is ruled out — picks updated without him"); yellow: a player in our
+    top 5 right now is questionable, with who'd likely start if he sits.
   - **🏀 First team to score prediction** — the top team's logo and the same two tiles, then both teams' odds
     (FanDuel "Team to Score First" counts free throws; DraftKings "Team to Score 1st FG" doesn't).
   - **👥 Starters** (expected / confirmed) and **🩹 Injuries** (every listed player, always with the injury).

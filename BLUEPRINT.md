@@ -753,6 +753,16 @@ NBA/
   2.2422 vs 2.2578); best blend (80/20) gains 0.0003 — noise, not adopted. FanDuel blend still ~2026-12-20.
 - **Backup players:** a questionable starter's likely replacement is re-scored with the whole lineup (`nba.py`
   `score_lineup`, `backups` / `backup_chance` on each card) and gets a table row when he'd make that book's top 5.
+- **Top-5 warnings** (2026-11-19): `picks.dropped_from_top5` reads today's `pick_log` for the game — anyone who was in
+  a logged top 5 on game day but isn't in the current starting five goes in the card's `dropped` list with why
+  ("ruled out", "listed doubtful", "not in the confirmed starting lineup"; healthy-but-benched counts as not starting).
+  `index.html` `cardAlerts` shows them as red banners, plus a yellow banner for each questionable player in the
+  current FanDuel or DraftKings top 5. Uses the FanDuel ranking for "was our #N pick" (the log stores that one).
+- **Tested — a learned backup guess** (`experiments/backup_test.py`, 1,019 past games where one regular starter sat):
+  a logit over minutes, recent starts, season starts, who started his earlier absences, last-game start. Jan–Apr
+  2026 33.1% (current rule) vs 32.4% (learned); 2026-27 27.1% vs 28.6% (70 games). Not better in both — the current
+  rule stays. Tonight's check: POR started Jayson Kent for Avdija (we guessed Jrue Holiday, the lineup site Scoot
+  Henderson) — coaches' choices for a one-night fill-in are hard to call.
 - **Deep research** (`reports/First basket model improvements.md`, 16 ranked ideas) — tested the top ones, none adopted:
   home court in stage 1 (current logistic already better: 0.6749 / 0.6751 vs 0.6755 / 0.6762); both teams' first
   scorers as extra step-2 examples (`both_teams_test.py`, worse at every weight); first shot attempt as extra examples
