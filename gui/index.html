@@ -1150,7 +1150,7 @@ function tile(g) {
   let res = "";
   if (g.first_basket) {
     const r = g.result;
-    res = `<div class="res">🏀 First: <b>${esc(g.first_basket.name)}</b>${r ? `<span class="tag ${r}">${rankLabel(g)}</span>` : ""}
+    res = `<div class="res">🏀 First: <b>${esc(g.first_basket.name)}</b>${g.first_basket.team ? ` (${esc(g.first_basket.team)})` : ""}${r ? `<span class="tag ${r}">${rankLabel(g)}</span>` : ""}
       ${r && r !== "hit" && g.our_pick && !g.past ? `<br>we had ${esc(g.our_pick.name)}` : ""}</div>`;
   }
   let tipRes = "";
@@ -1678,6 +1678,16 @@ function countUp(el) {
 }
 
 /* Card headers follow the live board: countdown → LIVE score → Final, plus the first-basket verdict. */
+/* "🏀 First team: MEM — our call ✅" under the first-basket result (added 2026-11-19) */
+function teamResult(g, el) {
+  const t = g.first_basket && g.first_basket.team;
+  if (!t) return "";
+  const c = (lastResult?.cards || []).find((x) => x.home === el.dataset.home && x.away === el.dataset.away);
+  const ft = c && c.first_team, fav = ft ? (ft[c.home] >= ft[c.away] ? c.home : c.away) : null;
+  const call = fav ? (fav === t ? " — our call ✅" : " — we had the other team ❌") : "";
+  return `<div class="tipres">🏀 First team to score: <b>${esc(TEAM_NAMES[t] || t)}</b>${call}</div>`;
+}
+
 /* " · ⛹️ Tip: Wembanyama (SA) won it — our call ✅" under the first-basket result (added 2026-11-19) */
 function tipResult(g, el) {
   if (!g.tip_winner && !g.tip_winner_team) return "";
@@ -1707,7 +1717,7 @@ function updateCardsLive() {
       const text = { hit: `✓ ${esc(g.first_basket.name)} scored first — our top pick!`,
                      top3: `🏀 ${esc(g.first_basket.name)} scored first — ${g.rank ? `our #${g.rank} pick` : "in our top 3"}`,
                      miss: `🏀 <b>${esc(g.first_basket.name)}</b> scored first${g.rank ? ` — our <b>#${g.rank}</b> pick` : " — <b>not in our picks</b>"}` }[r];
-      const tip = tipResult(g, el);
+      const tip = teamResult(g, el) + tipResult(g, el);
       if (v.dataset.k !== r + g.first_basket.name + tip) { v.className = `verdict on ${r}`; v.innerHTML = text + tip; v.dataset.k = r + g.first_basket.name + tip; }
       const row = [...el.querySelectorAll("tbody tr")].find((t) => normName(t.dataset.name) === normName(g.first_basket.name));
       if (row) {                                   // green row + say it in words
