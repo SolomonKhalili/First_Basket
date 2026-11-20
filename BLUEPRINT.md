@@ -790,9 +790,11 @@ NBA/
   box-score lines are fewer than its players with minutes. The health check flags short box scores too. Checked
   player by player against ESPN for every game since Oct 2025, and every team's game count against the standings.
 - **Track record safety** (2026-11-19): adding the 7 missing games grew the training data, which re-grades every
-  re-created pick (`season_backtest.fill_last_season`); that run deleted them first and stopped halfway, so the
-  website showed 17 games instead of 1,457 until the next run. The old picks are now kept until the new ones are
-  all made (restored if anything fails, or if far fewer come out).
+  re-created pick (`season_backtest.fill_last_season`); it deleted them first and wrote the new ones one by one,
+  and the website (published every minute during games) caught it mid-way: 17 games instead of 1,457. Now the
+  re-grade runs on a private in-memory copy of the database and the new picks replace the old ones in ONE
+  transaction (anyone reading sees the old picks or the new ones, never a half-empty record); if it fails or makes
+  far fewer picks, nothing changes.
 - **Tip result on the card** (2026-11-19): once a game has a first basket, the result box also says who won the
   opening tip and whether we called it (`static_site.html` reads ESPN's first "Jumpball" play — its first
   participant won; `index.html` `tipResult`). The result box had shrunk to 64 px wide: a `.miss` rule meant for
