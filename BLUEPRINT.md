@@ -769,6 +769,10 @@ NBA/
 - **Tested — 2023-24 as a second history season** (downloaded in a copy: 1,319 games, starters, early shots, box
   scores; same harness): 2026-27 2.22477 -> 2.23340 (clearly worse), Jan–Apr 2026 2.25075 -> 2.24893 (better). Not
   adopted — two-year-old roles and rates blur this season's picks. History stays 2024-25 only.
+- **Tested — fading history** (`fade_test.py`): each past game counts 0.5^(age / half-life), for the first-basket
+  rate alone or also minutes/points/shots/shooting, half-lives 730/365/180/90 days, with and without 2023-24. Every
+  version made 2026-27 log-loss worse (best 2.22541 vs 2.22477) while Jan–Apr improved a little (best 2.25005 vs
+  2.25075). Not adopted; every past game still counts equally.
   Context: our top pick ≈ StatsBench's published 17.7%; first-team accuracy ceiling ≈ 55–58% (tip winner scores
   first 66%); press reports the NBA asked partner books to stop "first-of" markets from Oct 2026.
 - **Adopted — 2024-25 season as player HISTORY** (`data_patches/history_2024_25.json.gz`, 0.7 MB: 1,321 games with

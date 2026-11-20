@@ -174,6 +174,7 @@ The final step mixes in each starter's season first-basket rate (25% FanDuel mod
 
 We also tried giving new players a smarter starting guess (by position or by how much they score) — no better than the plain 1 in 10, so it stays.
 Adding the 2023-24 season as extra history made this season's picks worse, so history stays at 2024-25 only.
+Making older games count less ("fading") also didn't help this season, so every past game still counts the same.
 
 ### Results (walk-forward test, 215 games of 2026-27)
 
