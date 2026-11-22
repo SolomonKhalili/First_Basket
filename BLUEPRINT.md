@@ -107,6 +107,9 @@ session: §11 step 0. Full details of every change are in §10, newest first.)*
   test periods); us-vs-DraftKings all season; times in the viewer's time zone; #1 gold / #2 blue; 30-second checks
   before tip-off + overnight checks; live job restarts itself with new code; Mac syncs every minute.
 
+- **11/22 (2 AM, cloud):** late West Coast games now get filed after midnight (tip result no longer "not in yet"
+  until 4 AM); a test that could write into the real database fixed.
+
 **Talking to the owner:** plain words, short answers, one clear next step. Not technical; got lost in git/branch
 talk on 11/19 — keep git out of the conversation (hard rule 8) and just say what was saved. Owner wants
 `README.md` / this file kept up to date without being asked.
@@ -392,7 +395,7 @@ fallback 0.6354 / 0.6323 → NBA.com's listed C in training too 0.6299 / 0.6309.
 | First-shot data + share | `nba.first_shots`, `build_features.first_shot_share` | ✅ Recorded for every game; tested as a model input and not adopted (§7.1) |
 | Early-shot data + share | `nba.early_shots`, `build_features.early_shot_share` | ✅ Each team's first 5 attempts recorded for every game; **used by the model** (stage 2) |
 
-**Tests:** 203 passing in 16 files (`python3 -m pytest`, 2026-11-19). Earlier breakdown (2026-11-17): 115 passing — `test_starters.py` (45), `test_pipeline.py` (29: sync, retrain decision, incremental build incl. late-labelled games, label guards, tip-rate rule), `test_display.py` (10), `test_tip_model.py` (8), `test_picks.py` (19), `test_pregame_model.py` (4). The incremental-build test was checked by re-introducing the old zero-games bug: it fails, as it should.
+**Tests:** 274 passing (`python3 -m pytest`, 2026-11-22). Earlier breakdown (2026-11-17): 115 passing — `test_starters.py` (45), `test_pipeline.py` (29: sync, retrain decision, incremental build incl. late-labelled games, label guards, tip-rate rule), `test_display.py` (10), `test_tip_model.py` (8), `test_picks.py` (19), `test_pregame_model.py` (4). The incremental-build test was checked by re-introducing the old zero-games bug: it fails, as it should.
 
 ### 4a. App, website and automation (2026-11-18)
 
@@ -623,7 +626,7 @@ NBA/
 ├── pregame_model.json      # active model weights + walk-forward results
 ├── train_pregame.py        # training, walk-forward test, keep-previous check
 ├── build_features.py       # training matrices (incremental) + player game logs
-├── tests/                  # 203 tests in 16 files (python3 -m pytest)
+├── tests/                  # 274 tests (python3 -m pytest)
 ├── nba_first_basket.db     # SQLite: games, first_baskets, lineups, official_lineups, first_shots, early_shots, pick_log (+ legacy predictions)
 ├── player_game_logs.pkl    # per-player game logs
 ├── X_train.npy, y_train.npy, groups.npy, game_ids.json, feature_names.json, meta.json   # training matrices
@@ -663,6 +666,22 @@ NBA/
 ---
 
 ## 10. Change log (newest first)
+
+### 2026-11-22 (2 AM, cloud session) — last night's late games filed the same night; tests can't reach the real database
+
+- **Bug (owner's screenshot):** BOS @ SAC (10 PM ET tip, 11/21) showed "Tip: … result not in yet" after it was final.
+  At midnight ET the live run treated it as a new day and quit (`new_day`), and the Cloudflare timer starts nothing
+  between midnight and 4 AM, so late West Coast games waited for the 4 AM nightly run.
+- **Fix (`publish.py`):** `day_pending(d)` (ESPN scoreboard: any game not started / in progress / finished but unfiled;
+  postponed and cancelled games ignored; `should_run` uses it). After midnight, `live()` keeps filing the previous
+  day's games (`late`) until none is pending, up to 4 AM ET (`LATE_GAMES_UNTIL`), publishing after each filing. If the
+  evening run already ended, the overnight odds check (`--odds`, every 30 min from midnight) hands over to
+  `live(out, day=yesterday)` when yesterday still has a pending game before 4 AM. 4 new tests.
+- **Test bug fixed:** `test_job_runs_one_at_a_time` ended before its background run finished; the run could then
+  reach the real `predict_today` (full update, real network) and write into `nba_first_basket.db` (e.g. a half-filed
+  MEM @ GS row). The test now waits for the run. Found with a Python audit hook logging every connection to the
+  real database file; 4 full runs after the fix left it unchanged.
+- **Verified:** 274 tests pass.
 
 ### 2026-11-19 (morning, later) — the Mac takes GitHub's code by itself
 

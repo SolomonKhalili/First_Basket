@@ -131,3 +131,47 @@ def test_republish_page_uses_the_sites_current_data(tmp_path, monkeypatch):
     assert publish.republish_page(tmp_path) is True
     d = json.loads((tmp_path / "data.json").read_text())
     assert d["iv"] == "IV" and d["ct"] == "CT" and "u" in d["users"] and (tmp_path / "index.html").exists()
+
+
+def test_late_games_are_filed_after_midnight(monkeypatch, tmp_path):
+    # the run starts 11:50 PM on 11/21; by the next check it's 12:10 AM, last night's late game is still unfiled:
+    # keep going and file it, then stop once nothing is left (instead of quitting at midnight)
+    from datetime import datetime
+    times = iter([datetime(2026, 11, 21, 23, 50, tzinfo=publish.ET)] + [datetime(2026, 11, 22, 0, 10 + i, tzinfo=publish.ET)
+                                                                         for i in range(20)])
+    pending, asked_days = iter([True, False]), []
+    monkeypatch.setattr(publish, "_now_et", lambda: next(times))
+    monkeypatch.setattr(publish, "day_pending", lambda d: asked_days.append(d) or next(pending))
+    published, saved = _run(monkeypatch, tmp_path, [_result(450), _result(450)], filed=[1])
+    assert asked_days == ["20261121", "20261121"]          # it looked after the right (previous) day
+    assert published == [450, 450]                          # first publish + the one after filing the late game
+    assert saved == [1]
+
+
+def test_quits_at_midnight_when_last_night_is_done(monkeypatch, tmp_path):
+    from datetime import datetime
+    times = iter([datetime(2026, 11, 21, 23, 50, tzinfo=publish.ET), datetime(2026, 11, 22, 0, 10, tzinfo=publish.ET)])
+    monkeypatch.setattr(publish, "_now_et", lambda: next(times))
+    monkeypatch.setattr(publish, "day_pending", lambda d: False)
+    published, saved = _run(monkeypatch, tmp_path, [_result(450)])
+    assert published == [450] and saved == [1]
+
+
+def test_overnight_odds_check_hands_over_to_filing_last_night(monkeypatch, tmp_path):
+    from datetime import datetime
+    calls = []
+    monkeypatch.setattr(publish, "_now_et", lambda: datetime(2026, 11, 22, 1, 0, tzinfo=publish.ET))
+    monkeypatch.setattr(publish, "day_pending", lambda d: d == "20261121")
+    monkeypatch.setattr(publish, "live", lambda out, once=False, day=None: calls.append(day) or 0)
+    assert publish.odds_only(tmp_path) == 0 and calls == ["20261121"]
+
+
+def test_postponed_games_dont_keep_a_day_open(monkeypatch):
+    import requests
+
+    class R:
+        def json(self): return {"events": [{"id": "1", "status": {"type": {"state": "post", "name": "STATUS_POSTPONED"}}},
+                                           {"id": "2", "status": {"type": {"state": "post", "name": "STATUS_FINAL"}}}]}
+    monkeypatch.setattr(requests, "get", lambda *a, **k: R())
+    monkeypatch.setattr(publish, "filed_games", lambda ids: {"2"})
+    assert publish.day_pending("20261121") is False
