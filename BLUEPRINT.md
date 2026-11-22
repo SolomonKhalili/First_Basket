@@ -108,7 +108,8 @@ session: §11 step 0. Full details of every change are in §10, newest first.)*
   before tip-off + overnight checks; live job restarts itself with new code; Mac syncs every minute.
 
 - **11/22 (2 AM, cloud):** late West Coast games now get filed after midnight (tip result no longer "not in yet"
-  until 4 AM); a test that could write into the real database fixed.
+  until 4 AM); a test that could write into the real database fixed; home team on the left, "vs" instead of "@",
+  start times kept on finished games.
 
 **Talking to the owner:** plain words, short answers, one clear next step. Not technical; got lost in git/branch
 talk on 11/19 — keep git out of the conversation (hard rule 8) and just say what was saved. Owner wants
@@ -667,7 +668,7 @@ NBA/
 
 ## 10. Change log (newest first)
 
-### 2026-11-22 (2 AM, cloud session) — last night's late games filed the same night; tests can't reach the real database
+### 2026-11-22 (2 AM, cloud session) — late games filed the same night; home team on the left; tests can't reach the real database
 
 - **Bug (owner's screenshot):** BOS @ SAC (10 PM ET tip, 11/21) showed "Tip: … result not in yet" after it was final.
   At midnight ET the live run treated it as a new day and quit (`new_day`), and the Cloudflare timer starts nothing
@@ -681,6 +682,13 @@ NBA/
   reach the real `predict_today` (full update, real network) and write into `nba_first_basket.db` (e.g. a half-filed
   MEM @ GS row). The test now waits for the run. Found with a Python audit hook logging every connection to the
   real database file; 4 full runs after the fix left it unchanged.
+- **Layout (owner's request):** **home team on the left, away on the right, "vs" instead of "@"** everywhere games
+  are shown (tiles, card headers, tip-off block and bars, "Scores first", starters, team-first table, odds tracker,
+  best bets, My bets, parlays, toasts, Data tables — `BOS @ SAC` cells display as `SAC vs BOS`; stored data keeps
+  `AWAY @ HOME`). Scores read home–away; team colour strips run home → away. The "Left team = away, right team =
+  home" hint lines are gone. **Finished games keep their start time** (tiles, card headers, Yesterday:
+  `gui.day_cards` now passes ESPN's `start_utc`). Fixed: a Yesterday tile with no first scorer showed "Our pick" twice.
+  Checked by screenshot on a scratch copy with the cloud's data.
 - **Verified:** 274 tests pass.
 
 ### 2026-11-19 (morning, later) — the Mac takes GitHub's code by itself
