@@ -701,6 +701,9 @@ NBA/
   `SITE_DEPLOY_KEY`, already set for `update-site.yml`). Works day and night, live job running or not; fresh data
   still comes from the live job / nightly run. (11/22 2:30 AM the owner had to start the live job by hand from the
   Mac: `gh workflow run live-picks.yml -R SolomonKhalili/first-basket -f kind=live`; site updated 2:35 AM.)
+- **Website review fixes (7:50 AM):** the Data table header now reads "Game (home vs away)" (rows had already
+  switched); the Yesterday / Today switch no longer shows under the Data, Injuries, Starters and Odds pages
+  (`body.data-mode` hides `.dayswitch`, `#yestSum`). Checked in a browser on a scratch copy.
 - **Verified:** 275 tests pass.
 
 ### 2026-11-19 (morning, later) — the Mac takes GitHub's code by itself

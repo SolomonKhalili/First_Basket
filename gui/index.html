@@ -449,7 +449,8 @@ details[open] summary::before { content: "▾ "; }
 .learn-head .step-of { white-space: nowrap; }
 
 /* ── Data view: the CSV and the spreadsheet as tabs ── */
-body.data-mode .board-wrap, body.data-mode #progress, body.data-mode #error, body.data-mode .layout { display: none !important; }
+body.data-mode .board-wrap, body.data-mode #progress, body.data-mode #error, body.data-mode .layout,
+body.data-mode .dayswitch, body.data-mode #yestSum, body.data-mode #bestBets { display: none !important; }
 .data-view { margin-top: 22px; }
 .data-top { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; margin-bottom: 14px; }
 .data-top h2 { margin: 0; font-family: var(--display); font-size: 28px; font-weight: 800; text-transform: uppercase; letter-spacing: .02em; }
@@ -2500,7 +2501,7 @@ function renderData() {
   renderPlayerSummary(d);
   const rows = filteredRows();
   $("dcount").textContent = `Showing ${rows.length.toLocaleString()} of ${d.rows.length.toLocaleString()}`;
-  const head = d.columns.map((c, i) => `<th data-col="${i}" title="Sort by this column">${esc(c.label)}${
+  const head = d.columns.map((c, i) => `<th data-col="${i}" title="Sort by this column">${esc(String(c.label).replace("(away @ home)", "(home vs away)"))}${
     dstate.sortCol === i ? `<span class="arr">${dstate.sortDir > 0 ? "▲" : "▼"}</span>` : ""}</th>`).join("");
   const body = rows.length ? rows.map((r) => `<tr>${r.map((v, i) => {
     const c = d.columns[i];
