@@ -112,6 +112,10 @@ session: §11 step 0. Full details of every change are in §10, newest first.)*
   start times kept on finished games; **every change to the page now republishes the website within minutes**
   (`page-on-push.yml`).
 
+**Owner's standing rule (2026-11-22): always put changes live right away.** In a cloud session, open the pull
+request and merge it yourself straight away; don't ask for approval or send the owner a merge link. Website: the
+page republishes within ~2 min of a merge (`page-on-push.yml`); the Mac follows `main` by itself.
+
 **Talking to the owner:** plain words, short answers, one clear next step. Not technical; got lost in git/branch
 talk on 11/19 — keep git out of the conversation (hard rule 8) and just say what was saved. Owner wants
 `README.md` / this file kept up to date without being asked.
