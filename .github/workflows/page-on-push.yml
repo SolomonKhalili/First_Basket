@@ -1,0 +1,49 @@
+# Owner: "anytime we make an update, it should fix the website right away."
+# Every change to the app's page or code that lands on main republishes the website's PAGE within a couple of
+# minutes, using the site's current (encrypted) data — day or night, whether or not the live job is running.
+# The live job (SolomonKhalili/first-basket) still brings fresh data and restarts itself on new code when running.
+name: page-on-push
+
+on:
+  push:
+    branches: [main]
+    paths: ["gui/**", "publish.py", "gui.py"]
+  workflow_dispatch:
+
+concurrency:
+  group: page-on-push
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  page:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    env:
+      TZ: America/New_York
+      SITE_DATA_KEY: ${{ secrets.SITE_DATA_KEY }}
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-python@v7
+        with:
+          python-version: "3.12"
+          cache: pip
+      - name: Install
+        run: pip install -q -r requirements.txt cryptography
+      - name: Build the new page with the site's current data
+        run: python publish.py --page-only --out site_out
+      - name: Publish it
+        env:
+          DEPLOY_KEY: ${{ secrets.SITE_DEPLOY_KEY }}
+        run: |
+          [ -f site_out/index.html ] || { echo "nothing to publish"; exit 0; }
+          mkdir -p ~/.ssh && printf '%s\n' "$DEPLOY_KEY" > ~/.ssh/site_key && chmod 600 ~/.ssh/site_key
+          export GIT_SSH_COMMAND="ssh -i ~/.ssh/site_key -o StrictHostKeyChecking=accept-new"
+          cd site_out
+          git init -q -b main
+          git -c user.name="First Basket bot" -c user.email="bot@users.noreply.github.com" add -A
+          git -c user.name="First Basket bot" -c user.email="bot@users.noreply.github.com" commit -q -m "Page $(date '+%Y-%m-%d %H:%M %Z')"
+          git push -q --force git@github.com:SolomonKhalili/first-basket.git HEAD:gh-pages
+          echo "published the new page"

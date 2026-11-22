@@ -570,6 +570,10 @@ def main(argv) -> int:
         print(f"should run ({kind}): {'yes' if ok else 'no — no upcoming games today'}")
         return 0 if ok else 3
     out = Path(argv[argv.index("--out") + 1]) if "--out" in argv else HERE / "site_out"
+    if "--page-only" in argv:                            # new code on main: the new page now, the site's current data
+        ok = republish_page(out)
+        print("page rebuilt with the site's current data" if ok else "couldn't read the site's current data")
+        return 0 if ok else 1
     if "--odds" in argv:                                 # overnight: odds only (opening prices)
         return odds_only(out)
     if "--live" in argv or "--once" in argv:

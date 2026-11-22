@@ -109,7 +109,8 @@ session: §11 step 0. Full details of every change are in §10, newest first.)*
 
 - **11/22 (2 AM, cloud):** late West Coast games now get filed after midnight (tip result no longer "not in yet"
   until 4 AM); a test that could write into the real database fixed; home team on the left, "vs" instead of "@",
-  start times kept on finished games.
+  start times kept on finished games; **every change to the page now republishes the website within minutes**
+  (`page-on-push.yml`).
 
 **Talking to the owner:** plain words, short answers, one clear next step. Not technical; got lost in git/branch
 talk on 11/19 — keep git out of the conversation (hard rule 8) and just say what was saved. Owner wants
@@ -396,7 +397,7 @@ fallback 0.6354 / 0.6323 → NBA.com's listed C in training too 0.6299 / 0.6309.
 | First-shot data + share | `nba.first_shots`, `build_features.first_shot_share` | ✅ Recorded for every game; tested as a model input and not adopted (§7.1) |
 | Early-shot data + share | `nba.early_shots`, `build_features.early_shot_share` | ✅ Each team's first 5 attempts recorded for every game; **used by the model** (stage 2) |
 
-**Tests:** 274 passing (`python3 -m pytest`, 2026-11-22). Earlier breakdown (2026-11-17): 115 passing — `test_starters.py` (45), `test_pipeline.py` (29: sync, retrain decision, incremental build incl. late-labelled games, label guards, tip-rate rule), `test_display.py` (10), `test_tip_model.py` (8), `test_picks.py` (19), `test_pregame_model.py` (4). The incremental-build test was checked by re-introducing the old zero-games bug: it fails, as it should.
+**Tests:** 275 passing (`python3 -m pytest`, 2026-11-22). Earlier breakdown (2026-11-17): 115 passing — `test_starters.py` (45), `test_pipeline.py` (29: sync, retrain decision, incremental build incl. late-labelled games, label guards, tip-rate rule), `test_display.py` (10), `test_tip_model.py` (8), `test_picks.py` (19), `test_pregame_model.py` (4). The incremental-build test was checked by re-introducing the old zero-games bug: it fails, as it should.
 
 ### 4a. App, website and automation (2026-11-18)
 
@@ -627,7 +628,7 @@ NBA/
 ├── pregame_model.json      # active model weights + walk-forward results
 ├── train_pregame.py        # training, walk-forward test, keep-previous check
 ├── build_features.py       # training matrices (incremental) + player game logs
-├── tests/                  # 274 tests (python3 -m pytest)
+├── tests/                  # 275 tests (python3 -m pytest)
 ├── nba_first_basket.db     # SQLite: games, first_baskets, lineups, official_lineups, first_shots, early_shots, pick_log (+ legacy predictions)
 ├── player_game_logs.pkl    # per-player game logs
 ├── X_train.npy, y_train.npy, groups.npy, game_ids.json, feature_names.json, meta.json   # training matrices
@@ -689,7 +690,14 @@ NBA/
   home" hint lines are gone. **Finished games keep their start time** (tiles, card headers, Yesterday:
   `gui.day_cards` now passes ESPN's `start_utc`). Fixed: a Yesterday tile with no first scorer showed "Our pick" twice.
   Checked by screenshot on a scratch copy with the cloud's data.
-- **Verified:** 274 tests pass.
+- **Website updates right away on every change (owner: "anytime we make an update, it should fix the website right
+  away"):** new workflow `.github/workflows/page-on-push.yml` in this private repo — on every push to `main` touching
+  `gui/**`, `gui.py` or `publish.py` it runs `python publish.py --page-only` (`republish_page`: the new page with
+  the site's current encrypted data) and force-pushes it to the website's `gh-pages` (secrets `SITE_DATA_KEY`,
+  `SITE_DEPLOY_KEY`, already set for `update-site.yml`). Works day and night, live job running or not; fresh data
+  still comes from the live job / nightly run. (11/22 2:30 AM the owner had to start the live job by hand from the
+  Mac: `gh workflow run live-picks.yml -R SolomonKhalili/first-basket -f kind=live`; site updated 2:35 AM.)
+- **Verified:** 275 tests pass.
 
 ### 2026-11-19 (morning, later) — the Mac takes GitHub's code by itself
 

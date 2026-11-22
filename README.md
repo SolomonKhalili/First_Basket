@@ -33,6 +33,7 @@ accounts only by the owner: `python3 site_users.py add NAME`). Everything below 
 |---|---|---|
 | Lineups (Expected → Confirmed), injuries, picks re-run | Every 3 min, 6 AM → last tip-off | GitHub cloud job (`website_live/live-picks.yml`, `publish.py --live`) in the public website repo |
 | Website republished | On any change (≤ every ~6 min, GitHub Pages' limit) | same job |
+| Website page after a code change | Within minutes of the change, day or night | `.github/workflows/page-on-push.yml` (this repo) |
 | FanDuel odds (players + team to score first) | Every 3 min; **every 30 s in the last 15 min before each tip-off** (exact closing price + close time) | same job |
 | FanDuel market opening | Every 30 min, midnight → 6 AM (catches when markets open) | same job (`publish.py --odds`) |
 | DraftKings odds (players + team 1st field goal), incl. official opening prices | Every 3 min via **ESPN's public odds feed** (shows DraftKings' changes ~2–8 min later); live every 3 min from the Mac app and every ~30 s from any viewer's browser | same job + Mac app + browsers |
@@ -110,7 +111,7 @@ python3 gui.py                      # the same picks in your web browser (cards,
 
 If you already have the database and `pregame_model.json`, you only need the last two commands.
 
-Run the tests any time: `python3 -m pytest` (274 tests, all in the `tests/` folder).
+Run the tests any time: `python3 -m pytest` (275 tests, all in the `tests/` folder).
 
 ---
 
@@ -268,7 +269,7 @@ NBA/
 ├── train_pregame.py        # retrains pregame_model.json and runs the week-by-week test
 ├── build_features.py       # builds training matrices and player game logs
 ├── picks.py                # pick log + track record (`eval`)
-├── tests/                  # 274 tests (python3 -m pytest)
+├── tests/                  # 275 tests (python3 -m pytest)
 ├── first_basket_data.csv   # every past game: who scored first (auto-regenerated; don't edit by hand)
 ├── my_predictions.xlsx     # open this: Scorecard, Games (our picks vs results), Lineups (expected vs confirmed vs actual)
 ├── nba_first_basket.db     # SQLite database
