@@ -158,7 +158,7 @@ def day_cards(day: str) -> dict:
         for e in ev:
             comp = e["competitions"][0]
             sc = {c["homeAway"]: c.get("score") for c in comp["competitors"]}
-            finals[str(e["id"])] = {"home_score": sc.get("home"), "away_score": sc.get("away"),
+            finals[str(e["id"])] = {"home_score": sc.get("home"), "away_score": sc.get("away"), "start_utc": e.get("date", ""),
                                     "state": e["status"]["type"]["state"], "detail": e["status"]["type"].get("shortDetail", "")}
     except Exception:  # noqa: BLE001 — scores are extra
         pass

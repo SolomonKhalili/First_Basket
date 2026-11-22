@@ -173,18 +173,35 @@ def should_run(kind: str) -> bool:
     progress (its result gets filed when it ends), or a finished game whose result isn't filed yet."""
     if kind == "nightly":
         return True
+    return day_pending(datetime.now(ET).strftime("%Y%m%d"))
+
+
+def day_pending(d: str) -> bool:
+    """Does NBA day `d` (YYYYMMDD) still need us: a game not started, in progress, or finished but not filed?
+    Postponed / cancelled games don't count (they never get a first basket)."""
     import requests
-    d = datetime.now(ET).strftime("%Y%m%d")
     try:
         events = requests.get("https://site.api.espn.com/apis/site/v2/sports/basketball/nba/scoreboard",
                               params={"dates": d}, timeout=20).json().get("events", [])
-    except Exception:  # noqa: BLE001 — if ESPN can't be reached, run anyway (the update will report it)
+    except Exception:  # noqa: BLE001 — if ESPN can't be reached, assume yes (the update will report it)
         return True
-    states = {str(e.get("id")): e.get("status", {}).get("type", {}).get("state") for e in events}
+    states = {}
+    for e in events:
+        t = e.get("status", {}).get("type", {})
+        if any(w in str(t.get("name", "")).upper() for w in ("POSTPONED", "CANCELED", "CANCELLED")):
+            continue
+        states[str(e.get("id"))] = t.get("state")
     if any(s in ("pre", "in") for s in states.values()):
         return True
     finished = [g for g, s in states.items() if s == "post"]
     return bool(finished) and bool(set(finished) - filed_games(finished))
+
+
+def _now_et():
+    return datetime.now(ET)
+
+
+LATE_GAMES_UNTIL = 4          # after midnight, keep filing the previous night's late games until 4 AM ET (nightly run)
 
 
 def filed_games(game_ids) -> set:
@@ -308,13 +325,20 @@ def watch(seconds: float, result) -> bool:
     return False
 
 
-def odds_only() -> int:
+def odds_only(out: Path = None) -> int:
     """Overnight (midnight – 6 AM): just look for FanDuel's first-basket markets and log any prices — so we see when
-    a market OPENS within ~30 min, and its true opening price. No picks, no publishing."""
+    a market OPENS within ~30 min, and its true opening price. No picks, no publishing.
+    Before 4 AM, if last night still has a late game unfiled (the evening run ended first), file it and republish
+    instead (live() for that day), so the Yesterday view shows its result tonight, not after the nightly run."""
+    from datetime import timedelta
+    now = _now_et()
+    yesterday = (now - timedelta(days=1)).strftime("%Y%m%d")
+    if out is not None and now.hour < LATE_GAMES_UNTIL and day_pending(yesterday):
+        return live(out, day=yesterday)
     import ev
     import fanduel_odds as fd
     import nba
-    con, now = nba.db(), datetime.now(ET)
+    con = nba.db()
     day = now.strftime("%Y%m%d")
     games = {(g["away_team"], g["home_team"]): g for g in nba.get_todays_games()}
     n = 0
@@ -405,7 +429,7 @@ def save_state() -> None:
     push_dir(folder, remote, "state", f"Saved data {datetime.now(ET):%Y-%m-%d %H:%M}")
 
 
-def live(out: Path, once: bool = False) -> int:
+def live(out: Path, once: bool = False, day: str = None) -> int:
     """Update -> publish if anything changed -> wait -> again, until every game has tipped off."""
     import traceback
     public = sys.stdout                                   # the public log: one short line per check, no details
@@ -421,7 +445,7 @@ def live(out: Path, once: bool = False) -> int:
     started, last_pub, last_save, published_fp, fails = time.time(), 0.0, time.time(), None, 0
     saved_sig = None
     last_bets = 0.0
-    day = datetime.now(ET).strftime("%Y%m%d")          # the NBA day this run looks after
+    day = day or _now_et().strftime("%Y%m%d")           # the NBA day this run looks after
     settings = lambda: json.dumps(load_site_users(), sort_keys=True) + (  # noqa: E731 — accounts + relay address
         RELAY_FILE.read_text() if RELAY_FILE.exists() else "")
     users_seen = settings()
@@ -494,9 +518,13 @@ def live(out: Path, once: bool = False) -> int:
         else:
             say("no change" if fp == published_fp else "changed — publishing at the next check")
         wait = seconds_to_next_tip(result)
-        new_day = datetime.now(ET).strftime("%Y%m%d") != day
+        now = _now_et()
+        new_day = now.strftime("%Y%m%d") != day
         unfinished = [g for g in result.get("schedule", []) if g.get("status") != 3]
-        if wait == float("inf") and not once and not new_day:
+        # past midnight the schedule is already tomorrow's, but last night's late (West Coast) games may still be on
+        # or unfiled: keep filing them until they're done (by 4 AM the nightly run takes over)
+        late = new_day and not once and now.hour < LATE_GAMES_UNTIL and day_pending(day)
+        if not once and (wait == float("inf") or late):
             # every game has tipped off: file each result as its game ends, so the Data tabs, the record and the
             # spreadsheet update tonight (not at 4 AM). Not earlier: new results retrain the model.
             try:
@@ -514,7 +542,9 @@ def live(out: Path, once: bool = False) -> int:
                 except Exception:  # noqa: BLE001
                     traceback.print_exc()
         all_done = wait == float("inf") and not unfinished
-        if once or new_day or all_done or time.time() - started > MAX_RUN:
+        if late:
+            say("after midnight: still filing last night's late games")
+        if once or (new_day and not late) or all_done or time.time() - started > MAX_RUN:
             if fp != published_fp:
                 publish_site(out, result)
                 say("published final update")
@@ -541,7 +571,7 @@ def main(argv) -> int:
         return 0 if ok else 3
     out = Path(argv[argv.index("--out") + 1]) if "--out" in argv else HERE / "site_out"
     if "--odds" in argv:                                 # overnight: odds only (opening prices)
-        return odds_only()
+        return odds_only(out)
     if "--live" in argv or "--once" in argv:
         return live(out, once="--once" in argv)
     users = load_site_users()

@@ -57,6 +57,11 @@ def test_job_runs_one_at_a_time(monkeypatch):
     assert job.start(set()) is True
     assert job.start(set()) is False             # second click while running is refused
     release.set()
+    for _ in range(250):                         # let the run finish while predict_today is still the fake one
+        if not job.state["running"]:              # (otherwise it could reach the real update and the real database)
+            break
+        threading.Event().wait(0.02)
+    assert job.state["running"] is False
 
 
 def test_server_serves_page_and_status():
