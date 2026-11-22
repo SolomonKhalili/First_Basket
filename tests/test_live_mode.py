@@ -175,3 +175,10 @@ def test_postponed_games_dont_keep_a_day_open(monkeypatch):
     monkeypatch.setattr(requests, "get", lambda *a, **k: R())
     monkeypatch.setattr(publish, "filed_games", lambda ids: {"2"})
     assert publish.day_pending("20261121") is False
+
+
+def test_page_only_republishes_without_an_update(monkeypatch, tmp_path):
+    calls = []
+    monkeypatch.setattr(publish, "republish_page", lambda out: calls.append(out) or True)
+    monkeypatch.setattr(publish, "run_update", lambda: (_ for _ in ()).throw(AssertionError("no update for a page-only run")))
+    assert publish.main(["--page-only", "--out", str(tmp_path)]) == 0 and calls == [tmp_path]
