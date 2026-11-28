@@ -1,0 +1,73 @@
+{
+  "type": "two_stage",
+  "labels": "first_field_goal",
+  "team_labels": "first_field_goal",
+  "early_m": 25,
+  "features": [
+    "is_home",
+    "fb_rate_shrunk",
+    "L10_fb_shrunk",
+    "shot_attempts_per36",
+    "true_shooting",
+    "minutes_per_game",
+    "points_per_game",
+    "team_tipoff_win_pct",
+    "tip_win_prob",
+    "early_shot_shrunk",
+    "opp_pos_share",
+    "vs_opp_rate",
+    "three_rate"
+  ],
+  "player_features": [
+    "fb_rate_shrunk",
+    "L10_fb_shrunk",
+    "shot_attempts_per36",
+    "true_shooting",
+    "minutes_per_game",
+    "points_per_game",
+    "early_shot_shrunk",
+    "opp_pos_share",
+    "vs_opp_rate"
+  ],
+  "feature_version": 2,
+  "team": {
+    "a": 0.11128255347247266,
+    "b": 0.37595313187818685
+  },
+  "w": [
+    0.04221813353960481,
+    -0.0033718574297259404,
+    -0.1325945087406971,
+    0.039594578574175594,
+    -0.1231179468691929,
+    0.3201295032147351,
+    0.1886239388544075,
+    -0.061699135214430205,
+    -0.037389049290486386
+  ],
+  "mu": [
+    0.08431155169156707,
+    0.09374855953402457,
+    15.495420312455542,
+    0.5819516682323054,
+    27.710079580625997,
+    2.638488757800916,
+    0.20198140527023795,
+    0.353480497398728,
+    0.10261698373294802
+  ],
+  "sd": [
+    0.03992104178944003,
+    0.04910080250125344,
+    4.345478185961649,
+    0.04718681727041878,
+    6.518710964147117,
+    0.4652891560317682,
+    0.04622661979822401,
+    0.08073430019578824,
+    0.04772619562745452
+  ],
+  "l2": 0.001,
+  "train_games": 1512,
+  "trained_through": "20261127"
+}
